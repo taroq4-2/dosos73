@@ -28,4 +28,10 @@ class OutputSafetyTest {
         assertEquals(1, choices.size)
         assertEquals("360p", choices.single().quality)
     }
+    @Test fun genericOriginalFormatDoesNotInventResolution() {
+        val json = org.json.JSONObject("""{"format_id":"mp4","ext":"mp4","protocol":"https","url":"https://example.com/video.mp4"}""")
+        val choice = MediaEngine.mapFormats(json).single()
+        assertEquals("Original", choice.quality)
+        assertEquals(Kind.VIDEO, choice.kind)
+    }
 }

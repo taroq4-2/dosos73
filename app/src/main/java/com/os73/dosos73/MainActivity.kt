@@ -68,6 +68,7 @@ class MainActivity : ComponentActivity() {
         val notifications = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { start() }
         val colors = if (isSystemInDarkTheme()) darkColorScheme(primary = Color(0xFF8DB9FF))
             else lightColorScheme(primary = Color(0xFF126BEA), background = Color(0xFFF7F9FC), surface = Color.White,
+                surfaceVariant = Color(0xFFEFF3FA), surfaceContainerHighest = Color(0xFFEFF3FA),
                 onBackground = Color(0xFF14243A), onSurface = Color(0xFF14243A))
         MaterialTheme(colorScheme = colors) {
             Surface(Modifier.fillMaxSize()) {
@@ -82,7 +83,8 @@ class MainActivity : ComponentActivity() {
                     }
                     Text(stringResource(R.string.subtitle), style = MaterialTheme.typography.bodyMedium)
                     OutlinedTextField(screen.url, model::edit, Modifier.fillMaxWidth(), enabled = !screen.busy && !transfer.active,
-                        label = { Text(stringResource(R.string.url)) }, maxLines = 3)
+                        label = { Text(stringResource(R.string.url)) }, maxLines = 3,
+                        textStyle = LocalTextStyle.current.copy(textDirection = androidx.compose.ui.text.style.TextDirection.Ltr))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         OutlinedButton(onClick = {
                             val clipboard = getSystemService(ClipboardManager::class.java)
@@ -99,43 +101,6 @@ class MainActivity : ComponentActivity() {
                         TextButton(model::cancelAnalysis) { Text(stringResource(R.string.cancel)) }
                     }
                     screen.error?.let { Text(stringResource(it), color = MaterialTheme.colorScheme.error) }
-                    screen.analysis?.let { analysis ->
-                        Text(analysis.title, style = MaterialTheme.typography.titleMedium, maxLines = 3)
-                        val choices = analysis.choices
-                        val selected = screen.selected ?: choices.first()
-                        Selection(stringResource(R.string.type), kindName(selected.kind), !transfer.active) { close ->
-                            choices.map { it.kind }.distinct().forEach { kind ->
-                                DropdownMenuItem(text = { Text(kindName(kind)) }, onClick = { model.select(choices.first { it.kind == kind }); close() })
-                            }
-                        }
-                        Selection(stringResource(R.string.quality), if (analysis.direct) stringResource(R.string.original) else selected.quality, !transfer.active) { close ->
-                            choices.filter { it.kind == selected.kind }.map { it.quality }.distinct().forEach { quality ->
-                                DropdownMenuItem(text = { Text(if (analysis.direct) stringResource(R.string.original) else quality) },
-                                    onClick = { model.select(choices.first { it.kind == selected.kind && it.quality == quality }); close() })
-                            }
-                        }
-                        Selection(stringResource(R.string.format), selected.extension.uppercase(), !transfer.active) { close ->
-                            choices.filter { it.kind == selected.kind && it.quality == selected.quality }.forEach { choice ->
-                                DropdownMenuItem(text = { Text(choice.extension.uppercase()) }, onClick = { model.select(choice); close() })
-                            }
-                        }
-                    }
-                    Card(Modifier.fillMaxWidth()) {
-                        Column(Modifier.padding(16.dp)) {
-                            Text(stringResource(R.string.destination), style = MaterialTheme.typography.labelLarge)
-                            Text(if (tree == null) "Downloads / dosos73" else stringResource(R.string.custom_folder))
-                            Row {
-                                TextButton({ picker.launch(tree) }, enabled = !transfer.active) { Text(stringResource(R.string.change)) }
-                                if (tree != null) TextButton({ tree = null; preferences.edit().remove("tree").apply() }, enabled = !transfer.active) {
-                                    Text(stringResource(R.string.default_folder))
-                                }
-                            }
-                        }
-                    }
-                    Button(onClick = {
-                        if (Build.VERSION.SDK_INT >= 33) notifications.launch(Manifest.permission.POST_NOTIFICATIONS) else start()
-                    }, modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
-                        enabled = screen.selected != null && !screen.busy && !transfer.active) { Text(stringResource(R.string.start)) }
                     if (transfer.phase != Phase.IDLE) {
                         Card(Modifier.fillMaxWidth()) {
                             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -158,6 +123,44 @@ class MainActivity : ComponentActivity() {
                             }
                         }
                     }
+                    screen.analysis?.let { analysis ->
+                        Text(analysis.title, style = MaterialTheme.typography.titleMedium, maxLines = 3)
+                        val choices = analysis.choices
+                        val selected = screen.selected ?: choices.first()
+                        if (!transfer.active) { Selection(stringResource(R.string.type), kindName(selected.kind), !transfer.active) { close ->
+                            choices.map { it.kind }.distinct().forEach { kind ->
+                                DropdownMenuItem(text = { Text(kindName(kind)) }, onClick = { model.select(choices.first { it.kind == kind }); close() })
+                            }
+                        }
+                        Selection(stringResource(R.string.quality), if (selected.quality == "Original") stringResource(R.string.original) else selected.quality, !transfer.active) { close ->
+                            choices.filter { it.kind == selected.kind }.map { it.quality }.distinct().forEach { quality ->
+                                DropdownMenuItem(text = { Text(if (quality == "Original") stringResource(R.string.original) else quality) },
+                                    onClick = { model.select(choices.first { it.kind == selected.kind && it.quality == quality }); close() })
+                            }
+                        }
+                        Selection(stringResource(R.string.format), selected.extension.uppercase(), !transfer.active) { close ->
+                            choices.filter { it.kind == selected.kind && it.quality == selected.quality }.forEach { choice ->
+                                DropdownMenuItem(text = { Text(choice.extension.uppercase()) }, onClick = { model.select(choice); close() })
+                            }
+                        }
+                        }
+                    }
+                    Card(Modifier.fillMaxWidth()) {
+                        Column(Modifier.padding(16.dp)) {
+                            Text(stringResource(R.string.destination), style = MaterialTheme.typography.labelLarge)
+                            Text(if (tree == null) "Downloads / dosos73" else stringResource(R.string.custom_folder))
+                            Row {
+                                TextButton({ picker.launch(tree) }, enabled = !transfer.active) { Text(stringResource(R.string.change)) }
+                                if (tree != null) TextButton({ tree = null; preferences.edit().remove("tree").apply() }, enabled = !transfer.active) {
+                                    Text(stringResource(R.string.default_folder))
+                                }
+                            }
+                        }
+                    }
+                    Button(onClick = {
+                        if (Build.VERSION.SDK_INT >= 33) notifications.launch(Manifest.permission.POST_NOTIFICATIONS) else start()
+                    }, modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
+                        enabled = screen.selected != null && !screen.busy && !transfer.active) { Text(stringResource(R.string.start)) }
                     Text(stringResource(R.string.notice), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Text("0.1.0-dev", style = MaterialTheme.typography.labelSmall)
                 }

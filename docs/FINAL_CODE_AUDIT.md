@@ -29,3 +29,7 @@ Media and HTTP remain distinct adapters because their cancellation/progress/extr
 Critical ownership: service owns transfer coroutine and temporary directory; use blocks own HTTP responses/streams, sockets and metadata retriever; Activity owns presentation only. Direct cancellation closes the OkHttp call; native cancellation closes proxy and calls wrapper termination. Cancellation during storage copy deletes the newly created destination. Post-commit cancellation edge cases and process death require additional tests.
 
 No performance improvement numbers are claimed. Raw build/test evidence and real device tests determine verified results; unperformed tests remain pending.
+
+## Follow-up evidence
+
+Generic yt-dlp metadata without a formats array caused an observed failure. Added single-original-format mapping and regression test; no invented resolution. Moved transfer status above choices, corrected URL LTR direction and added explicit backup exclusions. All 14 JVM and 5 device tests passed after fixes. Release build succeeded. CI setup failure traced to retired SDK tools package and corrected.

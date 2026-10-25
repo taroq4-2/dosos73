@@ -46,3 +46,10 @@ An Arabic-first, single-screen native Android downloader using Kotlin, Compose, 
 Build with JDK 17/21 and SDK 35 using the commands above. GitHub Actions builds debug/test-signed APKs and unsigned release APKs. Review the evidence and outstanding release blockers in `docs/`.
 
 First-party code: GPL-3.0-or-later. Branding and third-party trademarks are excluded from that license grant; see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+
+## صور فعلية ونتائج الاختبار
+
+<img src="screenshots/01-main-ar.png" width="220" alt="الشاشة الرئيسية" /> <img src="screenshots/02-analyzed-ar.png" width="220" alt="تحليل الرابط" />
+<img src="screenshots/03-download-ar.png" width="220" alt="التنزيل" /> <img src="screenshots/04-complete-ar.png" width="220" alt="اكتمال التنزيل" />
+
+نجح البناء المحلي واجتاز 14 اختبار JVM و5 اختبارات Android 15 تشمل تنزيلًا مباشرًا وتنزيل عينة عبر yt-dlp. هذه نسخة تطوير؛ دعم جميع المنصات والمراجعة الأمنية النهائية غير مكتملين.

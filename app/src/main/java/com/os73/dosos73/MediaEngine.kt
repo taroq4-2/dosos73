@@ -80,9 +80,9 @@ class MediaEngine(private val context: Context) {
     companion object {
         private val lock = Any()
         fun mapFormats(json: JSONObject): List<Choice> {
-            val formats = json.optJSONArray("formats") ?: return emptyList()
+            val formats = json.optJSONArray("formats") ?: org.json.JSONArray().put(json)
             require(formats.length() <= 1000)
-            data class Source(val id: String, val ext: String, val height: Int, val audio: Boolean, val video: Boolean)
+            data class Source(val id: String, val ext: String, val height: Int, val audio: Boolean, val video: Boolean, val unspecified: Boolean)
             val sources = (0 until formats.length()).mapNotNull { i ->
                 val f = formats.getJSONObject(i)
                 val id = f.optString("format_id")
@@ -92,13 +92,14 @@ class MediaEngine(private val context: Context) {
                     protocol !in setOf("https", "m3u8_native", "http_dash_segments") ||
                     !f.optString("url").startsWith("https://") || ext !in setOf("mp4", "webm", "m4a", "opus", "mp3")) null
                 else Source(id, ext, f.optInt("height"), f.optString("acodec", "none") != "none",
-                    f.optString("vcodec", "none") != "none")
+                    f.optString("vcodec", "none") != "none", !f.has("acodec") && !f.has("vcodec"))
             }
             val audio = sources.filter { it.audio && !it.video }
             return sources.sortedByDescending { it.height }.mapNotNull { f ->
                 when {
+                    f.unspecified -> Choice(f.id, if (f.ext in setOf("mp4", "webm")) Kind.VIDEO else Kind.AUDIO, f.ext, "Original")
                     f.audio && !f.video -> Choice(f.id, Kind.AUDIO, f.ext, f.ext.uppercase())
-                    f.video && f.audio -> Choice(f.id, Kind.VIDEO, f.ext, "${f.height}p")
+                    f.video && f.audio -> Choice(f.id, Kind.VIDEO, f.ext, if (f.height > 0) "${f.height}p" else "Original")
                     f.video -> {
                         val a = audio.lastOrNull { if (f.ext == "mp4") it.ext == "m4a" else it.ext in setOf("webm", "opus") }
                         a?.let { Choice("${f.id}+${it.id}", Kind.VIDEO, f.ext, "${f.height}p") }

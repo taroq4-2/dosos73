@@ -49,13 +49,15 @@ class LiveDownloadTest {
         assertEquals("Download must commit a verified file", Phase.COMPLETE, result.phase)
         assertNotNull(result.uri)
         context.contentResolver.openFileDescriptor(result.uri!!, "r")!!.use { assertTrue(it.statSize > 0) }
+        delay(1000) // Let Compose present the committed state before capturing evidence.
         screenshot("04-complete-ar.png")
     }
 
     @Test fun mediaExtractorAndNativeDownload() = runBlocking {
         assumeTrue(InstrumentationRegistry.getArguments().getString("liveMedia") == "true")
         val context = InstrumentationRegistry.getInstrumentation().targetContext
-        val url = "https://www.w3schools.com/html/html5_video.asp"
+        val url = InstrumentationRegistry.getArguments().getString("mediaUrl")
+            ?: "https://raw.githubusercontent.com/mediaelement/mediaelement-files/master/big_buck_bunny.mp4"
         val engine = MediaEngine(context)
         val analysis = engine.analyze(url)
         assertTrue(analysis.choices.isNotEmpty())

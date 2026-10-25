@@ -1,29 +1,17 @@
-# Verification evidence
+# Verification — 2026-10-25
 
-Status recorded during development on 2026-10-25. This report is updated after checks finish.
+VERIFIED: Debug and optimized unsigned release builds succeeded (Gradle 8.9, AGP 8.7.2, Kotlin 2.0.21, JDK21). 14 JVM tests passed. Five instrumented tests passed on Android15 API35 x86_64, including both opt-in live downloads, in 22.133 seconds. Android Lint: zero errors, 12 warnings (dependency/branding and compatibility advisories remain).
 
-## VERIFIED — COMPLETED
+Direct download: https://media.w3.org/2010/05/sintel/trailer.mp4 downloaded through foreground service, validated, saved to MediaStore and opened for reading via content URI.
 
-- Debug APK compilation completed locally with Gradle 8.9, AGP 8.7.2, Kotlin 2.0.21 and JDK 21.
-- 14 JVM tests passed (SafetyTest: 6; DirectDownloaderTest: 8), zero failures/errors. These include real MockWebServer streaming, unknown-length responses, interrupted transfers, partial-response rejection, HTML/empty output rejection and HTTPS downgrade rejection.
-- Public GitHub repository created at https://github.com/taroq4-2/dosos73.
+Native download: https://raw.githubusercontent.com/mediaelement/mediaelement-files/master/big_buck_bunny.mp4 analyzed and downloaded by yt-dlp and validated by Android metadata parser. This generic-file success does NOT prove social-platform support or separate-stream merging.
 
-## FAILED — REQUIRES FIX
+Three additional device tests cover malformed/empty media, format filtering and generic-original metadata. Four real Arabic captures are in screenshots/. Completion screenshot visually inspected. Evidence: docs/evidence/.
 
-- First compilation found an OkHttp DNS interface incompatibility; fixed using an explicit Dns implementation and debug build passed.
-- First release shrink failed because Jackson references optional desktop JavaBeans/XML classes. Narrow optional-class rules added; release rebuild is pending evidence.
+FIXED: Kotlin DNS interface compile error; optional Jackson desktop-class R8 error; generic metadata without formats array rejected; status card below controls; Arabic URL direction. Release build now passes.
 
-## NOT TESTED — EVIDENCE MISSING
+FAILED/UNVERIFIED: W3Schools native test TLS error, W3 native test HTTP403 challenge, Vimeo login-required response. No bypass attempted. Initial GitHub build failed on retired SDK tools package; explicit platform-tools configuration fixes the cause, remote rerun pending.
 
-- Social platform matrix (YouTube, TikTok, Instagram, Facebook, X, Snapchat, Telegram).
-- SAF provider behavior, full-disk failures, process-death recovery, service stop/timeout, large fonts, dark mode, multiple physical devices and 16 KB memory-page execution.
-- Release signing and native binary/license/source-correspondence audit.
+NOT TESTED: social-platform matrix, physical ARM devices, 16KB execution, separate-stream merge, conversions, SAF provider/error matrix, process death, timeout, cancellation stress, TalkBack, large fonts, external-player Open File action. Readable saved URI is verified, external player is not.
 
-## In progress
-
-Android 15 / API 35 x86_64 emulator instrumented checks, lint, release build and opt-in live downloads.
-
-Test invocation: `./gradlew testDebugUnitTest lintDebug assembleDebug assembleRelease connectedDebugAndroidTest`.
-Live cases are opt-in (`-e live true`, `-e liveMedia true` when invoking instrumentation), because external site behavior must not be disguised as deterministic CI coverage.
-
-Raw reports are generated in app/build/reports and uploaded by CI; selected evidence is retained under docs/evidence.
+BLOCKED for production: signing, complete native license/corresponding-source audit, advisory scan, independent QA and SECURITY.md issues. No v1.0 release published.
