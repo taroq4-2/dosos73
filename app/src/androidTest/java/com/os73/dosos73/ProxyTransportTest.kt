@@ -17,16 +17,18 @@ class ProxyTransportTest {
     @Test fun encryptedTunnelPreservesLargeResponse() {
         assumeTrue(InstrumentationRegistry.getArguments().getString("liveTransport") == "true")
         val endpoint = URL("https://raw.githubusercontent.com/mediaelement/mediaelement-files/master/big_buck_bunny.mp4")
-        fun fetch(proxy: Proxy): Pair<Long, String> {
-            val connection = endpoint.openConnection(proxy) as HttpsURLConnection
-            connection.connectTimeout = 20000
-            connection.readTimeout = 30000
-            connection.instanceFollowRedirects = false
-            try {
-                assertEquals(200, connection.responseCode)
+        fun fetch(proxy: Proxy, credentials: String? = null): Pair<Long, String> {
+            val client = okhttp3.OkHttpClient.Builder().proxy(proxy).followRedirects(false)
+                .connectTimeout(20, java.util.concurrent.TimeUnit.SECONDS).readTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
+                .proxyAuthenticator { _, response ->
+                    if (credentials == null || response.request.header("Proxy-Authorization") != null) null
+                    else response.request.newBuilder().header("Proxy-Authorization", okhttp3.Credentials.basic(credentials.substringBefore(':'),credentials.substringAfter(':'))).build()
+                }.build()
+            try { client.newCall(okhttp3.Request.Builder().url(endpoint).build()).execute().use { response ->
+                assertEquals(200, response.code)
                 val hash = MessageDigest.getInstance("SHA-256")
                 var bytes = 0L
-                connection.inputStream.use { input ->
+                response.body!!.byteStream().use { input ->
                     val buffer = ByteArray(32768)
                     while (true) {
                         val count = input.read(buffer)
@@ -38,7 +40,7 @@ class ProxyTransportTest {
                 }
                 assertTrue(bytes > 1024 * 1024)
                 return bytes to hash.digest().joinToString("") { "%02x".format(it) }
-            } finally { connection.disconnect() }
+            } } finally { client.connectionPool.evictAll(); client.dispatcher.executorService.shutdown() }
         }
         // A fixed public test URL; production native traffic always retains PublicProxy.
         val reference = fetch(Proxy.NO_PROXY)
@@ -50,7 +52,7 @@ class ProxyTransportTest {
         PublicProxy().use { tunnel ->
             val address = URI(tunnel.url)
             val proxy = Proxy(Proxy.Type.HTTP, InetSocketAddress(address.host, address.port))
-            repeat(3) { assertEquals("TLS tunnel content mismatch, pass $it", reference, fetch(proxy)) }
+            repeat(3) { assertEquals("TLS tunnel content mismatch, pass $it", reference, fetch(proxy, address.userInfo)) }
             val code = """
                 import urllib.request, hashlib, sys, ssl
                 opener = urllib.request.build_opener(urllib.request.ProxyHandler({'https': sys.argv[1]}))
