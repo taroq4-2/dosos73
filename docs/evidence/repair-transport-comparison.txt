@@ -1,0 +1,4 @@
+legacy=false pass=0 bytes=5510872 sha256=543a4ad9fef4c9e0004ec9482cb7225c2574b0f889291e8270b1c4d61dbc1ab8
+legacy=false pass=1 failure=NETWORK_TLS
+legacy=true pass=0 failure=NETWORK_TLS
+legacy=true pass=1 failure=NETWORK_TLS

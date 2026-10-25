@@ -9,6 +9,14 @@ import java.io.File
 
 @RunWith(AndroidJUnit4::class)
 class OutputSafetyTest {
+    @Test fun bestAudioDoesNotDependOnSourceOrder() {
+        for (order in listOf(listOf(160,96),listOf(96,160))) {
+            val formats=org.json.JSONArray().put(org.json.JSONObject("""{"format_id":"v","ext":"mp4","height":1080,"vcodec":"avc1","acodec":"none","protocol":"https","url":"https://example.com/v"}"""))
+            order.forEach { bitrate -> formats.put(org.json.JSONObject("""{"format_id":"a$bitrate","ext":"m4a","abr":$bitrate,"vcodec":"none","acodec":"aac","protocol":"https","url":"https://example.com/a"}""")) }
+            val choice=MediaEngine.mapFormats(org.json.JSONObject().put("formats",formats)).first { it.kind == Kind.VIDEO }
+            assertEquals("v+a160",choice.id)
+        }
+    }
     @Test fun publishesExactBytesToMediaStore() = kotlinx.coroutines.runBlocking {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val file = File(context.cacheDir, "publication-test.bin")

@@ -14,8 +14,8 @@ class MediaEngine(private val context: Context) {
     private val id = UUID.randomUUID().toString()
     @Volatile private var proxy: PublicProxy? = null
     fun cancel() {
-        proxy?.close()
-        YoutubeDL.getInstance().destroyProcessById(id)
+        runCatching { proxy?.close() }
+        cancellationExecutor.execute { runCatching { YoutubeDL.getInstance().destroyProcessById(id) } }
     }
     private fun initialize() {
         synchronized(lock) {
@@ -97,11 +97,12 @@ class MediaEngine(private val context: Context) {
             }
         }
     companion object {
+        private val cancellationExecutor = java.util.concurrent.Executors.newSingleThreadExecutor()
         private val lock = Any()
         fun mapFormats(json: JSONObject): List<Choice> {
             val formats = json.optJSONArray("formats") ?: org.json.JSONArray().put(json)
             require(formats.length() <= 1000)
-            data class Source(val id: String, val ext: String, val height: Int, val audio: Boolean, val video: Boolean, val unspecified: Boolean)
+            data class Source(val id: String, val ext: String, val height: Int, val audio: Boolean, val video: Boolean, val unspecified: Boolean, val abr: Double)
             val sources = (0 until formats.length()).mapNotNull { i ->
                 val f = formats.getJSONObject(i)
                 val id = f.optString("format_id")
@@ -111,7 +112,7 @@ class MediaEngine(private val context: Context) {
                     protocol !in setOf("https", "m3u8_native", "http_dash_segments") ||
                     !f.optString("url").startsWith("https://") || ext !in setOf("mp4", "webm", "m4a", "opus", "mp3")) null
                 else Source(id, ext, f.optInt("height"), f.optString("acodec", "none") != "none",
-                    f.optString("vcodec", "none") != "none", !f.has("acodec") && !f.has("vcodec"))
+                    f.optString("vcodec", "none") != "none", !f.has("acodec") && !f.has("vcodec"), f.optDouble("abr", 0.0).takeIf { it.isFinite() } ?: 0.0)
             }
             val audio = sources.filter { it.audio && !it.video }
             return sources.sortedByDescending { it.height }.mapNotNull { f ->
@@ -121,7 +122,7 @@ class MediaEngine(private val context: Context) {
                     f.video && f.audio -> Choice(f.id, Kind.VIDEO, f.ext, if (f.height > 0) "${f.height}p" else "Original",
                         f.height.takeIf { it > 0 }, true)
                     f.video -> {
-                        val a = audio.lastOrNull { if (f.ext == "mp4") it.ext == "m4a" else it.ext in setOf("webm", "opus") }
+                        val a = audio.filter { if (f.ext == "mp4") it.ext == "m4a" else it.ext in setOf("webm", "opus") }.maxByOrNull { it.abr }
                         a?.let { Choice("${f.id}+${it.id}", Kind.VIDEO, f.ext, "${f.height}p", f.height.takeIf { it > 0 }, true) }
                     }
                     else -> null

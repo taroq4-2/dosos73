@@ -36,8 +36,11 @@ class DownloadService : Service() {
         job = scope.launch {
             val directory = File(cacheDir, "transfer-${UUID.randomUUID()}")
             var stage = Stage.TRANSFER
+            var terminal = TransferState(Phase.CANCELLED, task.analysis.title)
             try {
                 withContext(Dispatchers.IO) { check(directory.mkdirs()) }
+                StoragePolicy.requireAvailable(android.os.StatFs(cacheDir.absolutePath).availableBytes,
+                    task.analysis.sizeBytes, if (task.tree == null) 2 else 1)
                 val output = if (task.analysis.direct) {
                     File(directory, "file.${task.choice.extension}").also { file ->
                         direct.download(task.analysis.url, file) { bytes, total, speed ->
@@ -62,17 +65,22 @@ class DownloadService : Service() {
                 val (uri, mime) = store.save(output, task)
                 Diagnostics.event(stage, "completed", output.length())
                 // Publication is the commit point: do not turn a committed file into a cancellation.
-                publish(TransferState(Phase.COMPLETE, task.analysis.title, output.length(), output.length(), 1f, uri = uri, mime = mime))
+                terminal = TransferState(Phase.COMPLETE, task.analysis.title, output.length(), output.length(), 1f, uri = uri, mime = mime)
             } catch (_: CancellationException) {
-                publish(TransferState(Phase.CANCELLED, task.analysis.title))
+                terminal = TransferState(Phase.CANCELLED, task.analysis.title)
             } catch (e: Exception) {
                 val failure = FailureClassifier.classify(stage, e)
                 Diagnostics.event(failure.stage, "failed", code = failure.code)
-                publish(TransferState(Phase.FAILED, task.analysis.title, error = failure.messageResource()))
+                terminal = TransferState(Phase.FAILED, task.analysis.title, error = failure.messageResource())
             } finally {
                 withContext(NonCancellable + Dispatchers.IO) { directory.deleteRecursively() }
                 stopForeground(STOP_FOREGROUND_REMOVE)
-                stopSelf()
+                stopSelfResult(startId)
+                // Keep ownership active through cleanup. No suspensions between releasing the
+                // job and publishing the terminal state, so a new reservation cannot be stranded.
+                job = null
+                Transfers.update(terminal.copy(detail = detail))
+                if (terminal.phase == Phase.COMPLETE) completionNotification(terminal)
             }
         }
         return START_NOT_STICKY
@@ -94,12 +102,22 @@ class DownloadService : Service() {
             .setProgress(100, ((state.percent ?: 0f) * 100).toInt(), state.percent == null)
             .addAction(0, getString(R.string.cancel), cancel).build()
     }
+    private fun completionNotification(state: TransferState) {
+        val uri = state.uri ?: return
+        val intent = Intent(Intent.ACTION_VIEW).setDataAndType(uri, state.mime)
+            .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        val open = PendingIntent.getActivity(this, 74, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+        val notification = NotificationCompat.Builder(this, "downloads").setSmallIcon(R.drawable.ic_download)
+            .setContentTitle(getString(R.string.complete)).setContentText(state.title).setAutoCancel(true)
+            .setContentIntent(open).addAction(0, getString(R.string.open), open).build()
+        getSystemService(NotificationManager::class.java).notify(74, notification)
+    }
     private fun cancelTransfer() {
         direct.cancel()
         scope.launch(Dispatchers.IO) { runCatching { media.cancel() }; job?.cancel() }
     }
     override fun onTimeout(startId: Int, fgsType: Int) { cancelTransfer(); stopSelf() }
-    override fun onDestroy() { direct.cancel(); scope.cancel(); super.onDestroy() }
+    override fun onDestroy() { direct.cancel(); media.cancel(); scope.cancel(); super.onDestroy() }
 }
 
 fun phaseText(phase: Phase) = when (phase) {

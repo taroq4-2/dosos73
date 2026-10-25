@@ -50,5 +50,5 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         direct.cancel()
         viewModelScope.launch(Dispatchers.IO) { runCatching { media.cancel() }; job?.cancel() }
     }
-    override fun onCleared() { direct.cancel(); super.onCleared() }
+    override fun onCleared() { direct.cancel(); media.cancel(); super.onCleared() }
 }
