@@ -36,6 +36,14 @@ The user explicitly retained the YouTube-first gate. No UI/About/Contact work wa
 
 This rules out reproducible transport corruption for that fixture, but does not establish compatibility with YouTube's TLS endpoints or identify the cause of its 403/challenge. The user has not yet checked whether their failing video plays in a signed-out private browser on their phone. That manual observation remains useful to distinguish a general source access requirement from an app-specific failure; browser success alone would not establish downloader success.
 
+### File-size hypothesis checked
+
+The application does enforce `Safety.MAX_BYTES = 2147483648` (2 GiB, approximately 2.15 decimal GB). DirectDownloader checks both declared Content-Length and streamed byte count; the native extractor receives `--max-filesize` with that value; OutputStore rejects a final file above it. Separate audio/video streams can each pass the native per-stream limit and still exceed the final merged-file limit. Unknown source sizes also cannot be assumed to pass until transfer/validation completes.
+
+Two deterministic HTTP tests were added: a declared 2147483649-byte response is rejected before writing; a declared 2147483648-byte response passes the size guard and then correctly fails as truncated when the fixture sends only one byte. These are boundary tests, not claims of an actual 2 GiB successful download. All 20 JVM tests passed.
+
+The recorded YouTube baseline failed with HTTP403 during transfer, and the updated engine encountered an extraction-time sign-in challenge. Neither log reports a max-filesize rejection. The user's original video's selected stream sizes are not known, so size cannot be excluded for that distinct case. No size limit was raised: doing so would not repair the observed server refusal. The successful transport fixture was 5510872 bytes and is not evidence of large-file acceptance.
+
 A permitted environment where YouTube serves the authorized test stream is needed to establish the before/after download result, audio/video merge, saved output and external playback. Android16, physical ARM devices and the full 20-review matrix remain pending. Under the requested strict phase order, UI/About/Contact redesign remains pending until the YouTube gate passes or the user authorizes parallel work. No stable release or YouTube-success claim is authorized by the available evidence.
 
 Sources: https://github.com/yt-dlp/yt-dlp/releases/tag/2026.10.21 and https://github.com/yt-dlp/yt-dlp/wiki/EJS. See docs/evidence/v4-* for actual recorded test output. Errors from prior failed experiments are retained and not replaced by success from unrelated endpoints.
