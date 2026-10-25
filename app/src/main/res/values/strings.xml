@@ -1,4 +1,12 @@
 <resources>
+    <string name="error_auth_required">This source requires sign-in or human verification. No file was saved. Private credentials are not supported.</string>
+    <string name="error_http403">The media server refused the download (HTTP 403). The title being available does not mean the stream is downloadable.</string>
+    <string name="error_http429">The server is limiting requests (HTTP 429). Try again later.</string>
+    <string name="error_format_unavailable">This format is no longer available. Analyze the link again.</string>
+    <string name="error_runtime">The media JavaScript components are unavailable or incompatible.</string>
+    <string name="error_merge">The audio and video could not be merged. No completed file was saved.</string>
+    <string name="error_verification">The downloaded output failed media validation. No completed file was saved.</string>
+    <string name="error_timeout">The network connection timed out. Try again when the connection is stable.</string>
     <string name="app_name">Download open-source OS73</string>
     <string name="title">Download media</string>
     <string name="subtitle">Share a link. Choose a format. Save your file.</string>

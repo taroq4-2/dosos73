@@ -16,13 +16,14 @@ import java.io.IOException
 import java.util.UUID
 
 class OutputStore(private val context: Context) {
-    fun validate(file: File, kind: Kind) {
+    fun validate(file: File, kind: Kind, expectedHeight: Int? = null, expectsAudio: Boolean = false) {
         require(file.isFile && file.length() in 1..Safety.MAX_BYTES)
         if (kind != Kind.FILE) MediaMetadataRetriever().use { retriever ->
             retriever.setDataSource(file.absolutePath)
             require((retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLongOrNull() ?: 0) > 0)
             if (kind == Kind.VIDEO) require(retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_HAS_VIDEO) == "yes")
-            if (kind == Kind.AUDIO) require(retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_HAS_AUDIO) == "yes")
+            if (kind == Kind.AUDIO || expectsAudio) require(retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_HAS_AUDIO) == "yes")
+            expectedHeight?.let { require(retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT)?.toIntOrNull() == it) }
         }
     }
     suspend fun save(file: File, task: DownloadTask): Pair<Uri, String> = withContext(Dispatchers.IO) {

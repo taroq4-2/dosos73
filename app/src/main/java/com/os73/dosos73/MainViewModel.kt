@@ -26,6 +26,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         catch (_: Exception) { mutable.value = mutable.value.copy(error = R.string.error_url) }
     }
     fun select(choice: Choice) { if (choice in mutable.value.analysis?.choices.orEmpty()) mutable.value = mutable.value.copy(selected = choice) }
+    fun invalidateFormats() { mutable.value = mutable.value.copy(analysis = null, selected = null) }
     fun analyze() {
         if (mutable.value.busy || Transfers.state.value.active) return
         val url = try { Safety.url(mutable.value.url) } catch (_: Exception) {
@@ -38,8 +39,10 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                 mutable.value = ScreenState(url, analysis = analysis, selected = analysis.choices.first())
             } catch (_: CancellationException) {
                 mutable.value = mutable.value.copy(busy = false)
-            } catch (_: Exception) {
-                mutable.value = mutable.value.copy(busy = false, error = R.string.error_analyze)
+            } catch (error: Exception) {
+                val failure = FailureClassifier.classify(Stage.EXTRACT, error)
+                Diagnostics.event(failure.stage, "failed", code = failure.code)
+                mutable.value = mutable.value.copy(busy = false, analysis = null, selected = null, error = failure.messageResource())
             }
         }
     }

@@ -33,6 +33,7 @@ class DownloadService : Service() {
         startForeground(73, notification(Transfers.state.value), ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
         job = scope.launch {
             val directory = File(cacheDir, "transfer-${UUID.randomUUID()}")
+            var stage = Stage.TRANSFER
             try {
                 withContext(Dispatchers.IO) { check(directory.mkdirs()) }
                 val output = if (task.analysis.direct) {
@@ -47,21 +48,25 @@ class DownloadService : Service() {
                         task.analysis.title, percent = if(processing) null else percent))
                 }
                 ensureActive()
+                stage = Stage.VERIFY
+                Diagnostics.event(stage, "started", output.length())
                 publish(TransferState(Phase.PROCESSING, task.analysis.title))
                 val store = OutputStore(this@DownloadService)
-                withContext(Dispatchers.IO) { store.validate(output, task.choice.kind) }
+                withContext(Dispatchers.IO) { store.validate(output, task.choice.kind, task.choice.expectedHeight, task.choice.expectsAudio) }
+                Diagnostics.event(stage, "completed", output.length())
+                stage = Stage.PUBLISH
+                Diagnostics.event(stage, "started", output.length())
                 publish(TransferState(Phase.SAVING, task.analysis.title))
                 val (uri, mime) = store.save(output, task)
+                Diagnostics.event(stage, "completed", output.length())
                 // Publication is the commit point: do not turn a committed file into a cancellation.
                 publish(TransferState(Phase.COMPLETE, task.analysis.title, output.length(), output.length(), 1f, uri = uri, mime = mime))
             } catch (_: CancellationException) {
                 publish(TransferState(Phase.CANCELLED, task.analysis.title))
             } catch (e: Exception) {
-                publish(TransferState(Phase.FAILED, task.analysis.title, error = when (e) {
-                    is SecurityException -> R.string.error_storage
-                    is IOException -> R.string.error_network
-                    else -> R.string.error_download
-                }))
+                val failure = FailureClassifier.classify(stage, e)
+                Diagnostics.event(failure.stage, "failed", code = failure.code)
+                publish(TransferState(Phase.FAILED, task.analysis.title, error = failure.messageResource()))
             } finally {
                 withContext(NonCancellable + Dispatchers.IO) { directory.deleteRecursively() }
                 stopForeground(STOP_FOREGROUND_REMOVE)

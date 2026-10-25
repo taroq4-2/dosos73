@@ -19,8 +19,10 @@ class MediaEngine(private val context: Context) {
     }
     private fun initialize() {
         synchronized(lock) {
+            BundledEngine.install(context)
             YoutubeDL.getInstance().init(context)
             FFmpeg.getInstance().init(context)
+            Diagnostics.event(Stage.INITIALIZE, "ready")
         }
     }
     private fun request(url: String, proxy: PublicProxy): YoutubeDLRequest {
@@ -31,7 +33,9 @@ class MediaEngine(private val context: Context) {
             addOption("--fragment-retries", 2); addOption("--concurrent-fragments", 1)
             addOption("--max-filesize", Safety.MAX_BYTES)
             addOption("--proxy", proxy.url); addOption("--no-check-formats")
-            addOption("--no-warnings"); addOption("--restrict-filenames")
+            addOption("--restrict-filenames")
+            // EJS is bundled with the pinned official zipapp; never fetch executable components.
+            addOption("--no-remote-components")
         }
     }
     suspend fun analyze(url: String): Analysis = runInterruptible(Dispatchers.IO) {
@@ -44,13 +48,19 @@ class MediaEngine(private val context: Context) {
                     addOption("--skip-download"); addOption("--write-info-json"); addOption("--quiet")
                     addOption("-o", File(dir, "metadata.%(ext)s").absolutePath)
                 }
-                YoutubeDL.getInstance().execute(request, id, null)
+                Diagnostics.event(Stage.EXTRACT, "started")
+                try { YoutubeDL.getInstance().execute(request, id, null) }
+                catch (error: Exception) {
+                    if (error is InterruptedException || error is kotlinx.coroutines.CancellationException) throw error
+                    throw FailureClassifier.classify(Stage.EXTRACT, error)
+                }
                 val info = dir.listFiles()?.singleOrNull { it.name.endsWith(".info.json") }
                     ?: error("Metadata unavailable")
                 require(info.length() in 1..(4 * 1024 * 1024))
                 val json = JSONObject(info.readText())
                 val choices = mapFormats(json)
                 require(choices.isNotEmpty()) { "No supported formats" }
+                Diagnostics.event(Stage.EXTRACT, "completed")
                 Analysis(url, json.optString("title", "download").take(200), choices, false)
             }
         } finally { proxy = null; dir.deleteRecursively() }
@@ -68,10 +78,20 @@ class MediaEngine(private val context: Context) {
                         addOption("--newline"); addOption("--progress-delta", 1)
                         if (task.choice.id.contains('+')) addOption("--merge-output-format", task.choice.extension)
                     }
-                    YoutubeDL.getInstance().execute(request, id) { percent, _, line ->
-                        progress(percent.takeIf { it >= 0 && it <= 100 }?.div(100),
-                            line.contains("[Merger]") || line.contains("[ExtractAudio]"))
+                    var stage = Stage.TRANSFER
+                    Diagnostics.event(stage, "started")
+                    try {
+                        YoutubeDL.getInstance().execute(request, id) { percent, _, line ->
+                            if (line.contains("[Merger]") || line.contains("[ExtractAudio]")) stage = Stage.MERGE
+                            progress(percent.takeIf { it >= 0 && it <= 100 }?.div(100), stage == Stage.MERGE)
+                        }
+                    } catch (error: Exception) {
+                        if (error is InterruptedException || error is kotlinx.coroutines.CancellationException) throw error
+                        val failure = FailureClassifier.classify(stage, error)
+                        Diagnostics.event(stage, "failed", code = failure.code)
+                        throw failure
                     }
+                    Diagnostics.event(stage, "completed")
                     directory.listFiles()?.singleOrNull { it.name == "media.${task.choice.extension}" && it.length() > 0 }
                         ?: error("Output missing")
                 } finally { proxy = null }
@@ -99,10 +119,11 @@ class MediaEngine(private val context: Context) {
                 when {
                     f.unspecified -> Choice(f.id, if (f.ext in setOf("mp4", "webm")) Kind.VIDEO else Kind.AUDIO, f.ext, "Original")
                     f.audio && !f.video -> Choice(f.id, Kind.AUDIO, f.ext, f.ext.uppercase())
-                    f.video && f.audio -> Choice(f.id, Kind.VIDEO, f.ext, if (f.height > 0) "${f.height}p" else "Original")
+                    f.video && f.audio -> Choice(f.id, Kind.VIDEO, f.ext, if (f.height > 0) "${f.height}p" else "Original",
+                        f.height.takeIf { it > 0 }, true)
                     f.video -> {
                         val a = audio.lastOrNull { if (f.ext == "mp4") it.ext == "m4a" else it.ext in setOf("webm", "opus") }
-                        a?.let { Choice("${f.id}+${it.id}", Kind.VIDEO, f.ext, "${f.height}p") }
+                        a?.let { Choice("${f.id}+${it.id}", Kind.VIDEO, f.ext, "${f.height}p", f.height.takeIf { it > 0 }, true) }
                     }
                     else -> null
                 }

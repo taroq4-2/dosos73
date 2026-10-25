@@ -1,0 +1,10 @@
+
+com.os73.dosos73.LiveDownloadTest:..
+com.os73.dosos73.OutputSafetyTest:...
+com.os73.dosos73.RuntimeInventoryTest:.
+
+Time: 20.996
+
+OK (6 tests)
+
+

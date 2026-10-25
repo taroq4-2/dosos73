@@ -65,7 +65,7 @@ class LiveDownloadTest {
         val directory = File(context.cacheDir, "live-media-test").apply { mkdirs() }
         try {
             val output = engine.download(DownloadTask(analysis, choice, null), directory) { _, _ -> }
-            OutputStore(context).validate(output, choice.kind)
+            OutputStore(context).validate(output, choice.kind, choice.expectedHeight, choice.expectsAudio)
             assertTrue(output.length() > 0)
         } finally { directory.deleteRecursively() }
     }

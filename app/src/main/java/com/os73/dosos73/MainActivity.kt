@@ -47,6 +47,9 @@ class MainActivity : ComponentActivity() {
     @Composable private fun AppScreen() {
         val screen by model.state.collectAsStateWithLifecycle()
         val transfer by Transfers.state.collectAsStateWithLifecycle()
+        LaunchedEffect(transfer.phase) {
+            if (transfer.phase == Phase.FAILED) model.invalidateFormats()
+        }
         val preferences = remember { getSharedPreferences("destination", MODE_PRIVATE) }
         var tree by remember { mutableStateOf(preferences.getString("tree", null)?.let(Uri::parse)) }
         val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->

@@ -1,5 +1,7 @@
 # Licensing inventory — development preview
 
+V4 investigation branch pins the official yt-dlp 2026.10.21 zipapp with EJS 0.8.0 inside the APK. Original yt-dlp/EJS code uses Unlicense; the zipapp additionally includes ISC/MIT components. Upstream notices are preserved in docs/licenses/. SHA256 is recorded in BundledEngine.kt and YOUTUBE_DOWNLOAD_ROOT_CAUSE.md. This does not complete the native wrapper/FFmpeg audit.
+
 First-party Kotlin, resources and build scripts are offered under GPL-3.0-or-later; see LICENSE. This does not relicense dependencies or third-party artwork.
 
 | Component | Version | Declared upstream license / source |

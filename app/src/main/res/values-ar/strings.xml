@@ -1,4 +1,12 @@
 <resources>
+    <string name="error_auth_required">يتطلب المصدر تسجيل الدخول أو تحققًا بشريًا. لم يُحفظ ملف. التطبيق لا يستخدم بيانات الدخول الخاصة.</string>
+    <string name="error_http403">رفض خادم الوسائط التنزيل (HTTP 403). ظهور العنوان لا يعني إتاحة تدفق الفيديو للتنزيل.</string>
+    <string name="error_http429">قيّد الخادم عدد الطلبات (HTTP 429). حاول لاحقًا.</string>
+    <string name="error_format_unavailable">لم تعد هذه الصيغة متاحة. أعد تحليل الرابط.</string>
+    <string name="error_runtime">مكونات JavaScript اللازمة للوسائط غير متاحة أو غير متوافقة.</string>
+    <string name="error_merge">تعذّر دمج الصوت والفيديو. لم يُحفظ ملف مكتمل.</string>
+    <string name="error_verification">لم يجتز الملف فحص سلامة الوسائط. لم يُحفظ ملف مكتمل.</string>
+    <string name="error_timeout">انتهت مهلة الاتصال. حاول مجددًا عند استقرار الشبكة.</string>
     <string name="app_name">Download open-source OS73</string>
     <string name="title">تحميل الوسائط</string>
     <string name="subtitle">شارك الرابط، اختر الصيغة، واحفظ الملف.</string>

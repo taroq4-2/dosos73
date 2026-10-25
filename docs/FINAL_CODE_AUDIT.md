@@ -1,5 +1,9 @@
 # First-party code audit
 
+## V4 investigation review
+
+Scope: BundledEngine, PipelineError, MediaEngine, DownloadService, OutputStore, MainViewModel, MainActivity, Models and added tests. Confirmed generic-error reporting defect corrected with stage-specific messages. Version-pinned asset replaces stale cached engine atomically after hash verification. No network updater introduced. Cancellation exceptions remain cancellations rather than being wrapped into download failures. Expected audio and height now participate in output verification. Native error-message strings are classified in memory, never written to app diagnostics. No significant duplicate subsystem removed; no independent review claimed. YouTube end-to-end and the requested 20-review framework remain incomplete. UI redesign is not claimed complete.
+
 Review type: separate self-review pass by the implementing assistant, **not an independent human/agent audit**. Date: 2026-10-25. Verdict: development preview only; production release blocked by the outstanding items in SECURITY.md and TEST_RESULTS.md.
 
 ## Files inspected
