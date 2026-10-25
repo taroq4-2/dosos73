@@ -4,6 +4,11 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class FailureClassifierTest {
+    @Test fun classifiesDiskAndTlsWithoutHidingAuthentication() {
+        assertEquals(FailureCode.STORAGE_FULL, FailureClassifier.classify(Stage.TRANSFER, java.io.IOException("write failed: ENOSPC (No space left on device)")).code)
+        assertEquals(FailureCode.NETWORK_TLS, FailureClassifier.classify(Stage.TRANSFER, Exception("[SSL] record layer failure (_ssl.c:2580)")).code)
+        assertEquals(FailureCode.AUTHENTICATION_REQUIRED, FailureClassifier.classify(Stage.EXTRACT, Exception("WARNING: [SSL] record layer failure\nERROR: Sign in to confirm you’re not a bot")).code)
+    }
     @Test fun transfer403IsNotStorageFailure() {
         val failure = FailureClassifier.classify(Stage.TRANSFER, Exception("unable to download video data: HTTP Error 403: Forbidden"))
         assertEquals(Stage.TRANSFER, failure.stage)

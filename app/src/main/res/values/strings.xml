@@ -1,4 +1,6 @@
 <resources>
+    <string name="new_download">New download</string>
+    <string name="error_tls">The secure connection failed. No completed file was saved. Check the connection and try again.</string>
     <string name="error_auth_required">This source requires sign-in or human verification. No file was saved. Private credentials are not supported.</string>
     <string name="error_http403">The media server refused the download (HTTP 403). The title being available does not mean the stream is downloadable.</string>
     <string name="error_http429">The server is limiting requests (HTTP 429). Try again later.</string>

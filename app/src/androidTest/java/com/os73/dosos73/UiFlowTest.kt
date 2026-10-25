@@ -19,6 +19,9 @@ class UiFlowTest {
         bitmap.recycle()
     }
     @Test fun aboutContactAndDraftSurviveNavigation() {
+        compose.runOnIdle { Transfers.update(TransferState()) }
+        compose.onNodeWithTag("url").assertExists()
+        capture("01-main-ar.png")
         compose.onNodeWithTag("about").performScrollTo().performClick()
         capture("05-about-ar.png")
         compose.onNodeWithTag("contact").performScrollTo().performClick()

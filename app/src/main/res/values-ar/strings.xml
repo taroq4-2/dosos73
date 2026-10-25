@@ -1,4 +1,6 @@
 <resources>
+    <string name="new_download">تحميل جديد</string>
+    <string name="error_tls">تعذّر الاتصال المشفّر. لم يُحفظ ملف مكتمل. تحقق من الاتصال ثم أعد المحاولة.</string>
     <string name="error_auth_required">يتطلب المصدر تسجيل الدخول أو تحققًا بشريًا. لم يُحفظ ملف. التطبيق لا يستخدم بيانات الدخول الخاصة.</string>
     <string name="error_http403">رفض خادم الوسائط التنزيل (HTTP 403). ظهور العنوان لا يعني إتاحة تدفق الفيديو للتنزيل.</string>
     <string name="error_http429">قيّد الخادم عدد الطلبات (HTTP 429). حاول لاحقًا.</string>

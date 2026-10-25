@@ -26,14 +26,14 @@ import java.util.Locale
     Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         Box(Modifier.fillMaxSize().safeDrawingPadding().imePadding(), contentAlignment = Alignment.TopCenter) {
             Column(Modifier.widthIn(max = 560.dp).fillMaxWidth().verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(14.dp), content = content)
+                .padding(horizontal = 20.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(10.dp), content = content)
         }
     }
 }
 
 @Composable internal fun Brand() {
     Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-        Image(painterResource(R.drawable.brand), null, Modifier.size(72.dp).clip(RoundedCornerShape(20.dp)))
+        Image(painterResource(R.drawable.brand), null, Modifier.size(64.dp).clip(RoundedCornerShape(18.dp)))
         Text("dosos73", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
         Text("Download open-source OS73", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
@@ -43,7 +43,7 @@ import java.util.Locale
     screen: ScreenState, transfer: TransferState, customFolder: Boolean,
     onEdit: (String) -> Unit, onSelect: (Choice) -> Unit, onAnalyze: () -> Unit, onCancelAnalysis: () -> Unit,
     onPaste: () -> Unit, onAbout: () -> Unit, onFolder: () -> Unit, onDefaultFolder: () -> Unit,
-    onStart: () -> Unit, onCancel: () -> Unit, onOpen: () -> Unit,
+    onStart: () -> Unit, onCancel: () -> Unit, onOpen: () -> Unit, onNewDownload: () -> Unit,
 ) {
     val enabled = !screen.busy && !transfer.active
     val choices = screen.analysis?.choices.orEmpty()
@@ -57,10 +57,11 @@ import java.util.Locale
             style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
         Text(stringResource(R.string.subtitle), Modifier.fillMaxWidth(), textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
+        if (!transfer.active && transfer.phase != Phase.COMPLETE) {
         OutlinedTextField(screen.url, onEdit, Modifier.fillMaxWidth().testTag("url"), enabled = enabled,
-            label = { Text(stringResource(R.string.url)) }, maxLines = 2, shape = RoundedCornerShape(18.dp),
+            label = { Text(stringResource(R.string.url)) }, singleLine = true, shape = RoundedCornerShape(18.dp),
             textStyle = LocalTextStyle.current.copy(textDirection = TextDirection.Ltr),
-            colors = OutlinedTextFieldDefaults.colors(unfocusedContainerColor = Color.White))
+            colors = OutlinedTextFieldDefaults.colors(unfocusedContainerColor = Color.White, disabledContainerColor = Color.White))
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedButton(onPaste, enabled = enabled, modifier = Modifier.weight(1f)) { Text(stringResource(R.string.paste)) }
             TextButton({ onEdit("") }, enabled = enabled) { Text(stringResource(R.string.clear)) }
@@ -74,8 +75,10 @@ import java.util.Locale
             }
         }
         screen.error?.let { Text(stringResource(it), color = MaterialTheme.colorScheme.error) }
+        }
         if (transfer.phase != Phase.IDLE) TransferCard(transfer, onCancel, onOpen)
-        if (!transfer.active) {
+        if (transfer.phase == Phase.COMPLETE) OutlinedButton(onNewDownload, Modifier.fillMaxWidth()) { Text(stringResource(R.string.new_download)) }
+        if (!transfer.active && transfer.phase != Phase.COMPLETE) {
             screen.analysis?.let { Text(it.title, maxLines = 2, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.titleSmall) }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 listOf(Kind.VIDEO, Kind.AUDIO).forEach { kind ->

@@ -82,6 +82,7 @@ class MainActivity : ComponentActivity() {
                     onDefaultFolder = { releaseTree(); tree = null; preferences.edit().remove("tree").apply() },
                     onStart = { if (Build.VERSION.SDK_INT >= 33) notifications.launch(Manifest.permission.POST_NOTIFICATIONS) else start() },
                     onCancel = { startService(Intent(this@MainActivity, DownloadService::class.java).setAction("cancel")) },
+                    onNewDownload = { Transfers.update(TransferState()); model.edit("") },
                     onOpen = { transfer.uri?.let { uri ->
                         try { startActivity(Intent(Intent.ACTION_VIEW).setDataAndType(uri, transfer.mime).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)) }
                         catch (_: android.content.ActivityNotFoundException) { Toast.makeText(this, R.string.error_open, Toast.LENGTH_LONG).show() }
