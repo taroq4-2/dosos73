@@ -35,7 +35,7 @@ import androidx.compose.ui.unit.dp
         }
         OutlinedButton({ browse("https://github.com/taroq4-2/dosos73") }, Modifier.fillMaxWidth()) { Text(stringResource(R.string.github_project)) }
         OutlinedButton({ browse("https://os73.com") }, Modifier.fillMaxWidth()) { Text(stringResource(R.string.developer_site)) }
-        TextButton({ browse("https://github.com/taroq4-2/dosos73/blob/fix/youtube-v4/THIRD_PARTY_NOTICES.md") }) { Text(stringResource(R.string.licenses)) }
+        TextButton({ browse("https://github.com/taroq4-2/dosos73/blob/main/THIRD_PARTY_NOTICES.md") }) { Text(stringResource(R.string.licenses)) }
         Text(stringResource(R.string.preview_status), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Button(contact, Modifier.fillMaxWidth().heightIn(min = 56.dp).testTag("contact"), shape = RoundedCornerShape(18.dp)) { Text(stringResource(R.string.contact)) }
         if (noHandler) Text(stringResource(R.string.error_open), color = MaterialTheme.colorScheme.error)

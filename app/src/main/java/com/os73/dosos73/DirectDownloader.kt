@@ -19,7 +19,7 @@ class DirectDownloader(private val client: OkHttpClient = secureClient()) {
         var current = Safety.url(url)
         repeat(6) {
             val request = Request.Builder().url(current).header("Accept-Encoding", "identity")
-                .header("User-Agent", "dosos73/0.2 (Android)")
+                .header("User-Agent", "dosos73/${BuildConfig.VERSION_NAME} (Android)")
                 .apply { if (head) head(); if(probe) header("Range", "bytes=0-0") }.build()
             val call = client.newCall(request)
             activeCall = call

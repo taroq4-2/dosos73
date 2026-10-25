@@ -55,7 +55,7 @@
     <string name="github_project">المشروع على GitHub</string>
     <string name="developer_site">المطور · os73.com</string>
     <string name="licenses">التراخيص ومصادر المكونات</string>
-    <string name="preview_status">نسخة تطوير تجريبية. تنزيل YouTube لم يُعتمد بعد. راجع المستودع لنتائج الاختبارات وحدود مراجعة تراخيص المكونات.</string>
+    <string name="preview_status">الإصدار الرسمي. تتوفر التحديثات والشيفرة المصدرية وإشعارات المكونات في مستودع المشروع.</string>
     <string name="contact_notice">جهّز رسالتك في تطبيق البريد. لا تُرسل تلقائيًا. تبقى المسودة محفوظة أثناء التنقل بين هذه الصفحات.</string>
     <string name="contact_name">الاسم (اختياري)</string>
     <string name="contact_email">البريد الإلكتروني (مطلوب)</string>

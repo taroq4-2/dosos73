@@ -1,62 +1,64 @@
-# dosos73 · Download open-source OS73
+# dosos73
+### Download open-source OS73
 
 <img src="branding/logo.png" width="112" alt="شعار dosos73" />
 
-تطبيق أندرويد مفتوح المصدر لتحميل الملفات والوسائط المدعومة، بواجهة عربية وإنجليزية.
+تطبيق أندرويد مفتوح المصدر لتنزيل الملفات والوسائط المدعومة، بواجهة عربية وإنجليزية، وحفظ الملفات في التنزيلات أو المجلد الذي تختاره.
 
-**0.2.0-preview — نسخة تجريبية موقّعة بمفتاح Android Debug، وليست إصدارًا إنتاجيًا. تنزيل YouTube لم يُعتمد بعد.** ظهر رفض HTTP403 وطلب تحقق، كما ظهر خطأ TLS متقطع في اختبار محرك الوسائط. راجع [تقرير التحقيق](docs/YOUTUBE_DOWNLOAD_ROOT_CAUSE.md).
+## المميزات
 
-[صفحة الإصدار](https://github.com/taroq4-2/dosos73/releases/tag/v0.2.0-preview) · [تحميل APK التجريبي](https://github.com/taroq4-2/dosos73/releases/download/v0.2.0-preview/dosos73-0.2.0-preview-debug.apk) · [التحقق SHA256](https://github.com/taroq4-2/dosos73/releases/download/v0.2.0-preview/SHA256SUMS.txt)
+- استقبال الروابط بالمشاركة أو اللصق.
+- اختيار الصيغ والجودات التي يوفرها المصدر فعلًا.
+- تنزيل الملفات دون سقف ثابت للحجم، مع مراعاة المساحة المتاحة.
+- التحقق من سلامة الوسائط قبل إعلان اكتمال التنزيل.
+- واجهة فاتحة، تقدم فعلي، وإشعار اكتمال يتيح فتح الملف.
+- صفحة تعريف بالمشروع ونموذج تواصل يفتح تطبيق البريد.
+- دون إعلانات أو حسابات أو تحليلات سلوكية أو مراقبة للحافظة.
 
-## ما تغير
+## التنزيل والتثبيت
 
-- أزيل سقف 2 GiB من التنزيل المباشر ومحرك الوسائط والتحقق النهائي. لا يوجد حد ثابت لحجم الملف؛ تظل المساحة المتاحة وقيود النظام والمصدر سارية.
-- واجهة فاتحة: أزرار فيديو وصوت، بطاقات الجودة والصيغة والحفظ، تقدم فعلي، وبطاقة نجاح خضراء.
-- صفحتا «من نحن» و«تواصل معنا». نموذج التواصل يفتح مسودة إلى contact@os73.com أو ينسخها؛ لا يرسل بريدًا تلقائيًا.
-- محرك yt-dlp 2026.10.21 وEJS 0.8.0 مثبتان مع التحقق من البصمة؛ رسائل خاصة برفض المصدر وTLS وامتلاء التخزين.
-- تحقّق من الصوت والدقة، ومن الملف المنسوخ قبل إظهاره مكتملًا.
+[تنزيل dosos73 1.0.0 لأندرويد](https://github.com/taroq4-2/dosos73/releases/download/v1.0.0/dosos73-1.0.0.apk) · [تفاصيل الإصدار](https://github.com/taroq4-2/dosos73/releases/tag/v1.0.0) · [بصمة SHA256](https://github.com/taroq4-2/dosos73/releases/download/v1.0.0/SHA256SUMS.txt)
+
+يتطلب Android 10 أو أحدث. يدعم arm64-v8a وx86_64. الحزمة موقّعة بمفتاح إصدار مستقل.
+
+**التثبيت لأول مرة:** افتح APK واسمح بالتثبيت من المصدر الذي تستخدمه. إذا كانت لديك نسخة Preview القديمة، احذفها أولًا لاختلاف التوقيع؛ سيؤدي ذلك إلى حذف إعدادات التطبيق، وتبقى الملفات المحفوظة في مجلد التنزيلات العام. الإصدارات الرسمية اللاحقة تستخدم المفتاح نفسه.
+
+أكد مالك المشروع نجاح تنزيل YouTube على هاتفه في 26 أكتوبر 2026. اختبارات المحاكي المحلي رصدت أخطاء اتصال متقطعة؛ قد تتأثر الإتاحة بقيود المصدر والشبكة. [نتائج التحقق](docs/RELEASE_1.0.0.md).
 
 ## الاستخدام
 
-1. شارك رابطًا نصيًا مع التطبيق، أو الصقه واختر «تحليل».
-2. اختر جودة وصيغة من الخيارات التي يعيدها المصدر فعلًا. الخيارات غير المتاحة معطّلة.
-3. اختر Downloads/dosos73 أو مجلدًا آخر.
-4. ابدأ التنزيل ثم افتح الملف بعد اكتماله والتحقق منه.
+1. شارك رابطًا نصيًا واحدًا أو الصقه في التطبيق.
+2. اختر «تحليل»، ثم النوع والجودة والصيغة المتاحة.
+3. اختر مكان الحفظ.
+4. ابدأ التنزيل وافتح الملف بعد اكتماله والتحقق منه.
 
-يحتاج التنزيل إلى مساحة للملفات المؤقتة والنسخة النهائية، وقد يحتاج الدمج مساحة إضافية. لا يوجد استئناف؛ الإلغاء ثم إعادة المحاولة يبدأ من جديد. لا يوجد تحويل MP3 إضافي ما لم يوفر المصدر هذه الصيغة. لا يضمن توفر عنوان الفيديو إمكانية تنزيله.
+التنزيل يحتاج إلى مساحة للنسخة المؤقتة والملف النهائي، وقد يحتاج الدمج مساحة إضافية. التنزيل الملغى يبدأ من جديد؛ لا يوجد استئناف في النسخة الحالية. لا يضمن ظهور عنوان الفيديو إمكانية تنزيله. حمّل المحتوى الذي يحق لك حفظه فقط؛ لا يتجاوز التطبيق قيود الوصول أو DRM.
 
-لا حسابات أو إعلانات أو تحليلات أو مراقبة للحافظة. لا تجاوز لقيود الوصول أو DRM. حمّل ما تملك حق حفظه فقط.
+## صور التطبيق
 
-## صور من التطبيق الفعلي
+صور فعلية من Android15. المثال المصوّر تنزيل مباشر لعينة عامة، وليس دليل نجاح YouTube.
 
-الصور من محاكي Android 15، والتنزيل المصوّر لعينة فيديو عامة مباشرة، **وليس إثباتًا لنجاح YouTube**.
+<img src="screenshots/01-main-ar.png" width="220" alt="الرئيسية" /> <img src="screenshots/02-analyzed-ar.png" width="220" alt="الصيغ المتاحة" />
+<img src="screenshots/03-download-ar.png" width="220" alt="التنزيل" /> <img src="screenshots/04-complete-ar.png" width="220" alt="اكتمال الحفظ" />
+<img src="screenshots/05-about-ar.png" width="220" alt="من نحن" /> <img src="screenshots/06-contact-ar.png" width="220" alt="التواصل" />
 
-<img src="screenshots/01-main-ar.png" width="220" alt="الرئيسية" /> <img src="screenshots/02-analyzed-ar.png" width="220" alt="اختيار صيغة فعلية" />
-<img src="screenshots/03-download-ar.png" width="220" alt="تنزيل فعلي" /> <img src="screenshots/04-complete-ar.png" width="220" alt="ملف محفوظ" />
-<img src="screenshots/05-about-ar.png" width="220" alt="من نحن" /> <img src="screenshots/06-contact-ar.png" width="220" alt="تواصل معنا" />
+## للمطورين
 
-## الاختبارات والوثائق
-
-[نتائج V4](docs/V4_TEST_RESULTS.md) · [مراجعات الجودة العشرون](docs/V4_REVIEW_MATRIX.md) · [مراجعة الكود](docs/FINAL_CODE_AUDIT.md) · [الأمان](docs/SECURITY.md) · [الأداء](docs/PERFORMANCE.md) · [التراخيص](THIRD_PARTY_NOTICES.md)
-
-اختبارات الحجم تستخدم طول استجابة معلنًا وملفًا sparse؛ لا تمثل تنزيلًا فعليًا متعدد الغيغابايت. اختبارات CI على Android 15 و16 منفصلة عن اختبارات الإنترنت. لا توجد موافقة إصدار مستقر أو مراجعة مستقلة مكتملة.
-
-## البناء
-
-Android Studio، JDK 17 أو 21، Android SDK 35. minSdk 29، targetSdk/compileSdk 35، مع arm64-v8a وx86_64.
+Kotlin وJetpack Compose؛ Android10+؛ minSdk29 وtargetSdk35؛ arm64-v8a وx86_64. يلزم JDK17 أو21 وAndroid SDK35.
 
 ~~~sh
 ./gradlew testDebugUnitTest lintDebug assembleDebug assembleRelease
 ./gradlew connectedDebugAndroidTest
 ~~~
 
-على Windows استخدم gradlew.bat. حزمة debug قابلة للتثبيت بمفتاح اختبار؛ حزمة release المحلية غير موقعة. لا توجد مفاتيح إنتاج أو بيانات دخول في المستودع.
+على Windows استخدم gradlew.bat. اختبارات الوحدة لا تعتمد على الإنترنت؛ الاختبارات الحية منفصلة. للتوقيع اضبط DOSOS73_KEYSTORE وDOSOS73_STORE_PASSWORD في بيئة البناء. المفاتيح وبيانات الدخول غير موجودة في المستودع.
+
+[الاختبارات](docs/V4_TEST_RESULTS.md) · [الإصلاحات](docs/REVIEW_FIXES.md) · [الأمان](docs/SECURITY.md) · [الأداء](docs/PERFORMANCE.md) · [مراجعة الكود](docs/FINAL_CODE_AUDIT.md) · [التراخيص](THIRD_PARTY_NOTICES.md)
 
 ## English
 
-A native Kotlin/Compose Android downloader with Arabic/English UI, scoped storage and streaming transfers. Version 0.2.0-preview removes the fixed media-size ceiling, adds the light UI, About and mail-composer contact flow, and improves stage-specific diagnostics. Storage capacity, provider limits and Android execution limits still apply.
+dosos73 is a native Android downloader with Arabic/English UI, source-derived format selection, scoped storage and streaming transfers without a fixed file-size ceiling. Storage and source restrictions still apply.
 
-**YouTube is NOT verified fixed.** The development APK is Android Debug-signed, not production-signed. Deterministic CI covers API35/API36; network tests and documented failures are separate. No fake progress, unsupported pause/resume, automatic email sending, credential collection or authentication bypass.
+Version 1.0.0 uses a dedicated release signing key. The project owner confirmed working YouTube downloads on their phone. Automated build/device results and intermittent local emulator network failures are documented separately. Upgrading from the older debug-signed preview requires uninstalling that preview first.
 
-First-party code: GPL-3.0-or-later. Branding and third-party components have separate terms; see the notices and outstanding native audit limitations. Developer: [OS73](https://os73.com).
-
+First-party code: GPL-3.0-or-later. Dependencies and branding have separate terms. Developer: [OS73](https://os73.com). Contact: contact@os73.com.

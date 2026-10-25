@@ -1,6 +1,6 @@
 # Reliability review — 2026-10-26
 
-The supplied review was treated as hypotheses, not a literal implementation plan. The owner retains the no-fixed-size-cap requirement and approved light default. Official release remains the goal; it requires verified YouTube download and playback.
+The supplied review was treated as hypotheses, not a literal implementation plan. The owner retains the no-fixed-size-cap requirement and approved light default. The owner confirmed successful YouTube downloads on their phone on 2026-10-26 and requested proceeding to release preparation.
 
 | Area | Change | Evidence / limits |
 |---|---|---|
@@ -19,7 +19,7 @@ Repeat Android extraction failed while fetching the YouTube player script: TLS r
 
 Controlled fixed public fixture: default HTTP handler succeeded once and failed once; legacy failed twice. Default TLS/TLS1.2 and software-crypto comparisons failed intermittently too. No production handler, TLS or CPU override was justified or applied. Diagnostic tests completing means observations were recorded, not that every transfer succeeded. Certificate verification remains enabled.
 
-No cookies, authentication bypass, token spoofing or trust-all certificate configuration. Complete YouTube download/merge/publication/playback still has not passed. Stable release is blocked.
+No cookies, authentication bypass, token spoofing or trust-all certificate configuration. The owner subsequently reported YouTube downloads working correctly on their phone. This is user-reported device acceptance; the local emulator TLS failures above remain recorded and are not presented as successful automated tests.
 
 ## Deliberate deviations from attachment
 

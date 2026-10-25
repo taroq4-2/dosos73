@@ -1,4 +1,4 @@
-# Licensing inventory — development preview
+# Third-party notices and source inventory
 
 V4 investigation branch pins the official yt-dlp 2026.10.21 zipapp with EJS 0.8.0 inside the APK. Original yt-dlp/EJS code uses Unlicense; the zipapp additionally includes ISC/MIT components. Upstream notices are preserved in docs/licenses/. SHA256 is recorded in BundledEngine.kt and YOUTUBE_DOWNLOAD_ROOT_CAUSE.md. This does not complete the native wrapper/FFmpeg audit.
 
@@ -16,7 +16,7 @@ First-party Kotlin, resources and build scripts are offered under GPL-3.0-or-lat
 | JUnit | 4.13.2, tests only | EPL-1.0, https://github.com/junit-team/junit4 |
 | Gradle Wrapper | 8.9 | Apache-2.0, https://github.com/gradle/gradle |
 
-The full transitive/native source-correspondence audit is not complete. Public production binary distribution remains blocked until the exact bundled native licenses, notices and corresponding-source obligations are verified. A linked upstream repository alone does not establish complete compliance for every binary.
+The full transitive/native source-correspondence audit is not complete. The inventory does not claim a completed legal audit. Exact upstream build recipes are linked below; component licenses remain applicable independently of the first-party license.
 
 ## User-supplied branding
 

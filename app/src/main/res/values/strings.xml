@@ -55,7 +55,7 @@
     <string name="github_project">Project on GitHub</string>
     <string name="developer_site">Developer · os73.com</string>
     <string name="licenses">Licenses and component notices</string>
-    <string name="preview_status">Development preview. YouTube downloading is not yet verified. See the repository for test results and component licensing limitations.</string>
+    <string name="preview_status">Official release. See the project repository for updates, source code and component notices.</string>
     <string name="contact_notice">Prepare a message in your mail app. Nothing is sent automatically. Your draft stays while navigating these pages.</string>
     <string name="contact_name">Name (optional)</string>
     <string name="contact_email">Email address (required)</string>

@@ -10,13 +10,25 @@ android {
         applicationId = "com.os73.dosos73"
         minSdk = 29
         targetSdk = 35
-        versionCode = 3
-        versionName = "0.2.1-rc1"
+        versionCode = 4
+        versionName = "1.0.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         ndk { abiFilters += listOf("arm64-v8a", "x86_64") }
     }
+    signingConfigs {
+        val keyPath = System.getenv("DOSOS73_KEYSTORE")
+        if (!keyPath.isNullOrBlank()) {
+            create("production") {
+                storeFile = file(keyPath)
+                storePassword = System.getenv("DOSOS73_STORE_PASSWORD")
+                keyAlias = "dosos73"
+                keyPassword = System.getenv("DOSOS73_STORE_PASSWORD")
+            }
+        }
+    }
     buildTypes {
         release {
+            signingConfig = signingConfigs.findByName("production")
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
