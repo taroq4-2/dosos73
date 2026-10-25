@@ -2,6 +2,12 @@
 
 Status: **NOT FIXED**. A complete authorized YouTube download has NOT passed on the Android test device. This report distinguishes reproduced facts from hypotheses.
 
+## Current preview update
+
+The user subsequently requested removal of the size ceiling and completion of the remaining prompt. Version 0.2.0-preview therefore includes the light UI and About/Contact pages. The former 2GiB guards were removed from DirectDownloader, yt-dlp arguments, and OutputStore. Nonempty/media integrity checks remain. Historical size-limit observations below describe the earlier implementation, not the preview.
+
+Two new API35 live suites still encountered `[SSL] record layer failure` on the non-YouTube generic video fixture, after earlier runs of that fixture had passed. This demonstrates that TLS failures are not exclusive to YouTube in this environment; it does not establish their exact cause. The generic failure is recorded rather than discarded. A specific NETWORK_TLS message was added, with authentication taking precedence when both warnings and an explicit sign-in challenge are present. Direct download, MediaStore, UI and deterministic tests passed separately. YouTube remains NOT FIXED and no stable approval is issued.
+
 ## Baseline
 
 Commit 5354664, API35 x86_64 emulator, wrapper 0.18.1. Test: Blender Big Buck Bunny (`aqz-KE-bpKQ`). Actual installed APK extracted formats successfully, entered native download, then returned `HTTP Error 403: Forbidden` after 40.981 seconds. Merge, output validation and MediaStore publication were not reached. The user's screenshot URL was not downloaded; this test reproduces its failure class, not its exact media.

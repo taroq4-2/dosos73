@@ -1,0 +1,2 @@
+ +0% 8666/com.os73.dosos73: 0% user + 0% kernel
+11% TOTAL: 0.8% user + 8% kernel + 2% iowait + 0.4% softirq

@@ -1,0 +1,2 @@
+Saved MediaStore video: durationMs=52209, dimensions=854x480, playedPositionMs=39
+Android MediaPlayer playback passed; this is not a YouTube download or an external player UI test.

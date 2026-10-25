@@ -1,0 +1,4 @@
+com.os73.dosos73.ContactDraftTest: tests=2; failures=0
+com.os73.dosos73.DirectDownloaderTest: tests=10; failures=0
+com.os73.dosos73.FailureClassifierTest: tests=5; failures=0
+com.os73.dosos73.SafetyTest: tests=6; failures=0

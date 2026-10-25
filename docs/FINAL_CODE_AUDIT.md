@@ -1,5 +1,9 @@
 # First-party code audit
 
+## 0.2.0-preview completion pass
+
+The later user instruction removes the fixed file-size cap and authorizes the remaining UI work. Reviewed AppUi, InfoScreens, ContactDraft and the activity integration: light default, responsive scrolling, real transfer state, contact input limits, encoded email intent, copy fallback, saved draft navigation and no automatic sending. Removed cap checks from direct/native/output paths while retaining integrity checks. Default destination now releases old SAF permission. OutputStore verifies the staged URI before publishing. Added disk-full/TLS classification and overflow-resistant speed arithmetic. The twenty self-review perspectives are recorded in V4_REVIEW_MATRIX.md; this is not independent approval. See V4_TEST_RESULTS.md for actual outcomes. Stable release remains blocked by YouTube and other documented gates.
+
 ## V4 investigation review
 
 Scope: BundledEngine, PipelineError, MediaEngine, DownloadService, OutputStore, MainViewModel, MainActivity, Models and added tests. Confirmed generic-error reporting defect corrected with stage-specific messages. Version-pinned asset replaces stale cached engine atomically after hash verification. No network updater introduced. Cancellation exceptions remain cancellations rather than being wrapped into download failures. Expected audio and height now participate in output verification. Native error-message strings are classified in memory, never written to app diagnostics. No significant duplicate subsystem removed; no independent review claimed. YouTube end-to-end and the requested 20-review framework remain incomplete. UI redesign is not claimed complete.

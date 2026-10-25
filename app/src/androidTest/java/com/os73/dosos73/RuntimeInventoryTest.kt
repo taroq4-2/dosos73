@@ -9,9 +9,11 @@ import java.util.concurrent.TimeUnit
 class RuntimeInventoryTest {
     @Test fun bundledComponentsExecute() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val initializationStart = android.os.SystemClock.elapsedRealtime()
         BundledEngine.install(context)
         com.yausername.youtubedl_android.YoutubeDL.init(context)
         com.yausername.ffmpeg.FFmpeg.getInstance().init(context)
+        val initializationMs = android.os.SystemClock.elapsedRealtime() - initializationStart
         val native = context.applicationInfo.nativeLibraryDir
         val base = File(context.noBackupFilesDir, "youtubedl-android")
         val python = File(base, "packages/python/usr")
@@ -32,7 +34,7 @@ class RuntimeInventoryTest {
         val qjs = run("$native/libqjs.so", "-e", "console.log('quickjs-execution-ok')")
         assertTrue(qjs.contains("quickjs-execution-ok"))
         val ffmpeg = run("$native/libffmpeg.so", "-version").lineSequence().first()
-        val report = "ABI=${android.os.Build.SUPPORTED_ABIS.first()}\nAndroid=${android.os.Build.VERSION.SDK_INT}\nPython, yt-dlp, EJS:\n$versions\n$qjs\n$ffmpeg\n"
+        val report = "ABI=${android.os.Build.SUPPORTED_ABIS.first()}\nAndroid=${android.os.Build.VERSION.SDK_INT}\nInitializationMs=$initializationMs (existing installed engine/runtime files)\nPython, yt-dlp, EJS:\n$versions\n$qjs\n$ffmpeg\n"
         val folder = File(context.getExternalFilesDir(null), "evidence").apply { mkdirs() }
         File(folder,"runtime-inventory.txt").writeText(report)
     }
