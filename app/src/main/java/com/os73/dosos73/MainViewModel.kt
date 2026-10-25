@@ -25,6 +25,12 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         try { edit(Safety.shared(text)); analyze() }
         catch (_: Exception) { mutable.value = mutable.value.copy(error = R.string.error_url) }
     }
+    fun paste(text: String?) {
+        if (mutable.value.busy || Transfers.state.value.active) return
+        if (text.isNullOrBlank() || !Regex("https?://", RegexOption.IGNORE_CASE).containsMatchIn(text)) {
+            mutable.value = mutable.value.copy(error = R.string.nothing_to_paste)
+        } else receive(text)
+    }
     fun select(choice: Choice) { if (choice in mutable.value.analysis?.choices.orEmpty()) mutable.value = mutable.value.copy(selected = choice) }
     fun invalidateFormats() { mutable.value = mutable.value.copy(analysis = null, selected = null) }
     fun analyze() {

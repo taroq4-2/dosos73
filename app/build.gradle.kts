@@ -10,8 +10,8 @@ android {
         applicationId = "com.os73.dosos73"
         minSdk = 29
         targetSdk = 35
-        versionCode = 4
-        versionName = "1.0.0"
+        versionCode = 5
+        versionName = "1.0.1"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         ndk { abiFilters += listOf("arm64-v8a", "x86_64") }
     }
@@ -67,3 +67,19 @@ dependencies {
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
 }
+
+// Catch missing translations in local checks and CI without a runtime dependency.
+val verifyTranslations by tasks.registering {
+    inputs.files("src/main/res/values/strings.xml", "src/main/res/values-ar/strings.xml")
+    doLast {
+        fun keys(path: String): Set<String> {
+            val document = javax.xml.parsers.DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(file(path))
+            val strings = document.getElementsByTagName("string")
+            val keys = (0 until strings.length).map { (strings.item(it) as org.w3c.dom.Element).getAttribute("name") }
+            check(keys.size == keys.toSet().size) { "Duplicate string keys in $path" }
+            return keys.toSet()
+        }
+        check(keys("src/main/res/values/strings.xml") == keys("src/main/res/values-ar/strings.xml")) { "Arabic and English string keys differ" }
+    }
+}
+tasks.named("preBuild") { dependsOn(verifyTranslations) }

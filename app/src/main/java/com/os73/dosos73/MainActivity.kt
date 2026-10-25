@@ -76,8 +76,8 @@ class MainActivity : ComponentActivity() {
                 "contact" -> ContactScreen { page = "about" }
                 else -> HomeScreen(screen, transfer, tree != null, model::edit, model::select, model::analyze,
                     model::cancelAnalysis, onPaste = {
-                        getSystemService(ClipboardManager::class.java).primaryClip?.getItemAt(0)
-                            ?.coerceToText(this@MainActivity)?.toString()?.let(model::receive)
+                        model.paste(getSystemService(ClipboardManager::class.java).primaryClip?.takeIf { it.itemCount > 0 }?.getItemAt(0)
+                            ?.text?.toString())
                     }, onAbout = { page = "about" }, onFolder = { picker.launch(tree) },
                     onDefaultFolder = { releaseTree(); tree = null; preferences.edit().remove("tree").apply() },
                     onStart = { if (Build.VERSION.SDK_INT >= 33) notifications.launch(Manifest.permission.POST_NOTIFICATIONS) else start() },
@@ -91,4 +91,3 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
-

@@ -20,7 +20,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import java.util.Locale
+import androidx.compose.ui.platform.LocalConfiguration
 
 @Composable internal fun Page(content: @Composable ColumnScope.() -> Unit) {
     Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
@@ -34,8 +34,8 @@ import java.util.Locale
 @Composable internal fun Brand() {
     Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
         Image(painterResource(R.drawable.brand), null, Modifier.size(64.dp).clip(RoundedCornerShape(18.dp)))
-        Text("dosos73", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-        Text("Download open-source OS73", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(stringResource(R.string.brand_name), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+        Text(stringResource(R.string.app_name), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 
@@ -63,7 +63,7 @@ import java.util.Locale
             textStyle = LocalTextStyle.current.copy(textDirection = TextDirection.Ltr),
             colors = OutlinedTextFieldDefaults.colors(unfocusedContainerColor = Color.White, disabledContainerColor = Color.White))
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedButton(onPaste, enabled = enabled, modifier = Modifier.weight(1f)) { Text(stringResource(R.string.paste)) }
+            OutlinedButton(onPaste, enabled = enabled, modifier = Modifier.weight(1f).testTag("paste")) { Text(stringResource(R.string.paste)) }
             TextButton({ onEdit("") }, enabled = enabled) { Text(stringResource(R.string.clear)) }
             Button(onAnalyze, enabled = enabled && screen.url.isNotBlank(), modifier = Modifier.testTag("analyze")) { Text(stringResource(R.string.analyze)) }
         }
@@ -105,8 +105,8 @@ import java.util.Locale
             OutlinedCard(onClick = onFolder, enabled = enabled, shape = RoundedCornerShape(18.dp), modifier = Modifier.fillMaxWidth()) {
                 Row(Modifier.fillMaxWidth().padding(18.dp), verticalAlignment = Alignment.CenterVertically) {
                     Text(stringResource(R.string.destination), Modifier.weight(1f), fontWeight = FontWeight.SemiBold)
-                    Text(if (customFolder) stringResource(R.string.custom_folder) else "Downloads", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text("  ▾")
+                    Text(if (customFolder) stringResource(R.string.custom_folder) else stringResource(R.string.default_folder), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(stringResource(R.string.dropdown_indicator))
                 }
             }
             if (customFolder) TextButton(onDefaultFolder, enabled = enabled) { Text(stringResource(R.string.default_folder)) }
@@ -131,21 +131,15 @@ import java.util.Locale
             Row(Modifier.fillMaxWidth().padding(18.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text(label, Modifier.weight(1f), fontWeight = FontWeight.SemiBold)
                 Text(value, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text("  ▾")
+                Text(stringResource(R.string.dropdown_indicator))
             }
         }
         DropdownMenu(expanded, { expanded = false }) { items { expanded = false } }
     }
 }
 
-internal fun bytesLabel(bytes: Long): String = when {
-    bytes >= 1024L * 1024 * 1024 -> String.format(Locale.US, "%.2f GiB", bytes.toDouble() / (1024L * 1024 * 1024))
-    bytes >= 1024 * 1024 -> String.format(Locale.US, "%.1f MiB", bytes.toDouble() / (1024 * 1024))
-    bytes >= 1024 -> String.format(Locale.US, "%.1f KiB", bytes.toDouble() / 1024)
-    else -> "$bytes B"
-}
-
 @Composable private fun TransferCard(state: TransferState, cancel: () -> Unit, open: () -> Unit) {
+    val locale = LocalConfiguration.current.locales[0]
     val complete = state.phase == Phase.COMPLETE
     val color = if (complete) Color(0xFFEAF8F1) else Color.White
     Card(Modifier.fillMaxWidth().testTag("transfer"), shape = RoundedCornerShape(20.dp),
@@ -163,7 +157,7 @@ internal fun bytesLabel(bytes: Long): String = when {
                     if (state.percent == null) CircularProgressIndicator(Modifier.fillMaxSize(), strokeWidth = 5.dp)
                     else {
                         CircularProgressIndicator(progress = { state.percent }, Modifier.fillMaxSize(), strokeWidth = 5.dp)
-                        Text("${(state.percent * 100).toInt()}%", style = MaterialTheme.typography.labelMedium)
+                        Text(percentLabel(state.percent, locale), style = MaterialTheme.typography.labelMedium)
                     }
                 }
             }
@@ -172,15 +166,15 @@ internal fun bytesLabel(bytes: Long): String = when {
                 else LinearProgressIndicator(progress = { state.percent }, Modifier.fillMaxWidth())
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
-                        if (state.bytes > 0) Text(bytesLabel(state.bytes) + (state.total?.let { " / ${bytesLabel(it)}" } ?: ""), style = MaterialTheme.typography.bodySmall)
-                        state.bytesPerSecond?.takeIf { it > 0 }?.let { Text("${bytesLabel(it)}/s", style = MaterialTheme.typography.bodySmall) }
+                        if (state.bytes > 0) Text(state.total?.let { stringResource(R.string.transfer_amount, bytesLabel(state.bytes, locale), bytesLabel(it, locale)) } ?: bytesLabel(state.bytes, locale), style = MaterialTheme.typography.bodySmall)
+                        state.bytesPerSecond?.takeIf { it > 0 }?.let { Text(stringResource(R.string.speed_value, bytesLabel(it, locale)), style = MaterialTheme.typography.bodySmall) }
                     }
                     OutlinedButton(cancel) { Text(stringResource(R.string.cancel)) }
                 }
             }
             state.error?.let { Text(stringResource(it), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium) }
             if (complete) Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(bytesLabel(state.bytes), Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
+                Text(bytesLabel(state.bytes, locale), Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
                 OutlinedButton(open) { Text(stringResource(R.string.open)) }
             }
         }

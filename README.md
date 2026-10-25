@@ -17,13 +17,15 @@
 
 ## التنزيل والتثبيت
 
-[تنزيل dosos73 1.0.0 لأندرويد](https://github.com/taroq4-2/dosos73/releases/download/v1.0.0/dosos73-1.0.0.apk) · [تفاصيل الإصدار](https://github.com/taroq4-2/dosos73/releases/tag/v1.0.0) · [بصمة SHA256](https://github.com/taroq4-2/dosos73/releases/download/v1.0.0/SHA256SUMS.txt)
+[تنزيل dosos73 1.0.1 لأندرويد](https://github.com/taroq4-2/dosos73/releases/download/v1.0.1/dosos73-1.0.1.apk) · [تفاصيل الإصدار](https://github.com/taroq4-2/dosos73/releases/tag/v1.0.1) · [بصمة SHA256](https://github.com/taroq4-2/dosos73/releases/download/v1.0.1/SHA256SUMS.txt)
 
 يتطلب Android 10 أو أحدث. يدعم arm64-v8a وx86_64. الحزمة موقّعة بمفتاح إصدار مستقل.
 
 **التثبيت لأول مرة:** افتح APK واسمح بالتثبيت من المصدر الذي تستخدمه. إذا كانت لديك نسخة Preview القديمة، احذفها أولًا لاختلاف التوقيع؛ سيؤدي ذلك إلى حذف إعدادات التطبيق، وتبقى الملفات المحفوظة في مجلد التنزيلات العام. الإصدارات الرسمية اللاحقة تستخدم المفتاح نفسه.
 
 أكد مالك المشروع نجاح تنزيل YouTube على هاتفه في 26 أكتوبر 2026. اختبارات المحاكي المحلي رصدت أخطاء اتصال متقطعة؛ قد تتأثر الإتاحة بقيود المصدر والشبكة. [نتائج التحقق](docs/RELEASE_1.0.0.md).
+
+الإصدار 1.0.1 يحسّن توافق فحص الروابط، وتنسيق الأرقام العربية، ورسائل اللصق وأيقونة التطبيق. [تفاصيل المراجعة والإصلاحات](docs/REVIEW_1.0.1.md).
 
 ## الاستخدام
 
@@ -59,6 +61,6 @@ Kotlin وJetpack Compose؛ Android10+؛ minSdk29 وtargetSdk35؛ arm64-v8a وx86
 
 dosos73 is a native Android downloader with Arabic/English UI, source-derived format selection, scoped storage and streaming transfers without a fixed file-size ceiling. Storage and source restrictions still apply.
 
-Version 1.0.0 uses a dedicated release signing key. The project owner confirmed working YouTube downloads on their phone. Automated build/device results and intermittent local emulator network failures are documented separately. Upgrading from the older debug-signed preview requires uninstalling that preview first.
+Version 1.0.1 uses a dedicated release signing key. The project owner confirmed working YouTube downloads on their phone. Automated build/device results and intermittent local emulator network failures are documented separately. Upgrading from the older debug-signed preview requires uninstalling that preview first.
 
 First-party code: GPL-3.0-or-later. Dependencies and branding have separate terms. Developer: [OS73](https://os73.com). Contact: contact@os73.com.
