@@ -4,7 +4,7 @@ Threat model: untrusted URL/share text, remote metadata, remote file contents an
 
 No shell command string is constructed from user input. Native requests use structured wrapper options, fixed output paths and allowlisted format IDs. No cookies, credentials, DRM bypass, Accessibility, overlays, all-files permission or background clipboard monitoring.
 
-Cleartext is enabled to support explicitly supplied public HTTP files and the loopback proxy. Do not transmit secrets in HTTP URLs. No trust-all TLS verifier is installed. Direct downloads are capped at 2 GiB and metadata parsing at 4 MiB / 1000 formats.
+Cleartext is enabled to support explicitly supplied public HTTP files and the loopback proxy. Do not transmit secrets in HTTP URLs. No trust-all TLS verifier is installed. Media downloads have no fixed size cap. Metadata parsing remains limited to 4 MiB / 1000 formats; these are metadata protections, not video-size limits.
 
 ## Remaining security gates
 
@@ -16,3 +16,4 @@ Cleartext is enabled to support explicitly supplied public HTTP files and the lo
 - Android service lifecycle and OS stop behavior require tests beyond normal cancellation.
 
 These are production release blockers. The preview must not be represented as security certified or fully MASVS compliant. No raw URLs or native error strings are logged by first-party code.
+

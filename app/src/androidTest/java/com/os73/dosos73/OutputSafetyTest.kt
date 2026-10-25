@@ -9,6 +9,52 @@ import java.io.File
 
 @RunWith(AndroidJUnit4::class)
 class OutputSafetyTest {
+    @Test fun publishesExactBytesToMediaStore() = kotlinx.coroutines.runBlocking {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val file = File(context.cacheDir, "publication-test.bin")
+        var uri: android.net.Uri? = null
+        try {
+            file.writeText("verified publication fixture")
+            val choice = Choice("direct", Kind.FILE, "bin", "Original")
+            val analysis = Analysis("https://example.com/file", "publication-test", listOf(choice), true)
+            val store = OutputStore(context)
+            store.validate(file, Kind.FILE)
+            uri = store.save(file, DownloadTask(analysis, choice, null)).first
+            assertEquals(file.readText(), context.contentResolver.openInputStream(uri!!)!!.bufferedReader().use { it.readText() })
+        } finally { uri?.let { context.contentResolver.delete(it, null, null) }; file.delete() }
+    }
+    @Test fun doubleTapHasOneOwner() {
+        val choice = Choice("direct", Kind.FILE, "bin", "Original")
+        val task = DownloadTask(Analysis("https://example.com/file", "test", listOf(choice), true), choice, null)
+        Transfers.update(TransferState())
+        try {
+            assertTrue(Transfers.reserve(task))
+            assertFalse(Transfers.reserve(task))
+            assertEquals(task, Transfers.take())
+            assertNull(Transfers.take())
+        } finally { Transfers.update(TransferState()) }
+    }
+    @Test fun videoOnlyFormatRequiresCompatibleAudio() {
+        val json = org.json.JSONObject("""{"formats":[
+          {"format_id":"137","ext":"mp4","height":1080,"vcodec":"avc1","acodec":"none","protocol":"https","url":"https://example.com/v"},
+          {"format_id":"140","ext":"m4a","vcodec":"none","acodec":"aac","protocol":"https","url":"https://example.com/a"}
+        ]}""")
+        val video = MediaEngine.mapFormats(json).first { it.kind == Kind.VIDEO }
+        assertEquals("137+140", video.id)
+        assertEquals(1080, video.expectedHeight)
+        assertTrue(video.expectsAudio)
+        json.getJSONArray("formats").remove(1)
+        assertTrue(MediaEngine.mapFormats(json).isEmpty())
+    }
+    @Test fun validatesSparseFileAboveFormerSizeCap() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val file = File(context.cacheDir, "large-sparse-test.bin")
+        try {
+            java.io.RandomAccessFile(file, "rw").use { it.setLength(2147483649L) }
+            OutputStore(context).validate(file, Kind.FILE)
+            assertEquals(2147483649L, file.length())
+        } finally { file.delete() }
+    }
     @Test fun rejectsEmptyAndFakeMedia() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val file = File(context.cacheDir, "invalid-test.mp4")

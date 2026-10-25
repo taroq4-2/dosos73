@@ -3,7 +3,7 @@ package com.os73.dosos73
 enum class Stage { INITIALIZE, EXTRACT, TRANSFER, MERGE, VERIFY, PUBLISH }
 enum class FailureCode { AUTHENTICATION_REQUIRED, HTTP_403, HTTP_429, FORMAT_UNAVAILABLE, JS_RUNTIME_UNAVAILABLE, EJS_COMPONENT_UNAVAILABLE,
     NETWORK_TIMEOUT, DOWNLOAD_INTERRUPTED, MERGE_FAILED, OUTPUT_EMPTY, OUTPUT_VERIFICATION_FAILED,
-    STORAGE_PERMISSION_DENIED, OUTPUT_WRITE_FAILED, EXTRACTION_FAILED, DOWNLOAD_FAILED }
+    STORAGE_PERMISSION_DENIED, STORAGE_FULL, OUTPUT_WRITE_FAILED, EXTRACTION_FAILED, DOWNLOAD_FAILED }
 
 class PipelineException(val stage: Stage, val code: FailureCode, cause: Throwable? = null) :
     Exception("${stage.name}:${code.name}", cause)
@@ -13,6 +13,7 @@ object FailureClassifier {
         if (error is PipelineException) return error
         val message = error.message.orEmpty().lowercase()
         val code = when {
+            "enospc" in message || "no space left on device" in message -> FailureCode.STORAGE_FULL
             error is SecurityException -> FailureCode.STORAGE_PERMISSION_DENIED
             "sign in to confirm" in message || "only works when logged-in" in message || "login required" in message -> FailureCode.AUTHENTICATION_REQUIRED
             Regex("(?:http(?: error)?|status(?: code)?)[ :]+403\\b").containsMatchIn(message) -> FailureCode.HTTP_403
@@ -32,6 +33,7 @@ object FailureClassifier {
 }
 
 fun PipelineException.messageResource(): Int = when (code) {
+    FailureCode.STORAGE_FULL -> R.string.error_disk_full
     FailureCode.AUTHENTICATION_REQUIRED -> R.string.error_auth_required
     FailureCode.HTTP_403 -> R.string.error_http403
     FailureCode.HTTP_429 -> R.string.error_http429

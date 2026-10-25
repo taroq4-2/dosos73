@@ -17,7 +17,7 @@ import java.util.UUID
 
 class OutputStore(private val context: Context) {
     fun validate(file: File, kind: Kind, expectedHeight: Int? = null, expectsAudio: Boolean = false) {
-        require(file.isFile && file.length() in 1..Safety.MAX_BYTES)
+        require(file.isFile && file.length() > 0)
         if (kind != Kind.FILE) MediaMetadataRetriever().use { retriever ->
             retriever.setDataSource(file.absolutePath)
             require((retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLongOrNull() ?: 0) > 0)
@@ -57,6 +57,10 @@ class OutputStore(private val context: Context) {
                 output.flush()
             } ?: throw IOException("Cannot write output")
             currentCoroutineContext().ensureActive()
+            // Verify the staged destination before exposing it as a completed download.
+            resolver.openFileDescriptor(uri, "r")?.use { descriptor ->
+                if (descriptor.statSize >= 0 && descriptor.statSize != file.length()) throw IOException("Output size mismatch")
+            } ?: throw IOException("Output cannot be opened")
             val finalUri = if (document != null) {
                 // Unique suffix prevents provider-dependent replacement of an existing user file.
                 val unique = name.substringBeforeLast('.') + "-${UUID.randomUUID().toString().take(8)}." + task.choice.extension

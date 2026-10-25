@@ -20,6 +20,7 @@ class DownloadService : Service() {
     private val direct = DirectDownloader()
     private val media by lazy { MediaEngine(this) }
     private var lastNotification = 0L
+    private var detail = ""
     override fun onBind(intent: Intent?): IBinder? = null
     override fun onCreate() {
         super.onCreate()
@@ -30,6 +31,7 @@ class DownloadService : Service() {
         if (intent?.action == "cancel") { cancelTransfer(); return START_NOT_STICKY }
         if (job?.isActive == true) return START_NOT_STICKY
         val task = Transfers.take() ?: run { stopSelf(); return START_NOT_STICKY }
+        detail = listOfNotNull(task.choice.expectedHeight?.let { "${it}p" }, task.choice.extension.uppercase()).joinToString(" · ")
         startForeground(73, notification(Transfers.state.value), ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
         job = scope.launch {
             val directory = File(cacheDir, "transfer-${UUID.randomUUID()}")
@@ -76,7 +78,7 @@ class DownloadService : Service() {
         return START_NOT_STICKY
     }
     private fun publish(state: TransferState) {
-        Transfers.update(state)
+        Transfers.update(state.copy(detail = detail))
         val now = System.currentTimeMillis()
         if (now - lastNotification > 1000) {
             lastNotification = now

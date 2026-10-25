@@ -31,17 +31,16 @@ class DirectDownloaderTest {
         engine.download("https://example.com/file", file) { _, _, _ -> }
         assertEquals("chunked fixture", file.readText())
     }
-    @Test fun rejectsDeclaredSizeAboveTwoGiBBeforeWriting() = fixture { server, engine, file ->
-        assertEquals(2147483648L, Safety.MAX_BYTES)
-        server.enqueue(MockResponse().setBody("x").setHeader("Content-Length", Safety.MAX_BYTES + 1)
+    @Test fun sizeAboveTwoGiBProceedsToTransferWithoutFixedCap() = fixture { server, engine, file ->
+        server.enqueue(MockResponse().setBody("x").setHeader("Content-Length", 2147483649L)
             .setSocketPolicy(SocketPolicy.DISCONNECT_AT_END))
         val error = runCatching { engine.download("https://example.com/file", file) { _, _, _ -> } }.exceptionOrNull()
-        assertTrue("Oversize response must hit size guard", error is IllegalArgumentException)
-        assertEquals(0L, file.length())
+        assertTrue("Large size must proceed to transfer, then reject truncation", error is java.io.IOException)
+        assertEquals(1L, file.length())
     }
     @Test fun exactTwoGiBPassesSizeGuardButTruncatedBodyFailsTransfer() = fixture { server, engine, file ->
         // Advertise the boundary without allocating or transferring two GiB.
-        server.enqueue(MockResponse().setBody("x").setHeader("Content-Length", Safety.MAX_BYTES)
+        server.enqueue(MockResponse().setBody("x").setHeader("Content-Length", 2147483648L)
             .setSocketPolicy(SocketPolicy.DISCONNECT_AT_END))
         val error = runCatching { engine.download("https://example.com/file", file) { _, _, _ -> } }.exceptionOrNull()
         assertTrue("Boundary must proceed to transfer, then reject truncation", error is java.io.IOException)

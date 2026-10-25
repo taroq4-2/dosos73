@@ -5,7 +5,6 @@ import java.net.URI
 import java.text.Normalizer
 
 object Safety {
-    const val MAX_BYTES = 2L * 1024 * 1024 * 1024
     fun url(input: String): String {
         require(input.length <= 8192 && input.none { it.isISOControl() })
         val u = URI(input.trim())

@@ -56,7 +56,6 @@ class DirectDownloader(private val client: OkHttpClient = secureClient()) {
             val mime = response.header("Content-Type").orEmpty()
             if (mime.startsWith("text/html")) throw IOException("HTML is not a file")
             val total = body.contentLength().takeIf { it >= 0 }
-            require(total == null || total <= Safety.MAX_BYTES)
             var count = 0L
             var lastBytes = 0L
             var last = System.nanoTime()
@@ -67,11 +66,10 @@ class DirectDownloader(private val client: OkHttpClient = secureClient()) {
                     val n = input.read(buffer)
                     if (n == -1) break
                     count += n
-                    if (count > Safety.MAX_BYTES) throw IOException("File exceeds limit")
                     output.write(buffer, 0, n)
                     val now = System.nanoTime()
                     if (now - last > 250_000_000) {
-                        progress(count, total, ((count-lastBytes)*1_000_000_000/(now-last)))
+                        progress(count, total, ((count-lastBytes).toDouble()*1_000_000_000/(now-last)).toLong())
                         last = now; lastBytes = count
                     }
                 }

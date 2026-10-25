@@ -44,5 +44,26 @@
     <string name="error_download">تعذّر التنزيل أو التحقق من الوسائط. لم يُحفظ ملف مكتمل.</string>
     <string name="error_start">تعذّر بدء التحميل على أندرويد. أبقِ التطبيق ظاهرًا وحاول مجددًا.</string>
     <string name="error_open">لا يوجد تطبيق لفتح هذا النوع من الملفات.</string>
-    <string name="notice">حمّل المحتوى المسموح لك بحفظه فقط. الحد التجريبي: ٢ غيغابايت للملف. الوسائط عبر HTTPS فقط. يبدأ التنزيل الملغى من جديد عند إعادة المحاولة.</string>
+    <string name="notice">لا يوجد حد ثابت لحجم الملف. التنزيل مرتبط بالمساحة المتاحة وقيود المصدر. حمّل المحتوى المسموح لك بحفظه فقط. يبدأ التنزيل الملغى من جديد عند إعادة المحاولة.</string>
+    <string name="analyze_first">حلّل الرابط أولًا</string>
+    <string name="about">من نحن</string>
+    <string name="back">رجوع</string>
+    <string name="contact">تواصل معنا</string>
+    <string name="about_description">تطبيق dosos73 هو مشروع مفتوح المصدر بالكامل، تم تطويره لتوفير أداة مجانية وبسيطة لتنزيل الملفات والوسائط المدعومة.\n\nنقدم هذا التطبيق بوصفه خدمة مجتمعية مجانية فقط، دون أهداف ربحية أو إعلانات أو اشتراكات مدفوعة.\n\nالكود المصدري للتطبيق متاح للمراجعة والمساهمة عبر GitHub، مع توثيق المكتبات والمكونات البرمجية المستخدمة ومصادرها وتراخيصها.\n\nالمطور: OS73 — os73.com</string>
+    <string name="github_project">المشروع على GitHub</string>
+    <string name="developer_site">المطور · os73.com</string>
+    <string name="licenses">التراخيص ومصادر المكونات</string>
+    <string name="preview_status">نسخة تطوير تجريبية. تنزيل YouTube لم يُعتمد بعد. راجع المستودع لنتائج الاختبارات وحدود مراجعة تراخيص المكونات.</string>
+    <string name="contact_notice">جهّز رسالتك في تطبيق البريد. لا تُرسل تلقائيًا. تبقى المسودة محفوظة أثناء التنقل بين هذه الصفحات.</string>
+    <string name="contact_name">الاسم (اختياري)</string>
+    <string name="contact_email">البريد الإلكتروني (مطلوب)</string>
+    <string name="contact_subject">الموضوع (مطلوب)</string>
+    <string name="contact_message">الرسالة (مطلوب)</string>
+    <string name="contact_invalid">أدخل بريدًا إلكترونيًا صحيحًا وموضوعًا ورسالة.</string>
+    <string name="compose_email">فتح تطبيق البريد</string>
+    <string name="copy_message">نسخ الرسالة</string>
+    <string name="message_copied">تم نسخ الرسالة. يمكنك لصقها في تطبيق البريد.</string>
+    <string name="no_email_app">لا يتوفر تطبيق بريد. انسخ الرسالة وأرسلها إلى contact@os73.com.</string>
+    <string name="composer_opened">فُتحت مسودة البريد. راجع الرسالة وأرسلها من هناك.</string>
+    <string name="error_disk_full">مساحة التخزين ممتلئة. وفّر مساحة على الجهاز وفي مكان الحفظ ثم أعد المحاولة.</string>
 </resources>

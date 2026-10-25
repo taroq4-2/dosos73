@@ -31,7 +31,6 @@ class MediaEngine(private val context: Context) {
             addOption("--ignore-config"); addOption("--no-playlist"); addOption("--no-cache-dir")
             addOption("--socket-timeout", 25); addOption("--retries", 2)
             addOption("--fragment-retries", 2); addOption("--concurrent-fragments", 1)
-            addOption("--max-filesize", Safety.MAX_BYTES)
             addOption("--proxy", proxy.url); addOption("--no-check-formats")
             addOption("--restrict-filenames")
             // EJS is bundled with the pinned official zipapp; never fetch executable components.

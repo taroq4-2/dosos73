@@ -13,7 +13,7 @@ enum class Phase { IDLE, DOWNLOADING, PROCESSING, SAVING, COMPLETE, CANCELLED, F
 data class TransferState(
     val phase: Phase = Phase.IDLE, val title: String = "", val bytes: Long = 0,
     val total: Long? = null, val percent: Float? = null, val bytesPerSecond: Long? = null,
-    val uri: Uri? = null, val mime: String = "application/octet-stream", val error: Int? = null,
+    val uri: Uri? = null, val mime: String = "application/octet-stream", val error: Int? = null, val detail: String = "",
 ) { val active get() = phase in setOf(Phase.DOWNLOADING, Phase.PROCESSING, Phase.SAVING) }
 
 /** Process-local single-flight ownership. Service owns transfer lifetime, never an Activity. */

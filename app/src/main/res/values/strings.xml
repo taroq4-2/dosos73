@@ -44,5 +44,26 @@
     <string name="error_download">Download or media verification failed. No completed file was saved.</string>
     <string name="error_start">Android could not start the transfer. Keep the app visible and try again.</string>
     <string name="error_open">No application can open this file type.</string>
-    <string name="notice">Download only content you are authorized to save. Preview limit: 2 GB per file. HTTPS media only. Cancelled transfers restart from the beginning.</string>
+    <string name="notice">No fixed file-size limit. Available storage and source restrictions still apply. Download only content you are authorized to save. Cancelled transfers restart from the beginning.</string>
+    <string name="analyze_first">Analyze a link first</string>
+    <string name="about">About us</string>
+    <string name="back">Back</string>
+    <string name="contact">Contact us</string>
+    <string name="about_description">dosos73 is an open-source project developed to provide a free, simple tool for downloading supported files and media.\n\nWe provide this app as a free community service, without commercial goals, advertisements, or paid subscriptions.\n\nThe application source code is available for review and contribution on GitHub, with documentation for the libraries, components, sources, and licenses used.\n\nDeveloper: OS73 — os73.com</string>
+    <string name="github_project">Project on GitHub</string>
+    <string name="developer_site">Developer · os73.com</string>
+    <string name="licenses">Licenses and component notices</string>
+    <string name="preview_status">Development preview. YouTube downloading is not yet verified. See the repository for test results and component licensing limitations.</string>
+    <string name="contact_notice">Prepare a message in your mail app. Nothing is sent automatically. Your draft stays while navigating these pages.</string>
+    <string name="contact_name">Name (optional)</string>
+    <string name="contact_email">Email address (required)</string>
+    <string name="contact_subject">Subject (required)</string>
+    <string name="contact_message">Message (required)</string>
+    <string name="contact_invalid">Enter a valid email address, subject, and message.</string>
+    <string name="compose_email">Open mail app</string>
+    <string name="copy_message">Copy message</string>
+    <string name="message_copied">Message copied. You can paste it into your mail app.</string>
+    <string name="no_email_app">No mail app is available. Copy the message and send it to contact@os73.com.</string>
+    <string name="composer_opened">Mail composer opened. Review and send the message there.</string>
+    <string name="error_disk_full">Storage is full. Free space on the device and destination, then try again.</string>
 </resources>
