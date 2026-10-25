@@ -30,6 +30,7 @@ class OutputStore(private val context: Context) {
         val resolver = context.contentResolver
         val mime = MimeTypeMap.getSingleton().getMimeTypeFromExtension(task.choice.extension) ?: "application/octet-stream"
         val name = Safety.filename(task.analysis.title, task.choice.extension)
+        if (task.tree == null) StoragePolicy.requireAvailable(android.os.StatFs(context.cacheDir.absolutePath).availableBytes, file.length())
         var document: DocumentFile? = null
         val uri = if (task.tree == null) {
             resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, ContentValues().apply {

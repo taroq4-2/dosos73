@@ -15,11 +15,12 @@ class DirectDownloader(private val client: OkHttpClient = secureClient()) {
     @Volatile private var activeCall: okhttp3.Call? = null
     fun cancel() { activeCall?.cancel() }
 
-    private fun request(url: String, head: Boolean = false): Response {
+    private fun request(url: String, head: Boolean = false, probe: Boolean = false): Response {
         var current = Safety.url(url)
         repeat(6) {
             val request = Request.Builder().url(current).header("Accept-Encoding", "identity")
-                .apply { if (head) head() }.build()
+                .header("User-Agent", "dosos73/0.2 (Android)")
+                .apply { if (head) head(); if(probe) header("Range", "bytes=0-0") }.build()
             val call = client.newCall(request)
             activeCall = call
             val response = call.execute()
@@ -34,9 +35,14 @@ class DirectDownloader(private val client: OkHttpClient = secureClient()) {
     }
 
     suspend fun analyze(url: String): Analysis? = withContext(Dispatchers.IO) {
-        request(url, true).use { response ->
+        val head = request(url, true)
+        val candidate = if (head.code in setOf(403,405,501)) {
+            head.close()
+            request(url, probe = true)
+        } else head
+        candidate.use { response ->
             if (!response.isSuccessful) return@withContext null
-            val mime = response.header("Content-Type")?.substringBefore(';')?.trim().orEmpty()
+            val mime = response.header("Content-Type")?.substringBefore(';')?.trim()?.lowercase().orEmpty()
             val ext = response.request.url.pathSegments.lastOrNull()?.substringAfterLast('.', "")?.lowercase().orEmpty()
             // HTML and unknown responses must go through the extractor, not be saved as media.
             if (mime.startsWith("text/") || mime.contains("json") || mime.isBlank()) return@withContext null
@@ -45,7 +51,9 @@ class DirectDownloader(private val client: OkHttpClient = secureClient()) {
                 mime == "application/pdf" || mime == "application/zip")) return@withContext null
             val safeExt = ext.takeIf { it.matches(Regex("[a-z0-9]{1,8}")) } ?: when(kind) { Kind.VIDEO -> "mp4"; Kind.AUDIO -> "m4a"; else -> "bin" }
             Analysis(url, response.request.url.pathSegments.lastOrNull()?.substringBeforeLast('.')?.take(100).orEmpty().ifBlank { "download" },
-                listOf(Choice("direct", kind, safeExt, "Original")), true)
+                listOf(Choice("direct", kind, safeExt, "Original")), true,
+                if (response.code == 206) Regex("bytes 0-0/(\\d+)").matchEntire(response.header("Content-Range").orEmpty())?.groupValues?.get(1)?.toLongOrNull()
+                else response.header("Content-Length")?.toLongOrNull()?.takeIf { it >= 0 })
         }
     }
 
@@ -54,7 +62,7 @@ class DirectDownloader(private val client: OkHttpClient = secureClient()) {
             if (!response.isSuccessful || response.code == 206) throw IOException("HTTP ${response.code}")
             val body = response.body ?: throw IOException("Empty response")
             val mime = response.header("Content-Type").orEmpty()
-            if (mime.startsWith("text/html")) throw IOException("HTML is not a file")
+            if (mime.startsWith("text/html", true)) throw IOException("HTML is not a file")
             val total = body.contentLength().takeIf { it >= 0 }
             var count = 0L
             var lastBytes = 0L

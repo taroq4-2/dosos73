@@ -10,6 +10,25 @@ import java.io.File
 import okhttp3.mockwebserver.SocketPolicy
 
 class DirectDownloaderTest {
+    @Test fun headRejectionUsesBoundedRangeProbeAndRealTotal() = fixture { server, engine, _ ->
+        server.enqueue(MockResponse().setResponseCode(405))
+        server.enqueue(MockResponse().setResponseCode(206).setHeader("Content-Type","VIDEO/MP4")
+            .setHeader("Content-Range","bytes 0-0/5000000000").setBody("x"))
+        val result=engine.analyze("https://example.com/video.mp4")!!
+        assertEquals(5000000000L,result.sizeBytes)
+        assertEquals(Kind.VIDEO,result.choices.single().kind)
+        assertEquals("HEAD",server.takeRequest().method)
+        val probe=server.takeRequest()
+        assertEquals("bytes=0-0",probe.getHeader("Range"))
+        assertTrue(probe.getHeader("User-Agent")!!.startsWith("dosos73/"))
+    }
+    @Test fun rangeRejectionAndUppercaseHtmlAreNotMedia() = fixture { server, engine, file ->
+        server.enqueue(MockResponse().setResponseCode(405))
+        server.enqueue(MockResponse().setResponseCode(416))
+        assertNull(engine.analyze("https://example.com/video.mp4"))
+        server.enqueue(MockResponse().setHeader("Content-Type","TEXT/HTML").setBody("login"))
+        assertTrue(runCatching { engine.download("https://example.com/video.mp4",file) { _,_,_ -> } }.isFailure)
+    }
     private fun fixture(block: suspend (MockWebServer, DirectDownloader, File) -> Unit) = runBlocking {
         MockWebServer().use { server ->
             server.start()

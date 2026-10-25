@@ -7,7 +7,7 @@ import kotlinx.coroutines.flow.asStateFlow
 enum class Kind { VIDEO, AUDIO, FILE }
 data class Choice(val id: String, val kind: Kind, val extension: String, val quality: String,
     val expectedHeight: Int? = null, val expectsAudio: Boolean = false)
-data class Analysis(val url: String, val title: String, val choices: List<Choice>, val direct: Boolean)
+data class Analysis(val url: String, val title: String, val choices: List<Choice>, val direct: Boolean, val sizeBytes: Long? = null)
 data class DownloadTask(val analysis: Analysis, val choice: Choice, val tree: Uri?)
 enum class Phase { IDLE, DOWNLOADING, PROCESSING, SAVING, COMPLETE, CANCELLED, FAILED }
 data class TransferState(
