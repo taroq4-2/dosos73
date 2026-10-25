@@ -25,3 +25,9 @@ VersionCode 4, versionName 1.0.0. Production RSA key is kept outside the reposit
 GitHub native public-fixture diagnostic run 40238340229 also passed. This exercised the native downloader on an independent API35 emulator, not YouTube.
 
 Signed release build: testDebugUnitTest (29 passed), lintRelease and assembleRelease succeeded. APK SHA256: 2a701da47ef1fd92940251ccaccf55e9dcbef9683a759fa5d2ac8c786ed6bb3b. Certificate SHA256: bf0bcb1ba4d282b2e38f75be6220ad4b06902f96b47bbe68d67a51bfeb6e0ca9. APK v2 signature verified; Android10+; arm64-v8a/x86_64.
+
+## GitHub artifact acceptance
+
+The signed APK was uploaded to GitHub release draft 423691986 and downloaded through the GitHub asset API. Its SHA256 matched the locally signed artifact exactly. Signature verification passed. Installed the downloaded artifact on API35, confirmed versionName 1.0.0/versionCode 4 and non-debuggable package flags. Cold launch completed in 1365 ms (single observation, not a benchmark).
+
+Via the actual release UI, shared the public Sintel MP4 URL, analyzed it, started download, observed real progress, and reached Download completed for 4,372,373 bytes. The Open file action launched the system media viewer. Previous automated MediaPlayer playback evidence remains separate. YouTube acceptance is the owner's phone report, not this public-fixture test.
