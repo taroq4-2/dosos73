@@ -36,10 +36,16 @@ class DirectDownloader(private val client: OkHttpClient = secureClient()) {
 
     suspend fun analyze(url: String): Analysis? = withContext(Dispatchers.IO) {
         val head = request(url, true)
-        val candidate = if (head.code in setOf(403,405,501)) {
+        var candidate = if (head.code in setOf(403,405,501)) {
             head.close()
             request(url, probe = true)
         } else head
+        // Some origins reject byte ranges although a normal GET is supported.
+        // Retry only this probe failure once; close without downloading the body.
+        if (candidate.code == 416) {
+            candidate.close()
+            candidate = request(url)
+        }
         candidate.use { response ->
             if (!response.isSuccessful) return@withContext null
             val mime = response.header("Content-Type")?.substringBefore(';')?.trim()?.lowercase().orEmpty()

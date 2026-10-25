@@ -22,12 +22,31 @@ class DirectDownloaderTest {
         assertEquals("bytes=0-0",probe.getHeader("Range"))
         assertTrue(probe.getHeader("User-Agent")!!.startsWith("dosos73/"))
     }
-    @Test fun rangeRejectionAndUppercaseHtmlAreNotMedia() = fixture { server, engine, file ->
+    @Test fun rangeRejectionRetriesGetAndStillRejectsHtml() = fixture { server, engine, file ->
         server.enqueue(MockResponse().setResponseCode(405))
         server.enqueue(MockResponse().setResponseCode(416))
+        server.enqueue(MockResponse().setHeader("Content-Type","TEXT/HTML").setBody("login"))
         assertNull(engine.analyze("https://example.com/video.mp4"))
         server.enqueue(MockResponse().setHeader("Content-Type","TEXT/HTML").setBody("login"))
         assertTrue(runCatching { engine.download("https://example.com/video.mp4",file) { _,_,_ -> } }.isFailure)
+    }
+    @Test fun rangeUnsupportedOriginUsesOnePlainGet() = fixture { server, engine, _ ->
+        server.enqueue(MockResponse().setResponseCode(405))
+        server.enqueue(MockResponse().setResponseCode(416))
+        server.enqueue(MockResponse().setHeader("Content-Type", "VIDEO/MP4").setBody("media"))
+        assertEquals(5L, engine.analyze("https://example.com/video.mp4")!!.sizeBytes)
+        server.takeRequest()
+        assertEquals("bytes=0-0", server.takeRequest().getHeader("Range"))
+        val fallback = server.takeRequest()
+        assertEquals("GET", fallback.method)
+        assertNull(fallback.getHeader("Range"))
+        assertEquals(3, server.requestCount)
+    }
+    @Test fun repeatedRangeFailureDoesNotLoop() = fixture { server, engine, _ ->
+        server.enqueue(MockResponse().setResponseCode(405))
+        repeat(2) { server.enqueue(MockResponse().setResponseCode(416)) }
+        assertNull(engine.analyze("https://example.com/video.mp4"))
+        assertEquals(3, server.requestCount)
     }
     private fun fixture(block: suspend (MockWebServer, DirectDownloader, File) -> Unit) = runBlocking {
         MockWebServer().use { server ->
