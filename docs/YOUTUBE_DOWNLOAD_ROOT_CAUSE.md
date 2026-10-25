@@ -28,6 +28,14 @@ Same YouTube test with the updated engine returned TLS record errors during webp
 
 ## Gate and next required evidence
 
+### Follow-up transport isolation
+
+The user explicitly retained the YouTube-first gate. No UI/About/Contact work was started.
+
+`ProxyTransportTest` passed on API35 x86_64: a public video fixture downloaded directly over HTTPS, through three Java CONNECT transfers, and through the bundled Python urllib CONNECT path. All five copies had identical byte counts and SHA256. TLS certificate verification remained enabled. No YouTube challenge was retried, cookies supplied, or production proxy restrictions removed. See `evidence/v4-proxy-transport.txt` and `evidence/v4-proxy-test.txt`.
+
+This rules out reproducible transport corruption for that fixture, but does not establish compatibility with YouTube's TLS endpoints or identify the cause of its 403/challenge. The user has not yet checked whether their failing video plays in a signed-out private browser on their phone. That manual observation remains useful to distinguish a general source access requirement from an app-specific failure; browser success alone would not establish downloader success.
+
 A permitted environment where YouTube serves the authorized test stream is needed to establish the before/after download result, audio/video merge, saved output and external playback. Android16, physical ARM devices and the full 20-review matrix remain pending. Under the requested strict phase order, UI/About/Contact redesign remains pending until the YouTube gate passes or the user authorizes parallel work. No stable release or YouTube-success claim is authorized by the available evidence.
 
 Sources: https://github.com/yt-dlp/yt-dlp/releases/tag/2026.10.21 and https://github.com/yt-dlp/yt-dlp/wiki/EJS. See docs/evidence/v4-* for actual recorded test output. Errors from prior failed experiments are retained and not replaced by success from unrelated endpoints.

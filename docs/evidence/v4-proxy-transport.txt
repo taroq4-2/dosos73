@@ -1,0 +1,5 @@
+Android=35
+bytes=5510872
+sha256=543a4ad9fef4c9e0004ec9482cb7225c2574b0f889291e8270b1c4d61dbc1ab8
+Direct HTTPS, 3 Java CONNECT transfers and bundled Python CONNECT transfer identical; certificate validation enabled.
+This does not establish YouTube availability or compatibility with its TLS endpoints.
