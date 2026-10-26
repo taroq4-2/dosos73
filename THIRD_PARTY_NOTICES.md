@@ -21,3 +21,5 @@ The full transitive/native source-correspondence audit is not complete. The inve
 ## User-supplied branding
 
 `branding/original.jpg` is preserved byte-for-byte from the supplied artwork. `logo.png` is a deterministic crop; Android assets are resized from that crop. No replacement logo was generated. The artwork contains third-party social platform marks. Those marks are not licensed under the application code license and do not indicate affiliation or endorsement. Rights and brand-guideline clearance for public binary distribution have not been established. No unrestricted reuse grant is made for branding.
+
+Tajawal (Regular/Medium/Bold), copyright 2018 Boutros International, SIL Open Font License 1.1. Unmodified fonts from https://github.com/google/fonts/tree/main/ofl/tajawal ; full license in docs/licenses/Tajawal-OFL.txt and the APK raw resources.
