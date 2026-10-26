@@ -31,10 +31,15 @@ class UiFlowTest {
         compose.runOnIdle {
             compose.activity.startActivity(
                 android.content
-                    .Intent(android.content.Intent.ACTION_SEND)
+                    .Intent(compose.activity, MainActivity::class.java)
+                    .setAction(android.content.Intent.ACTION_SEND)
                     .setType("text/plain")
                     .putExtra(android.content.Intent.EXTRA_TEXT, "not a URL")
             )
+        }
+        compose.waitUntil(5_000) {
+            runCatching { compose.onAllNodesWithTag("url").fetchSemanticsNodes().isNotEmpty() }
+                .getOrDefault(false)
         }
         compose.onNodeWithTag("url").assertExists()
         compose.onNodeWithText(compose.activity.getString(R.string.error_url)).assertExists()
@@ -48,7 +53,9 @@ class UiFlowTest {
         compose
             .onNodeWithText(compose.activity.getString(R.string.no_active_downloads))
             .assertExists()
+        capture("02-downloads-ar.png")
         compose.onNodeWithTag("nav_files").performClick()
+        capture("03-files-ar.png")
         compose.onNodeWithTag("nav_home").performClick()
         compose.onNodeWithTag("url").assertTextContains("https://example.com/saved-input")
     }
