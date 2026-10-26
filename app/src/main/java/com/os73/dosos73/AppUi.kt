@@ -112,7 +112,7 @@ internal fun GradientButton(
             .heightIn(min = 48.dp)
             .clip(RoundedCornerShape(28.dp))
             .background(
-                if (enabled) Brush.horizontalGradient(listOf(Color(0xFF1266DB), Neon.Purple))
+                if (enabled) Brush.horizontalGradient(listOf(Neon.ActionBlue, Neon.Purple))
                 else Brush.linearGradient(listOf(Neon.Raised, Neon.Raised))
             ),
         enabled = enabled,
@@ -703,7 +703,7 @@ internal fun NeonChip(
         colors =
             FilterChipDefaults.filterChipColors(
                 containerColor = Neon.Surface,
-                selectedContainerColor = Neon.Blue,
+                selectedContainerColor = Neon.ActionBlue,
                 labelColor = Neon.Secondary,
                 selectedLabelColor = Color.White,
                 iconColor = Neon.Secondary,
@@ -711,4 +711,3 @@ internal fun NeonChip(
             ),
     )
 }
-

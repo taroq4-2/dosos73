@@ -27,24 +27,28 @@ class UiFlowTest {
 
     @Test
     fun sharedTextReturnsToHomeFromFileLibrary() {
-        compose.onNodeWithTag("nav_files").performClick()
-        compose.runOnIdle {
-            InstrumentationRegistry.getInstrumentation()
-                .callActivityOnNewIntent(
-                    compose.activity,
-                    android.content
-                        .Intent(compose.activity, MainActivity::class.java)
-                        .setAction(android.content.Intent.ACTION_SEND)
-                        .setType("text/plain")
-                        .putExtra(android.content.Intent.EXTRA_TEXT, "not a URL"),
-                )
+        val activity = compose.activity
+        val launchIntent = android.content.Intent(activity.intent)
+        try {
+            compose.onNodeWithTag("nav_files").performClick()
+            compose.runOnIdle {
+                InstrumentationRegistry.getInstrumentation()
+                    .callActivityOnNewIntent(
+                        activity,
+                        android.content
+                            .Intent(activity, MainActivity::class.java)
+                            .setAction(android.content.Intent.ACTION_SEND)
+                            .setType("text/plain")
+                            .putExtra(android.content.Intent.EXTRA_TEXT, "not a URL"),
+                    )
+            }
+            compose.onNodeWithTag("url").assertExists()
+            compose.onNodeWithText(activity.getString(R.string.error_url)).assertExists()
+        } finally {
+            // ActivityScenario identifies lifecycle events by the launch intent's action.
+            // onNewIntent correctly updates the real Activity intent; restore the harness identity.
+            compose.runOnIdle { activity.intent = launchIntent }
         }
-        compose.waitUntil(5_000) {
-            runCatching { compose.onAllNodesWithTag("url").fetchSemanticsNodes().isNotEmpty() }
-                .getOrDefault(false)
-        }
-        compose.onNodeWithTag("url").assertExists()
-        compose.onNodeWithText(compose.activity.getString(R.string.error_url)).assertExists()
     }
 
     @Test

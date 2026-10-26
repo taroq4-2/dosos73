@@ -29,6 +29,7 @@ internal object Neon {
     val Raised = Color(0xFF102440)
     val Cyan = Color(0xFF19D7F5)
     val Blue = Color(0xFF168BFF)
+    val ActionBlue = Color(0xFF1266DB)
     val Purple = Color(0xFF812BFF)
     val Text = Color(0xFFF5F7FF)
     val Secondary = Color(0xFFA7B6D0)
