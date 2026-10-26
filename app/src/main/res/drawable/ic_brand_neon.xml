@@ -1,0 +1,10 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android" xmlns:aapt="http://schemas.android.com/aapt" android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
+    <group android:translateX="20" android:translateY="27" android:scaleX="0.68" android:scaleY="0.68">
+        <path android:fillType="evenOdd" android:pathData="M31,3 L62,3 C108,3 108,77 62,77 L35,77 Q31,77 31,71 L31,59 L35,59 Q43,53 35,47 L31,47 L31,41 L35,41 Q43,35 35,29 L31,29 Z M51,18 C44,18 44,22 44,26 L44,56 Q44,63 51,63 L63,63 C91,63 91,18 63,18 Z">
+            <aapt:attr name="android:fillColor"><gradient android:startX="20" android:startY="0" android:endX="85" android:endY="78" android:type="linear"><item android:offset="0" android:color="#19D7F5"/><item android:offset="0.5" android:color="#168BFF"/><item android:offset="1" android:color="#812BFF"/></gradient></aapt:attr>
+        </path>
+        <path android:pathData="M5,24 L33,24 Q38,24 38,28.5 Q38,33 33,33 L5,33 Q0,33 0,28.5 Q0,24 5,24 M13,40 L33,40 Q38,40 38,44.5 Q38,49 33,49 L13,49 Q8,49 8,44.5 Q8,40 13,40 M22,56 L34,56 Q38,56 38,60 Q38,64 34,64 L22,64 Q18,64 18,60 Q18,56 22,56 M57,27 Q57,24 61,24 Q65,24 65,27 L65,39 L72,39 Q76,39 73,43 L63,54 Q61,57 58,54 L48,43 Q45,39 49,39 L57,39 Z">
+            <aapt:attr name="android:fillColor"><gradient android:startX="20" android:startY="0" android:endX="85" android:endY="78" android:type="linear"><item android:offset="0" android:color="#19D7F5"/><item android:offset="0.5" android:color="#168BFF"/><item android:offset="1" android:color="#812BFF"/></gradient></aapt:attr>
+        </path>
+    </group>
+</vector>

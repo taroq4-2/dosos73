@@ -10,8 +10,8 @@ android {
         applicationId = "com.os73.dosos73"
         minSdk = 29
         targetSdk = 35
-        versionCode = 5
-        versionName = "1.0.1"
+        versionCode = 6
+        versionName = "1.1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         ndk { abiFilters += listOf("arm64-v8a", "x86_64") }
     }
@@ -39,6 +39,7 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
     kotlinOptions { jvmTarget = "17" }
+    bundle { language { enableSplit = false } }
     buildFeatures { compose = true; buildConfig = true }
     packaging { jniLibs.useLegacyPackaging = true }
     testOptions { unitTests.isReturnDefaultValues = true }
@@ -83,3 +84,4 @@ val verifyTranslations by tasks.registering {
     }
 }
 tasks.named("preBuild") { dependsOn(verifyTranslations) }
+

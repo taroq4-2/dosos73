@@ -8,7 +8,7 @@ class AppResourcesTest {
     @Test fun adaptiveForegroundHasDensityIndependentSize() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val resources = context.resources
-        val icon = resources.getDrawable(R.drawable.launcher_foreground, context.theme)
+        val icon = resources.getDrawable(R.drawable.ic_brand_neon, context.theme)
         val widthDp = icon.intrinsicWidth / resources.displayMetrics.density
         assertEquals(108f, widthDp, 1f)
     }
@@ -26,3 +26,4 @@ class AppResourcesTest {
         assertEquals(setOf("ar", "en"), locales)
     }
 }
+

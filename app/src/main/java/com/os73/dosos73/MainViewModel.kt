@@ -17,24 +17,29 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     private val direct = DirectDownloader()
     private val media = MediaEngine(app)
     fun edit(url: String) {
-        if (mutable.value.busy || Transfers.state.value.active) return
+        if (mutable.value.busy) return
         mutable.value = ScreenState(url.take(8192))
     }
     fun receive(text: String) {
-        if (mutable.value.busy || Transfers.state.value.active) return
+        if (mutable.value.busy) return
         try { edit(Safety.shared(text)); analyze() }
         catch (_: Exception) { mutable.value = mutable.value.copy(error = R.string.error_url) }
     }
     fun paste(text: String?) {
-        if (mutable.value.busy || Transfers.state.value.active) return
+        if (mutable.value.busy) return
         if (text.isNullOrBlank() || !Regex("https?://", RegexOption.IGNORE_CASE).containsMatchIn(text)) {
             mutable.value = mutable.value.copy(error = R.string.nothing_to_paste)
         } else receive(text)
     }
+    private var preferred = Kind.VIDEO
+    fun prefer(kind: Kind) {
+        preferred = kind
+        mutable.value.analysis?.choices?.firstOrNull { it.kind == kind }?.let(::select)
+    }
     fun select(choice: Choice) { if (choice in mutable.value.analysis?.choices.orEmpty()) mutable.value = mutable.value.copy(selected = choice) }
     fun invalidateFormats() { mutable.value = mutable.value.copy(analysis = null, selected = null) }
     fun analyze() {
-        if (mutable.value.busy || Transfers.state.value.active) return
+        if (mutable.value.busy) return
         val url = try { Safety.url(mutable.value.url) } catch (_: Exception) {
             mutable.value = mutable.value.copy(error = R.string.error_url); return
         }
@@ -42,7 +47,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         job = viewModelScope.launch {
             try {
                 val analysis = direct.analyze(url) ?: media.analyze(url)
-                mutable.value = ScreenState(url, analysis = analysis, selected = analysis.choices.first())
+                mutable.value = ScreenState(url, analysis = analysis, selected = analysis.choices.firstOrNull { it.kind == preferred } ?: analysis.choices.first())
             } catch (_: CancellationException) {
                 mutable.value = mutable.value.copy(busy = false)
             } catch (error: Exception) {
@@ -58,3 +63,4 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     }
     override fun onCleared() { direct.cancel(); media.cancel(); super.onCleared() }
 }
+

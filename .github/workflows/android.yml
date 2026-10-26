@@ -1,7 +1,7 @@
 name: Android verification
 on:
   push:
-    branches: [main, fix/youtube-v4, fix/reliability-youtube]
+    branches: [main, fix/youtube-v4, fix/reliability-youtube, feat/neon-manager]
     tags: ['v*']
   pull_request:
   workflow_dispatch:
@@ -68,4 +68,5 @@ jobs:
         with:
           name: device-test-reports-api-${{ matrix.api }}
           path: app/build/reports/androidTests/
+
 

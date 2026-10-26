@@ -1,6 +1,7 @@
 package com.os73.dosos73
 
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.async
 import okhttp3.OkHttpClient
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
@@ -102,7 +103,22 @@ class DirectDownloaderTest {
         server.enqueue(MockResponse().setBody("a".repeat(10000)).setSocketPolicy(SocketPolicy.DISCONNECT_DURING_RESPONSE_BODY))
         assertTrue(runCatching { engine.download("https://example.com/file", file) { _, _, _ -> } }.isFailure)
     }
-    @Test fun productionDnsRejectsLoopback() {
+    @Test fun cooperativePauseBlocksConsumptionThenResumesExactBytes() = fixture { server, engine, file ->
+        server.enqueue(MockResponse().setBody("paused then resumed fixture"))
+        val entered = kotlinx.coroutines.CompletableDeferred<Unit>()
+        val resume = kotlinx.coroutines.CompletableDeferred<Unit>()
+        kotlinx.coroutines.coroutineScope {
+            val transfer = async(kotlinx.coroutines.Dispatchers.IO) {
+                engine.download("https://example.com/file", file, awaitReady = { entered.complete(Unit); resume.await() }) { _, _, _ -> }
+            }
+            entered.await()
+            assertEquals(0L, file.length())
+            assertFalse(transfer.isCompleted)
+            resume.complete(Unit)
+            transfer.await()
+        }
+        assertEquals("paused then resumed fixture", file.readText())
+    }    @Test fun productionDnsRejectsLoopback() {
         assertTrue(runCatching { DirectDownloader.secureClient().dns.lookup("127.0.0.1") }.isFailure)
     }
     @Test fun rejectsPrivateRedirectTargetThroughProductionDns() = runBlocking {
@@ -110,3 +126,4 @@ class DirectDownloaderTest {
         assertTrue(runCatching { downloader.analyze("http://127.0.0.1/file.mp4") }.isFailure)
     }
 }
+

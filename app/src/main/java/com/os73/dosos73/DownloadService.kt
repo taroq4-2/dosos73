@@ -10,6 +10,7 @@ import android.content.pm.ServiceInfo
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.first
 import java.io.File
 import java.io.IOException
 import java.util.UUID
@@ -27,13 +28,42 @@ class DownloadService : Service() {
         getSystemService(NotificationManager::class.java).createNotificationChannel(
             NotificationChannel("downloads", getString(R.string.downloads), NotificationManager.IMPORTANCE_LOW))
     }
+    private val paused = kotlinx.coroutines.flow.MutableStateFlow(false)
+    private var cancelled = false
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (intent?.action == "cancel") { cancelTransfer(); return START_NOT_STICKY }
-        if (job?.isActive == true) return START_NOT_STICKY
-        val task = Transfers.take() ?: run { stopSelf(); return START_NOT_STICKY }
-        detail = listOfNotNull(task.choice.expectedHeight?.let { "${it}p" }, task.choice.extension.uppercase()).joinToString(" · ")
+        if (intent?.action == "pause") {
+            if (Transfers.currentTask?.analysis?.direct == true && Transfers.state.value.phase in setOf(Phase.DOWNLOADING, Phase.PAUSED)) {
+                paused.value = !paused.value
+                publish(Transfers.state.value.copy(phase = if(paused.value) Phase.PAUSED else Phase.DOWNLOADING, bytesPerSecond = null))
+            }
+            return START_NOT_STICKY
+        }
         startForeground(73, notification(Transfers.state.value), ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
+        if (job?.isActive == true) return START_NOT_STICKY
+        cancelled = false
         job = scope.launch {
+            try {
+                var task = Transfers.take() ?: DownloadQueue.take(this@DownloadService)?.also { Transfers.reserve(it); Transfers.take() }
+                while (task != null) {
+                    paused.value = false
+                    processTask(task)
+                    ensureActive()
+                    task = DownloadQueue.take(this@DownloadService)?.also { Transfers.reserve(it); Transfers.take() }
+                }
+            } finally {
+                stopForeground(STOP_FOREGROUND_REMOVE)
+                job = null
+                stopSelfResult(startId)
+                // A newly queued command may have arrived while the last empty take was returning.
+                if (!cancelled && DownloadQueue.tasks.value.isNotEmpty())
+                    androidx.core.content.ContextCompat.startForegroundService(this@DownloadService, Intent(this@DownloadService, DownloadService::class.java))
+            }
+        }
+        return START_NOT_STICKY
+    }
+    private suspend fun processTask(task: DownloadTask) = coroutineScope {
+        detail = listOfNotNull(task.choice.expectedHeight?.let { "${it}p" }, task.choice.extension.uppercase()).joinToString(" · ")
             val directory = File(cacheDir, "transfer-${UUID.randomUUID()}")
             var stage = Stage.TRANSFER
             var terminal = TransferState(Phase.CANCELLED, task.analysis.title)
@@ -43,10 +73,10 @@ class DownloadService : Service() {
                     task.analysis.sizeBytes, if (task.tree == null) 2 else 1)
                 val output = if (task.analysis.direct) {
                     File(directory, "file.${task.choice.extension}").also { file ->
-                        direct.download(task.analysis.url, file) { bytes, total, speed ->
-                            publish(TransferState(Phase.DOWNLOADING, task.analysis.title, bytes, total,
+                        direct.download(task.analysis.url, file, progress = { bytes, total, speed ->
+                            publish(TransferState(if(paused.value) Phase.PAUSED else Phase.DOWNLOADING, task.analysis.title, bytes, total,
                                 Safety.progress(bytes, total), speed))
-                        }
+                        }, awaitReady = { paused.first { !it } })
                     }
                 } else media.download(task, directory) { percent, processing ->
                     publish(TransferState(if (processing) Phase.PROCESSING else Phase.DOWNLOADING,
@@ -74,16 +104,10 @@ class DownloadService : Service() {
                 terminal = TransferState(Phase.FAILED, task.analysis.title, error = failure.messageResource())
             } finally {
                 withContext(NonCancellable + Dispatchers.IO) { directory.deleteRecursively() }
-                stopForeground(STOP_FOREGROUND_REMOVE)
-                stopSelfResult(startId)
-                // Keep ownership active through cleanup. No suspensions between releasing the
-                // job and publishing the terminal state, so a new reservation cannot be stranded.
-                job = null
+                // Ownership remains active through cleanup before publishing terminal state.
                 Transfers.update(terminal.copy(detail = detail))
                 if (terminal.phase == Phase.COMPLETE) completionNotification(terminal)
             }
-        }
-        return START_NOT_STICKY
     }
     private fun publish(state: TransferState) {
         Transfers.update(state.copy(detail = detail))
@@ -113,8 +137,8 @@ class DownloadService : Service() {
         getSystemService(NotificationManager::class.java).notify(74, notification)
     }
     private fun cancelTransfer() {
-        direct.cancel()
-        scope.launch(Dispatchers.IO) { runCatching { media.cancel() }; job?.cancel() }
+        cancelled = true
+        direct.cancel(); media.cancel(); job?.cancel()
     }
     override fun onTimeout(startId: Int, fgsType: Int) { cancelTransfer(); stopSelf() }
     override fun onDestroy() { direct.cancel(); media.cancel(); scope.cancel(); super.onDestroy() }
@@ -122,6 +146,7 @@ class DownloadService : Service() {
 
 fun phaseText(phase: Phase) = when (phase) {
     Phase.IDLE -> R.string.ready
+    Phase.PAUSED -> R.string.paused
     Phase.DOWNLOADING -> R.string.downloading
     Phase.PROCESSING -> R.string.processing
     Phase.SAVING -> R.string.saving
@@ -129,3 +154,4 @@ fun phaseText(phase: Phase) = when (phase) {
     Phase.CANCELLED -> R.string.cancelled
     Phase.FAILED -> R.string.failed
 }
+

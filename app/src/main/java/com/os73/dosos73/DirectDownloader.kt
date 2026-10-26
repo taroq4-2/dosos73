@@ -63,7 +63,7 @@ class DirectDownloader(private val client: OkHttpClient = secureClient()) {
         }
     }
 
-    suspend fun download(url: String, destination: File, progress: (Long, Long?, Long) -> Unit) = withContext(Dispatchers.IO) {
+    suspend fun download(url: String, destination: File, awaitReady: suspend () -> Unit = {}, progress: (Long, Long?, Long) -> Unit) = withContext(Dispatchers.IO) {
         request(url).use { response ->
             if (!response.isSuccessful || response.code == 206) throw IOException("HTTP ${response.code}")
             val body = response.body ?: throw IOException("Empty response")
@@ -77,6 +77,7 @@ class DirectDownloader(private val client: OkHttpClient = secureClient()) {
                 val buffer = ByteArray(64 * 1024)
                 while (true) {
                     currentCoroutineContext().ensureActive()
+                    awaitReady()
                     val n = input.read(buffer)
                     if (n == -1) break
                     count += n
@@ -102,3 +103,5 @@ class DirectDownloader(private val client: OkHttpClient = secureClient()) {
             .retryOnConnectionFailure(false).build()
     }
 }
+
+

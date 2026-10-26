@@ -75,6 +75,7 @@ class OutputStore(private val context: Context) {
             resolver.openFileDescriptor(finalUri, "r")?.use { descriptor ->
                 if (descriptor.statSize >= 0 && descriptor.statSize != file.length()) throw IOException("Output size mismatch")
             } ?: throw IOException("Output cannot be opened")
+            runCatching { LibraryRepository.remember(context, finalUri, mime, name, file.length()) }
             finalUri to mime
         } catch (error: Exception) {
             runCatching { if (document != null) document!!.delete() else resolver.delete(uri, null, null) }
@@ -82,3 +83,4 @@ class OutputStore(private val context: Context) {
         }
     }
 }
+

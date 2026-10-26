@@ -18,10 +18,19 @@ class UiFlowTest {
         File(folder, name).outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
         bitmap.recycle()
     }
-    @Test fun aboutContactAndDraftSurviveNavigation() {
+    @Test fun primaryNavigationKeepsRealEmptyStatesAndInput() {
+        compose.runOnIdle { Transfers.update(TransferState()) }
+        compose.onNodeWithTag("url").performTextInput("https://example.com/saved-input")
+        compose.onNodeWithTag("nav_downloads").performClick()
+        compose.onNodeWithText(compose.activity.getString(R.string.no_active_downloads)).assertExists()
+        compose.onNodeWithTag("nav_files").performClick()
+        compose.onNodeWithTag("nav_home").performClick()
+        compose.onNodeWithTag("url").assertTextContains("https://example.com/saved-input")
+    }    @Test fun aboutContactAndDraftSurviveNavigation() {
         compose.runOnIdle { Transfers.update(TransferState()) }
         compose.onNodeWithTag("url").assertExists()
         capture("01-main-ar.png")
+        compose.onNodeWithTag("nav_more").performClick()
         compose.onNodeWithTag("about").performScrollTo().performClick()
         capture("05-about-ar.png")
         compose.onNodeWithTag("contact").performScrollTo().performClick()
@@ -38,3 +47,5 @@ class UiFlowTest {
         // Never opens a mail composer or sends a message during automated tests.
     }
 }
+
+
