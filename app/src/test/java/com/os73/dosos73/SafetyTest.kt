@@ -6,6 +6,19 @@ import org.junit.Test
 
 class SafetyTest {
     @Test
+    fun nat64CannotTunnelToPrivateIpv4() {
+        assertTrue(Safety.publicAddress(InetAddress.getByName("64:ff9b::808:808")))
+        for (address in
+            listOf(
+                "64:ff9b::7f00:1",
+                "64:ff9b::a00:1",
+                "64:ff9b::c0a8:101",
+                "2002:7f00:1::",
+                "2001:0:1::",
+            )) assertFalse(address, Safety.publicAddress(InetAddress.getByName(address)))
+    }
+
+    @Test
     fun rejectsDangerousSchemesAndCredentials() {
         listOf(
                 "file:///etc/passwd",

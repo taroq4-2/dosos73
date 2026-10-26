@@ -77,7 +77,18 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         job =
             viewModelScope.launch {
                 try {
-                    val analysis = direct.analyze(url) ?: media.analyze(url)
+                    val analysis =
+                        withTimeout(120_000) {
+                            val directResult =
+                                try {
+                                    direct.analyze(url)
+                                } catch (error: java.io.IOException) {
+                                    currentCoroutineContext().ensureActive()
+                                    if (!url.startsWith("https://")) throw error
+                                    null
+                                }
+                            directResult ?: media.analyze(url)
+                        }
                     mutable.value =
                         ScreenState(
                             url,
@@ -86,6 +97,10 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                                 analysis.choices.firstOrNull { it.kind == preferred }
                                     ?: analysis.choices.first(),
                         )
+                } catch (_: TimeoutCancellationException) {
+                    direct.cancel()
+                    media.cancel()
+                    mutable.value = mutable.value.copy(busy = false, error = R.string.error_timeout)
                 } catch (_: CancellationException) {
                     mutable.value = mutable.value.copy(busy = false)
                 } catch (error: Exception) {
@@ -104,10 +119,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     fun cancelAnalysis() {
         direct.cancel()
-        viewModelScope.launch(Dispatchers.IO) {
-            runCatching { media.cancel() }
-            job?.cancel()
-        }
+        media.cancel()
+        job?.cancel()
     }
 
     override fun onCleared() {

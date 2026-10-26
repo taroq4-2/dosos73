@@ -15,4 +15,4 @@ Cleartext is enabled to support explicitly supplied public HTTP files and the lo
 - SAF partial documents and MediaStore pending rows can survive process death; transaction recovery needs a durable journal.
 - Android service lifecycle and OS stop behavior require tests beyond normal cancellation.
 
-These limitations remain documented for release 1.0.0. The release is not security certified or fully MASVS compliant. No raw URLs or native error strings are logged by first-party code.
+This is a living hardening list, including limitations carried forward from release 1.0.0. The release is not security certified or fully MASVS compliant. No raw URLs or native error strings are logged by first-party code. Inspection of individual packaged ELF files is narrower than a complete 16 KB audit of the extracted Python/FFmpeg runtime and real-device behavior.

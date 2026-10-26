@@ -7,6 +7,37 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class LibraryQueueTest {
+    @Test
+    fun activeTaskIsDurableUntilExplicitAcknowledgement() = runBlocking {
+        val choice = Choice("direct", Kind.FILE, "bin", "Original")
+        val task =
+            DownloadTask(
+                Analysis("https://example.com/recover", "Recovery fixture", listOf(choice), true),
+                choice,
+                null,
+            )
+        try {
+            DownloadQueue.enqueue(context, task)
+            assertEquals(task, DownloadQueue.take(context))
+            assertEquals(task, DownloadQueue.interrupted(context))
+            val disk = org.json.JSONObject(File(context.filesDir, "waiting-tasks.json").readText())
+            assertEquals(task, DownloadQueue.decodeTask(disk.getJSONObject("active")))
+            assertFalse(DownloadQueue.tasks.value.any { it.id == task.id })
+            // A new service delivery must recover the leased job, not skip to the next one.
+            assertEquals(task, DownloadQueue.take(context))
+            DownloadQueue.finish(context, task.id)
+            assertNull(DownloadQueue.interrupted(context))
+            assertTrue(
+                org.json
+                    .JSONObject(File(context.filesDir, "waiting-tasks.json").readText())
+                    .isNull("active")
+            )
+        } finally {
+            DownloadQueue.finish(context, task.id)
+            DownloadQueue.remove(context, task.id)
+        }
+    }
+
     private val context
         get() = InstrumentationRegistry.getInstrumentation().targetContext
 

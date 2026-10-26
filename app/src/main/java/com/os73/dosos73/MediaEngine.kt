@@ -23,9 +23,13 @@ class MediaEngine(private val context: Context) {
 
     private fun initialize() {
         synchronized(lock) {
-            BundledEngine.install(context)
-            YoutubeDL.getInstance().init(context)
-            FFmpeg.getInstance().init(context)
+            try {
+                BundledEngine.install(context)
+                YoutubeDL.getInstance().init(context)
+                FFmpeg.getInstance().init(context)
+            } catch (error: LinkageError) {
+                throw PipelineException(Stage.INITIALIZE, FailureCode.JS_RUNTIME_UNAVAILABLE, error)
+            }
             Diagnostics.event(Stage.INITIALIZE, "ready")
         }
     }
@@ -156,6 +160,8 @@ class MediaEngine(private val context: Context) {
                 val video: Boolean,
                 val unspecified: Boolean,
                 val abr: Double,
+                val tbr: Double,
+                val fps: Double,
             )
             val sources =
                 (0 until formats.length()).mapNotNull { i ->
@@ -180,11 +186,18 @@ class MediaEngine(private val context: Context) {
                             f.optString("vcodec", "none") != "none",
                             !f.has("acodec") && !f.has("vcodec"),
                             f.optDouble("abr", 0.0).takeIf { it.isFinite() } ?: 0.0,
+                            f.optDouble("tbr", 0.0).takeIf { it.isFinite() } ?: 0.0,
+                            f.optDouble("fps", 0.0).takeIf { it.isFinite() } ?: 0.0,
                         )
                 }
             val audio = sources.filter { it.audio && !it.video }
             return sources
-                .sortedByDescending { it.height }
+                .sortedWith(
+                    compareByDescending<Source> { it.height }
+                        .thenByDescending { if (it.video) it.tbr else it.abr }
+                        .thenByDescending { it.fps }
+                        .thenBy { it.id }
+                )
                 .mapNotNull { f ->
                     when {
                         f.unspecified ->

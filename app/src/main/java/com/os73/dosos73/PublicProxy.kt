@@ -74,11 +74,10 @@ class PublicProxy : Closeable {
         require(parts.size == 3 && parts[0] == "CONNECT")
         val target = java.net.URI("https://${parts[1]}")
         require(target.port == 443 && target.userInfo == null && target.path.isNullOrEmpty())
-        val address = Safety.resolve(target.host).first()
-        Socket().use { remote ->
-            sockets.add(remote)
+        // Validate the entire DNS answer before attempting any connection.
+        val addresses = Safety.resolve(target.host)
+        connectPublic(addresses).use { remote ->
             try {
-                remote.connect(InetSocketAddress(address, 443), 20_000)
                 remote.soTimeout = 60_000
                 client
                     .getOutputStream()
@@ -104,6 +103,27 @@ class PublicProxy : Closeable {
                 sockets.remove(remote)
             }
         }
+    }
+
+    private fun connectPublic(addresses: List<InetAddress>): Socket {
+        val deadline = System.nanoTime() + 20_000_000_000L
+        var failure: java.io.IOException? = null
+        for (address in addresses) {
+            if (server.isClosed) throw java.io.IOException("Proxy closed")
+            val remaining = ((deadline - System.nanoTime()) / 1_000_000L).toInt()
+            if (remaining <= 0) break
+            val remote = Socket()
+            sockets.add(remote)
+            try {
+                remote.connect(InetSocketAddress(address, 443), minOf(5000, remaining))
+                return remote
+            } catch (error: java.io.IOException) {
+                failure = error
+                sockets.remove(remote)
+                remote.close()
+            }
+        }
+        throw failure ?: java.net.SocketTimeoutException("Connection timed out")
     }
 
     private fun authorized(header: String): Boolean {

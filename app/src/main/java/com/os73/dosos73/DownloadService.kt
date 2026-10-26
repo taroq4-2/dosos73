@@ -47,7 +47,7 @@ class DownloadService : Service() {
             if (job == null) stopSelf()
             return START_NOT_STICKY
         }
-        if (intent?.action == "pause") {
+        if (intent?.action == "pause" && flags and START_FLAG_REDELIVERY == 0) {
             if (
                 Transfers.currentTask?.analysis?.direct == true &&
                     Transfers.state.value.phase in setOf(Phase.DOWNLOADING, Phase.PAUSED)
@@ -60,14 +60,14 @@ class DownloadService : Service() {
                     )
                 )
             }
-            return START_NOT_STICKY
+            return if (job?.isActive == true) START_REDELIVER_INTENT else START_NOT_STICKY
         }
         startForeground(
             73,
             notification(Transfers.state.value),
             ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC,
         )
-        if (job?.isActive == true) return START_NOT_STICKY
+        if (job?.isActive == true) return START_REDELIVER_INTENT
         cancelled = false
         job =
             scope.launch {
@@ -79,11 +79,12 @@ class DownloadService : Service() {
                                 Transfers.take()
                             }
                     while (task != null) {
+                        DownloadQueue.rememberActive(this@DownloadService, task)
                         paused.value = false
                         if (processTask(task) == Phase.FAILED) {
                             cancelled =
                                 true // Keep waiting tasks until the user explicitly retries or
-                                     // continues.
+                            // continues.
                             break
                         }
                         ensureActive()
@@ -116,7 +117,7 @@ class DownloadService : Service() {
                         )
                 }
             }
-        return START_NOT_STICKY
+        return START_REDELIVER_INTENT
     }
 
     private suspend fun processTask(task: DownloadTask) = coroutineScope {
@@ -132,6 +133,7 @@ class DownloadService : Service() {
         var failureCode: FailureCode? = null
         try {
             withContext(Dispatchers.IO) {
+                OutputStore(this@DownloadService).preflight(task.tree)
                 check(directory.mkdirs())
                 StoragePolicy.requireAvailable(
                     android.os.StatFs(cacheDir.absolutePath).availableBytes,
@@ -187,7 +189,18 @@ class DownloadService : Service() {
             stage = Stage.PUBLISH
             Diagnostics.event(stage, "started", output.length())
             publish(TransferState(Phase.SAVING, task.analysis.title))
-            val (uri, mime) = store.save(output, task)
+            val (uri, mime) =
+                store.save(output, task) { done, total ->
+                    publish(
+                        TransferState(
+                            Phase.SAVING,
+                            task.analysis.title,
+                            done,
+                            total,
+                            Safety.progress(done, total),
+                        )
+                    )
+                }
             Diagnostics.event(stage, "completed", output.length())
             // Publication is the commit point: do not turn a committed file into a cancellation.
             terminal =
@@ -221,6 +234,7 @@ class DownloadService : Service() {
                 }
             }
             // Ownership remains active through cleanup before publishing terminal state.
+            withContext(NonCancellable) { DownloadQueue.finish(this@DownloadService, task.id) }
             Transfers.update(terminal.copy(detail = detail))
             if (terminal.phase == Phase.COMPLETE) completionNotification(terminal)
         }

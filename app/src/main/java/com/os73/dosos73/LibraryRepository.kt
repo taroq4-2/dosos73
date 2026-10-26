@@ -235,12 +235,13 @@ internal object LibraryRepository {
         }
 }
 
-/** A small durable waiting queue. Launch never starts network work automatically. */
+/** Waiting and in-flight ownership share one atomic journal, avoiding a dequeue/crash gap. */
 internal object DownloadQueue {
     private val lock = Mutex()
     private val mutable = MutableStateFlow<List<DownloadTask>>(emptyList())
     val tasks = mutable.asStateFlow()
     private var loaded = false
+    private var active: DownloadTask? = null
 
     private fun file(context: Context) = AtomicFile(File(context.filesDir, "waiting-tasks.json"))
 
@@ -248,8 +249,14 @@ internal object DownloadQueue {
         if (loaded) return
         mutable.value =
             runCatching {
+                    val text = file(context).openRead().bufferedReader().use { it.readText() }
                     val array =
-                        JSONArray(file(context).openRead().bufferedReader().use { it.readText() })
+                        if (text.trimStart().startsWith("[")) JSONArray(text)
+                        else {
+                            val journal = JSONObject(text)
+                            active = journal.optJSONObject("active")?.let(::decodeTask)
+                            journal.getJSONArray("waiting")
+                        }
                     (0 until array.length()).map { decodeTask(array.getJSONObject(it)) }
                 }
                 .getOrDefault(emptyList())
@@ -262,7 +269,13 @@ internal object DownloadQueue {
         val atomic = file(context)
         val output = atomic.startWrite()
         try {
-            output.write(array.toString().toByteArray())
+            output.write(
+                JSONObject()
+                    .put("waiting", array)
+                    .put("active", active?.let(::encodeTask))
+                    .toString()
+                    .toByteArray()
+            )
             atomic.finishWrite(output)
         } catch (error: Exception) {
             atomic.failWrite(output)
@@ -278,7 +291,7 @@ internal object DownloadQueue {
             lock.withLock {
                 load(context)
                 require(mutable.value.size < 50)
-                if (mutable.value.none { it.id == task.id }) {
+                if (active?.id != task.id && mutable.value.none { it.id == task.id }) {
                     mutable.value = mutable.value + task
                     save(context)
                 }
@@ -289,12 +302,46 @@ internal object DownloadQueue {
         withContext(Dispatchers.IO) {
             lock.withLock {
                 load(context)
+                active?.let {
+                    return@withLock it
+                }
                 val task = mutable.value.firstOrNull()
                 if (task != null) {
+                    active = task
                     mutable.value = mutable.value.drop(1)
                     save(context)
                 }
                 task
+            }
+        }
+
+    suspend fun rememberActive(context: Context, task: DownloadTask) =
+        withContext(Dispatchers.IO) {
+            lock.withLock {
+                load(context)
+                check(active == null || active?.id == task.id)
+                active = task
+                mutable.value = mutable.value.filterNot { it.id == task.id }
+                save(context)
+            }
+        }
+
+    suspend fun finish(context: Context, id: String) =
+        withContext(Dispatchers.IO) {
+            lock.withLock {
+                load(context)
+                if (active?.id == id) {
+                    active = null
+                    save(context)
+                }
+            }
+        }
+
+    suspend fun interrupted(context: Context): DownloadTask? =
+        withContext(Dispatchers.IO) {
+            lock.withLock {
+                load(context)
+                active
             }
         }
 

@@ -128,6 +128,18 @@ class MainActivity : ComponentActivity() {
                 DownloadQueue.initialize(this@MainActivity)
                 FailureJournal.initialize(this@MainActivity)
             }
+            if (
+                !Transfers.state.value.active &&
+                    DownloadQueue.interrupted(this@MainActivity) != null
+            ) {
+                runCatching {
+                        ContextCompat.startForegroundService(
+                            this@MainActivity,
+                            Intent(this@MainActivity, DownloadService::class.java),
+                        )
+                    }
+                    .onFailure { message(R.string.error_start) }
+            }
             refresh()
         }
         LaunchedEffect(transfer.phase) {
@@ -310,10 +322,13 @@ class MainActivity : ComponentActivity() {
         ) { padding ->
             Column(Modifier.fillMaxSize().padding(padding).statusBarsPadding().imePadding()) {
                 if (page in setOf("downloads", "files")) {
-                    ScreenHeader({
-                        searching = !searching
-                        if (!searching) query = ""
-                    }, { page = "more" })
+                    ScreenHeader(
+                        {
+                            searching = !searching
+                            if (!searching) query = ""
+                        },
+                        { page = "more" },
+                    )
                     if (searching)
                         OutlinedTextField(
                             query,

@@ -32,6 +32,9 @@ object Safety {
         )
             return false
         val b = address.address.map { it.toInt() and 255 }
+        // RFC 6052 well-known /96 prefix: apply the IPv4 policy to its embedded address.
+        if (b.size == 16 && b.take(12) == listOf(0x00, 0x64, 0xff, 0x9b, 0, 0, 0, 0, 0, 0, 0, 0))
+            return publicAddress(InetAddress.getByAddress(address.address.copyOfRange(12, 16)))
         return if (b.size == 4) {
             !(b[0] == 0 ||
                 b[0] == 127 ||
@@ -48,7 +51,9 @@ object Safety {
         } else
             b.size == 16 &&
                 (b[0] and 0xe0) == 0x20 &&
-                !(b[0] == 0x20 && b[1] == 0x01 && b[2] == 0x0d && b[3] == 0xb8)
+                !(b[0] == 0x20 && b[1] == 0x01 && b[2] == 0x0d && b[3] == 0xb8) &&
+                !(b[0] == 0x20 && b[1] == 0x02) &&
+                !(b[0] == 0x20 && b[1] == 0x01 && b[2] == 0 && b[3] == 0)
     }
 
     fun resolve(host: String): List<InetAddress> =

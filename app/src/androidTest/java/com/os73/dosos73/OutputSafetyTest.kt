@@ -32,6 +32,12 @@ class OutputSafetyTest {
                     it.kind == Kind.VIDEO
                 }
             assertEquals("v+a160", choice.id)
+            assertEquals(
+                "a160",
+                MediaEngine.mapFormats(org.json.JSONObject().put("formats", formats))
+                    .first { it.kind == Kind.AUDIO }
+                    .id,
+            )
         }
     }
 

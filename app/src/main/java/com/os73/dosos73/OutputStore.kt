@@ -16,6 +16,22 @@ import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 
 class OutputStore(private val context: Context) {
+    fun preflight(tree: Uri?) {
+        if (tree == null) return
+        val folder =
+            DocumentFile.fromTreeUri(context, tree) ?: throw IOException("Destination unavailable")
+        if (!folder.isDirectory || !folder.canWrite()) throw IOException("Destination is read-only")
+        val probe =
+            folder.createFile("application/octet-stream", ".dosos73-check-${UUID.randomUUID()}")
+                ?: throw IOException("Cannot create output")
+        try {
+            context.contentResolver.openOutputStream(probe.uri, "w")?.use { it.flush() }
+                ?: throw IOException("Cannot write output")
+        } finally {
+            if (!probe.delete()) throw IOException("Cannot remove destination probe")
+        }
+    }
+
     fun validate(
         file: File,
         kind: Kind,
@@ -42,16 +58,23 @@ class OutputStore(private val context: Context) {
                             "yes"
                     )
                 expectedHeight?.let {
-                    require(
+                    val rotation =
                         retriever
-                            .extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT)
-                            ?.toIntOrNull() == it
-                    )
+                            .extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_ROTATION)
+                            ?.toIntOrNull() ?: 0
+                    val heightKey =
+                        if (rotation % 180 != 0) MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH
+                        else MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT
+                    require(retriever.extractMetadata(heightKey)?.toIntOrNull() == it)
                 }
             }
     }
 
-    suspend fun save(file: File, task: DownloadTask): Pair<Uri, String> =
+    suspend fun save(
+        file: File,
+        task: DownloadTask,
+        progress: (Long, Long) -> Unit = { _, _ -> },
+    ): Pair<Uri, String> =
         withContext(Dispatchers.IO) {
             val resolver = context.contentResolver
             val mime =
@@ -88,12 +111,21 @@ class OutputStore(private val context: Context) {
                 resolver.openOutputStream(uri, "w")?.use { output ->
                     file.inputStream().use { input ->
                         val buffer = ByteArray(64 * 1024)
+                        var copied = 0L
+                        var last = 0L
                         while (true) {
                             currentCoroutineContext().ensureActive()
                             val n = input.read(buffer)
                             if (n == -1) break
                             output.write(buffer, 0, n)
+                            copied += n
+                            val now = System.nanoTime()
+                            if (now - last > 250_000_000L) {
+                                progress(copied, file.length())
+                                last = now
+                            }
                         }
+                        progress(copied, file.length())
                     }
                     output.flush()
                 } ?: throw IOException("Cannot write output")

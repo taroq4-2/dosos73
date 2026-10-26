@@ -68,12 +68,6 @@ class DirectDownloader(private val client: OkHttpClient = secureClient()) {
                         ?.trim()
                         ?.lowercase()
                         .orEmpty()
-                val ext =
-                    response.request.url.pathSegments
-                        .lastOrNull()
-                        ?.substringAfterLast('.', "")
-                        ?.lowercase()
-                        .orEmpty()
                 // HTML and unknown responses must go through the extractor, not be saved as media.
                 if (mime.startsWith("text/") || mime.contains("json") || mime.isBlank())
                     return@withContext null
@@ -88,24 +82,25 @@ class DirectDownloader(private val client: OkHttpClient = secureClient()) {
                         mime.startsWith("audio/") ||
                         mime == "application/octet-stream" ||
                         mime == "application/pdf" ||
-                        mime == "application/zip")
+                        mime == "application/zip" ||
+                        mime in
+                            setOf(
+                                "image/jpeg",
+                                "image/png",
+                                "application/gzip",
+                                "application/x-7z-compressed",
+                            ))
                 )
                     return@withContext null
-                val safeExt =
-                    ext.takeIf { it.matches(Regex("[a-z0-9]{1,8}")) }
-                        ?: when (kind) {
-                            Kind.VIDEO -> "mp4"
-                            Kind.AUDIO -> "m4a"
-                            else -> "bin"
-                        }
+                val (title, safeExt) =
+                    DirectFileName.resolve(
+                        response.header("Content-Disposition"),
+                        response.request.url.pathSegments.lastOrNull().orEmpty(),
+                        mime,
+                    )
                 Analysis(
                     url,
-                    response.request.url.pathSegments
-                        .lastOrNull()
-                        ?.substringBeforeLast('.')
-                        ?.take(100)
-                        .orEmpty()
-                        .ifBlank { "download" },
+                    title,
                     listOf(Choice("direct", kind, safeExt, "Original")),
                     true,
                     if (response.code == 206)
