@@ -1,7 +1,0 @@
-Starting: Intent { cmp=com.os73.dosos73/.MainActivity }
-Status: ok
-LaunchState: COLD
-Activity: com.os73.dosos73/.MainActivity
-TotalTime: 1831
-WaitTime: 1834
-Complete

@@ -1,6 +1,6 @@
 # Third-party notices and source inventory
 
-V4 investigation branch pins the official yt-dlp 2026.10.21 zipapp with EJS 0.8.0 inside the APK. Original yt-dlp/EJS code uses Unlicense; the zipapp additionally includes ISC/MIT components. Upstream notices are preserved in docs/licenses/. SHA256 is recorded in BundledEngine.kt and YOUTUBE_DOWNLOAD_ROOT_CAUSE.md. This does not complete the native wrapper/FFmpeg audit.
+The application pins the official yt-dlp 2026.10.21 zipapp with EJS 0.8.0 inside the APK. Original yt-dlp/EJS code uses Unlicense; the zipapp additionally includes ISC/MIT components. Upstream notices are preserved in docs/licenses/. SHA256 is recorded in BundledEngine.kt. This does not complete the native wrapper/FFmpeg audit.
 
 First-party Kotlin, resources and build scripts are offered under GPL-3.0-or-later; see LICENSE. This does not relicense dependencies or third-party artwork.
 
@@ -20,6 +20,7 @@ The full transitive/native source-correspondence audit is not complete. The inve
 
 ## User-supplied branding
 
-`branding/original.jpg` is preserved byte-for-byte from the supplied artwork. `logo.png` is a deterministic crop; Android assets are resized from that crop. No replacement logo was generated. The artwork contains third-party social platform marks. Those marks are not licensed under the application code license and do not indicate affiliation or endorsement. Rights and brand-guideline clearance for public binary distribution have not been established. No unrestricted reuse grant is made for branding.
+The current neon artwork was supplied by the project owner. The source image is retained in branding/neon-reference.png and used by the Android UI. The launcher uses the corresponding vector mark. Artwork is not covered by the code license; no unrestricted third-party reuse or independent trademark clearance is asserted.
 
 Tajawal (Regular/Medium/Bold), copyright 2018 Boutros International, SIL Open Font License 1.1. Unmodified fonts from https://github.com/google/fonts/tree/main/ofl/tajawal ; full license in docs/licenses/Tajawal-OFL.txt and the APK raw resources.
+

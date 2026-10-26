@@ -1,7 +1,7 @@
 name: Android verification
 on:
   push:
-    branches: [main, fix/youtube-v4, fix/reliability-youtube, feat/neon-manager]
+    branches: [main, 'maintenance/**']
     tags: ['v*']
   pull_request:
   workflow_dispatch:
@@ -43,7 +43,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        api: [35, 36]
+        api: [29, 33, 35, 36]
     timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4

@@ -1,9 +1,0 @@
-
-com.os73.dosos73.LiveDownloadTest:.
-com.os73.dosos73.RuntimeInventoryTest:.
-
-Time: 38.539
-
-OK (2 tests)
-
-

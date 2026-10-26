@@ -1,8 +1,0 @@
-
-com.os73.dosos73.ProxyTransportTest:.
-
-Time: ٧٫٥٩٩
-
-OK (1 test)
-
-

@@ -1,67 +1,107 @@
+<div align="center">
+<img src="branding/neon-reference.png" width="160" alt="dosos73 logo" />
+
 # dosos73
+**Download open-source OS73**
 
-### Download open-source OS73
+An open-source Android media downloader with an Arabic-first, bilingual interface.
 
-<img src="branding/neon-reference.png" width="150" alt="dosos73 — الهوية الجديدة" />
+[العربية](README-ar.md) · [Download ARM64 APK](https://github.com/taroq4-2/dosos73/releases/download/v1.1.2/dosos73-1.1.2-arm64-v8a.apk) · [All releases](https://github.com/taroq4-2/dosos73/releases) · [Website](https://os73.com)
 
-مدير تنزيلات مفتوح المصدر لأندرويد بواجهة عربية وإنجليزية، وهوية كحلية بتدرجات السماوي والأزرق والبنفسجي. نزّل الوسائط المدعومة، تابع المهام، وأدر ملفاتك من مكان واحد.
+[![Android verification](https://github.com/taroq4-2/dosos73/actions/workflows/android.yml/badge.svg)](https://github.com/taroq4-2/dosos73/actions/workflows/android.yml)
+</div>
 
-[**تنزيل dosos73 1.1.1 للهاتف — ARM64 APK، نحو 59 MB**](https://github.com/taroq4-2/dosos73/releases/download/v1.1.1/dosos73-1.1.1-arm64-v8a.apk) · [نسخة x86_64](https://github.com/taroq4-2/dosos73/releases/download/v1.1.1/dosos73-1.1.1-x86_64.apk) · [تفاصيل الإصدار](https://github.com/taroq4-2/dosos73/releases/tag/v1.1.1) · [SHA256](https://github.com/taroq4-2/dosos73/releases/download/v1.1.1/SHA256SUMS.txt)
+## Download and install
 
-يتطلب **Android 10 أو أحدث**. اختر ARM64 للهواتف الحديثة مثل Samsung S23 Ultra؛ نسخة x86_64 منفصلة للأجهزة المتوافقة والمحاكيات. انخفض حجم نسخة الهاتف بنحو **47%** مقارنة بحزمة 1.1.0، دون تنزيل مكتبات إضافية عند اللصق. تستخدم النسخة مفتاح الإصدار السابق نفسه وتُثبّت فوقه دون حذف التطبيق. [تقرير إصلاح الانهيار والحجم والاستعادة](docs/RELIABILITY_1.1.1.md).
+**Version 1.1.2 · Android 10+ · no ads or accounts.**
 
-## داخل التطبيق
+| Package | Device |
+|---|---|
+| [ARM64 APK](https://github.com/taroq4-2/dosos73/releases/download/v1.1.2/dosos73-1.1.2-arm64-v8a.apk) | Modern ARM64 phones, including Samsung S23 Ultra |
+| [x86_64 APK](https://github.com/taroq4-2/dosos73/releases/download/v1.1.2/dosos73-1.1.2-x86_64.apk) | Compatible Intel/AMD devices and emulators |
+| [Checksums](https://github.com/taroq4-2/dosos73/releases/download/v1.1.2/SHA256SUMS.txt) | SHA-256 identities of published APKs |
 
-- رئيسية لإدخال الرابط وتحليل الصيغ والجودات المتاحة فعليًا.
-- شاشة تنزيلات بتقدم وسرعة وحجم حقيقيين، وقائمة انتظار محفوظة تعمل بالتتابع.
-- الاحتفاظ بالمهمات الفاشلة والملغاة لإعادة المحاولة. يتوقف الطابور عند الفشل حتى يختار المستخدم المتابعة.
-- إيقاف مؤقت واستئناف للتنزيل المباشر داخل الجلسة الحالية؛ تنزيلات محرك الوسائط تدعم الإلغاء وإعادة البدء.
-- مكتبة لملفات التطبيق، مع البحث والتصفية والترتيب والصور المصغرة والفتح والمشاركة وإعادة التسمية والحذف المؤكد.
-- الإزالة من سجل التنزيلات منفصلة عن حذف الملف نفسه.
-- اختيار مجلد الحفظ، وصفحات الإعدادات والتعريف والتواصل، ودعم العربية RTL والإنجليزية LTR.
-- تحميل بلا سقف ثابت لحجم الملف، مع فحص المساحة والتحقق من سلامة الناتج قبل إعلان الاكتمال.
-- دون إعلانات أو حسابات أو تحليلات سلوكية أو مراقبة للحافظة.
+Open the APK and allow installation from your selected browser/file manager when Android asks. Production updates use the same signing certificate and can install over previous official releases without clearing data. Older debug-signed previews cannot update in place. Choose the correct architecture; 32-bit devices are not supported. No runtime-library download is required when pasting a link.
 
-## صور فعلية
+## Features
 
-صور من التطبيق الجاري على Android 15؛ الملفات الظاهرة عينات عامة استُخدمت للاختبار. حالة التوقف والطابور ناتجة عن تنزيل حقيقي، والأعداد غير ثابتة.
+- Paste or share one public URL; analyze actual available formats and qualities.
+- Download supported video, audio and direct files; merge compatible video/audio streams.
+- Sequential queue, saved failed tasks and retry; real progress, speed and file size when available.
+- Pause direct downloads within the current session; cancel/restart native downloads.
+- Durable active-task recovery after process death, without a permanent monitoring service.
+- App file library with search, filters, sorting, thumbnails, open, share, rename and confirmed deletion.
+- MediaStore Downloads or a user-authorized folder; storage checks and verification before success.
+- Arabic RTL and English LTR, dark navy interface, Tajawal typography and local language settings.
+- No fixed media-size cap; storage capacity, timeouts and source restrictions still apply.
 
-<img src="screenshots/neon-home-ar.png" width="240" alt="الرئيسية العربية" /> <img src="screenshots/neon-downloads-ar.png" width="240" alt="التنزيلات والطابور" /> <img src="screenshots/neon-files-ar.png" width="240" alt="مكتبة الملفات" />
+## Screenshots
 
-<img src="screenshots/neon-settings-ar.png" width="240" alt="الإعدادات" /> <img src="screenshots/neon-home-en.png" width="240" alt="English home" /> <img src="screenshots/neon-icon.png" width="240" alt="أيقونة التطبيق في Android" />
+Authentic captures from the running app. The release validation report identifies the build and environment; older release evidence is labeled as such.
 
-[صور الواجهة السابقة](screenshots/01-main-ar.png) · [تقرير التصميم والتحقق](docs/NEON_REDESIGN.md)
+<img src="screenshots/current-home-ar.png" width="230" alt="Arabic home" /> <img src="screenshots/current-downloads-ar.png" width="230" alt="Downloads" /> <img src="screenshots/current-files-ar.png" width="230" alt="Files" />
 
-[صورة اكتمال تنزيل YouTube من الإصدار 1.1.1](screenshots/youtube-completed-1.1.1.png) · [نتائج الإصلاح والاستعادة وتقليل الحجم](docs/RELIABILITY_1.1.1.md)
+<img src="screenshots/current-settings-ar.png" width="230" alt="Settings" /> <img src="screenshots/current-home-en.png" width="230" alt="English home" />
 
-## الاستخدام
+## Use
 
-1. ألصق رابطًا أو شاركه من تطبيق آخر.
-2. اضغط «تحميل» لتحليل المصدر، ثم اختر نوع الوسائط والجودة والصيغة.
-3. اضغط «ابدأ»؛ تتولى شاشة التنزيلات متابعة المهمة والطابور.
-4. افتح الملف بعد اكتماله من الإشعار أو المكتبة.
+1. Paste a URL or share it to dosos73.
+2. Wait for analysis, then select media type, quality and format.
+3. Start the download; monitor it in Downloads.
+4. Open the verified saved file from its notification or the file library.
 
-تُحفظ المهمة الجارية لاستعادتها إذا أعاد أندرويد تشغيل الخدمة أو عند فتح التطبيق بعد انقطاع العملية؛ تعاد المحاولة من بداية الملف، وليس من آخر بايت. «إيقاف إجباري» من إعدادات الهاتف يمنع إعادة التشغيل حتى فتح التطبيق. لا تعمل خدمة مراقبة مستمرة عند الخمول. قد تمنع قيود المصدر أو الشبكة بعض الروابط. لا يستورد التطبيق بيانات تسجيل الدخول أو يتجاوز DRM. إزالة عنصر من السجل لا تحذف ملفه؛ حذف الملف يتطلب تأكيدًا.
+Recovery retries from the beginning, not the last byte. Android Settings → Force stop prevents automatic restart until reopening the app. Failed jobs stop the queue for user review. Removing history is distinct from deleting a file. Download only content you are authorized to save.
 
-## التطوير والتحقق
+## Technical details
 
-Kotlin وJetpack Compose؛ minSdk 29 وtargetSdk 35؛ JDK 17/21 وAndroid SDK 35. لا توجد مفاتيح أو كلمات مرور في المستودع.
+| Setting | Value |
+|---|---|
+| Application ID | `com.os73.dosos73` |
+| Version / code | `1.1.2` / `8` |
+| Minimum / target / compile SDK | `29` / `35` / `35` |
+| UI | Kotlin 2.0.21, Jetpack Compose, Material 3 |
+| Network | OkHttp 4.12.0; public-address validation |
+| Media engine | yt-dlp 2026.10.21 + EJS 0.8.0, wrapper 0.18.1 |
+| Processing | Bundled Python, QuickJS and FFmpeg |
+| Distribution | Signed ARM64 and x86_64 APKs |
+
+## Build and test
+
+Use JDK 17/21, Android SDK platform/build-tools 35 and the included wrapper. Set your SDK path locally; never commit `local.properties`.
 
 ```sh
-./gradlew testDebugUnitTest lintDebug assembleDebug assembleRelease
+./gradlew testDebugUnitTest lintDebug lintRelease assembleDebug assembleRelease
 ./gradlew connectedDebugAndroidTest
 ./gradlew assembleRelease -PtargetAbi=arm64-v8a
 ./gradlew assembleRelease -PtargetAbi=x86_64
 ```
 
-على Windows استخدم `gradlew.bat`. الترجمتان تخضعان لفحص تطابق المفاتيح أثناء البناء. اختبارات الوحدة تستخدم خادمًا محليًا داخل الاختبار؛ اختبارات الشبكة العامة منفصلة وتتطلب التفعيل. للتوقيع اضبط `DOSOS73_KEYSTORE` و`DOSOS73_STORE_PASSWORD` في بيئة البناء. المصدر المثبت لمحرك الوسائط موجود في المستودع؛ لم يُستبدل ضمن إعادة التصميم.
+Windows: use `gradlew.bat`. Set `DOSOS73_KEYSTORE` and `DOSOS73_STORE_PASSWORD` only in the authorized signing environment. Without these, the release build is unsigned and must not be published as a production APK. Required CI covers APIs 29, 33, 35 and 36. Live-network tests are separate opt-in checks, not implied by unit-test success. Always smoke-test the exact minified release artifact.
 
-[نتائج إعادة التصميم](docs/NEON_REDESIGN.md) · [مراجعة الإصلاحات السابقة](docs/REVIEW_1.0.1.md) · [الأمان والحدود المعروفة](docs/SECURITY.md) · [التراخيص والمكونات](THIRD_PARTY_NOTICES.md)
+[Validation and limitations](docs/RELEASE_VALIDATION.md) · [Architecture](docs/ARCHITECTURE.md) · [Cleanup manifest](docs/CLEANUP_MANIFEST.csv) · [Changelog](CHANGELOG.md)
 
-## English
+## Privacy, permissions and limitations
 
-dosos73 is an open-source native Android media downloader with Arabic/English UI, a navy neon visual system, a durable sequential queue, retryable failures and an app-owned file library. File actions use Android scoped storage. Direct transfers support cooperative pause/resume within the current session; media-engine transfers support cancel/restart. Process-death resume is not implemented. Source availability and storage capacity still apply.
+No analytics, advertising, accounts, cookies or automatic message sending. Clipboard access occurs only on Paste. Queue/history URLs and destination metadata are stored privately on the device; backup is disabled. Source websites see network requests and IP addresses. Permissions cover internet, foreground data transfer and optional notifications; no all-files, accessibility or overlay access. Public HTTP files are supported, so do not use sensitive HTTP links.
 
-Version 1.1.0 retains the official release signing key. Download and verification links are above. See the redesign report for executed tests and remaining limitations.
+Website restrictions may prevent downloads. No promise of universal platform support, DRM bypass, playlists, forced MP3 conversion or persistent byte-range resume. No real Samsung-device or complete native supply-chain/16 KB certification is claimed. [Privacy](PRIVACY.md) · [Security](SECURITY.md) · [Known hardening work](docs/SECURITY.md).
 
-First-party code: **GPL-3.0-or-later**. Dependencies, fonts and supplied branding retain their own terms. Developer: [OS73](https://os73.com) · contact@os73.com.
+## Contribute and license
+
+[Contribution guide](CONTRIBUTING.md) · [Issues](https://github.com/taroq4-2/dosos73/issues) · [Source](https://github.com/taroq4-2/dosos73)
+
+First-party code: **GPL-3.0-or-later**, see [LICENSE](LICENSE). Dependencies, fonts and supplied artwork retain their own terms; see [third-party notices](THIRD_PARTY_NOTICES.md). Complete native license/source correspondence remains under review.
+
+### About dosos73
+
+**Easier downloads. More control. Open source.**
+
+dosos73 is an open-source download manager for Android, designed to provide a simple, practical experience for downloading video and audio and managing files in one place.
+
+We are developing an app that combines ease of use with good performance, while caring about privacy and transparency and giving the community room to contribute to its development.
+
+An open project, evolving through everyone's contributions.
+
+**Project developer:** Tariq
+
+**Official website:** [os73.com](https://os73.com)

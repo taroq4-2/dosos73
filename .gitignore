@@ -6,3 +6,8 @@ local.properties
 *.jks
 *.keystore
 .DS_Store
+*.apk
+*.aab
+*.log
+*.hprof
+captures/

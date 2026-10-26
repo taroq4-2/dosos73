@@ -10,8 +10,8 @@ android {
         applicationId = "com.os73.dosos73"
         minSdk = 29
         targetSdk = 35
-        versionCode = 7
-        versionName = "1.1.1"
+        versionCode = 8
+        versionName = "1.1.2"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         ndk { abiFilters += (providers.gradleProperty("targetAbi").orNull?.let { listOf(it) } ?: listOf("arm64-v8a", "x86_64")) }
     }

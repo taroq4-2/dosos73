@@ -1,9 +1,6 @@
 name: Android native transport diagnostic
 on:
   workflow_dispatch:
-  push:
-    branches: [fix/reliability-youtube]
-    paths: ['.github/workflows/network-diagnostic.yml']
 permissions:
   contents: read
 jobs:

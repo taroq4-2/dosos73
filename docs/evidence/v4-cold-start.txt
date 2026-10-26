@@ -1,6 +1,0 @@
-Starting: Intent { cmp=com.os73.dosos73/.MainActivity }
-Status: timeout
-LaunchState: UNKNOWN (-1)
-Activity: com.os73.dosos73/.MainActivity
-WaitTime: 34415
-Complete

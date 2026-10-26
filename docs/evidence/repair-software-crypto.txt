@@ -1,7 +1,0 @@
-OpenSSL 3.5.2 5 Aug 2025
-default 0 SSLError
-default 1 SSLError
-default 2 SSLError
-tls12 0 SSLError
-tls12 1 SSLError
-tls12 2 5510872 543a4ad9fef4c9e0004ec9482cb7225c2574b0f889291e8270b1c4d61dbc1ab8

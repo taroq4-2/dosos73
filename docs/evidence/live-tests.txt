@@ -1,9 +1,0 @@
-
-com.os73.dosos73.LiveDownloadTest:..
-com.os73.dosos73.OutputSafetyTest:...
-
-Time: 22.133
-
-OK (5 tests)
-
-
