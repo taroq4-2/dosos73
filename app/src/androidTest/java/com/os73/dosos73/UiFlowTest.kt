@@ -26,6 +26,17 @@ class UiFlowTest {
     }
 
     @Test
+    fun closingSearchRestoresUnfilteredLibrary() {
+        compose.onNodeWithTag("nav_files").performClick()
+        compose.onNodeWithContentDescription(compose.activity.getString(R.string.search)).performClick()
+        compose.onNodeWithTag("search").performTextInput("no-matching-fixture")
+        compose.onNodeWithText(compose.activity.getString(R.string.no_search_results)).assertExists()
+        compose.onNodeWithContentDescription(compose.activity.getString(R.string.search)).performClick()
+        compose.onNodeWithTag("search").assertDoesNotExist()
+        compose.onNodeWithText(compose.activity.getString(R.string.no_search_results)).assertDoesNotExist()
+    }
+
+    @Test
     fun sharedTextReturnsToHomeFromFileLibrary() {
         val activity = compose.activity
         val launchIntent = android.content.Intent(activity.intent)

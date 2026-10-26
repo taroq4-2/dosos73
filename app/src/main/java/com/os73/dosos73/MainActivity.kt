@@ -310,7 +310,10 @@ class MainActivity : ComponentActivity() {
         ) { padding ->
             Column(Modifier.fillMaxSize().padding(padding).statusBarsPadding().imePadding()) {
                 if (page in setOf("downloads", "files")) {
-                    ScreenHeader({ searching = !searching }, { page = "more" })
+                    ScreenHeader({
+                        searching = !searching
+                        if (!searching) query = ""
+                    }, { page = "more" })
                     if (searching)
                         OutlinedTextField(
                             query,
