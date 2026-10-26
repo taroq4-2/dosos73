@@ -69,3 +69,10 @@ Recovery restarts transfer from byte zero; it is not Range/ETag resume. Android/
 - Release initialization was explicitly exercised after reproducing the old release-only crash. Do not substitute debug tests for this check in future releases.
 
 No claim is made that all forty review lenses are closed or that all network sources work under all restrictions.
+
+## Final acceptance
+
+- GitHub run [40331317006](https://github.com/taroq4-2/dosos73/actions/runs/40331317006) passed build and device jobs for API 35 and 36 at code commit `b95b350`.
+- After removing only extracted runtime packages on the test emulator, the final signed x86_64 release initialized from scratch without crashing. YouTube analysis succeeded, and a selected 720p MP4 finished downloading/merging and passed the application's audio/video/height verification. Saved size: 30,812,514 bytes. Opening the file in the external player displayed video; full-duration playback was not certified.
+- [Actual completed-download screenshot](../screenshots/youtube-completed-1.1.1.png).
+- Final ARM64 APK: 58,863,815 bytes (47.4% smaller than 1.1.0); x86_64 APK: 61,855,814 bytes. Both retain the production signing certificate. ARM64 installation and behavior on the user's S23 Ultra have not been independently tested here.

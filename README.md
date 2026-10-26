@@ -32,6 +32,8 @@
 
 [صور الواجهة السابقة](screenshots/01-main-ar.png) · [تقرير التصميم والتحقق](docs/NEON_REDESIGN.md)
 
+[صورة اكتمال تنزيل YouTube من الإصدار 1.1.1](screenshots/youtube-completed-1.1.1.png) · [نتائج الإصلاح والاستعادة وتقليل الحجم](docs/RELIABILITY_1.1.1.md)
+
 ## الاستخدام
 
 1. ألصق رابطًا أو شاركه من تطبيق آخر.
