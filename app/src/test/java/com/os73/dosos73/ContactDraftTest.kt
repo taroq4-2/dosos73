@@ -4,13 +4,16 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class ContactDraftTest {
-    @Test fun nameIsOptionalAndContentIsPreserved() {
+    @Test
+    fun nameIsOptionalAndContentIsPreserved() {
         val draft = ContactDraft("", "person@example.com", "مساعدة", "أحتاج مساعدة في التنزيل")
         assertTrue(draft.valid)
         assertTrue(draft.copyText().contains("contact@os73.com"))
         assertTrue(draft.body().contains(draft.message))
     }
-    @Test fun rejectsMissingFieldsAndHeaderInjection() {
+
+    @Test
+    fun rejectsMissingFieldsAndHeaderInjection() {
         val valid = ContactDraft("", "person@example.com", "Support", "Message")
         assertFalse(valid.copy(email = "not an address").valid)
         assertFalse(valid.copy(subject = " ").valid)

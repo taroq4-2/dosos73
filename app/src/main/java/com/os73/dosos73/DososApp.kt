@@ -9,9 +9,14 @@ class DososApp : Application() {
         // No extractor, timer, network request or clipboard access during startup.
         // Old private temporary data can be removed after a process death.
         Thread {
-            cacheDir.listFiles()?.filter { it.name.startsWith("transfer-") || it.name.startsWith("analysis-") }
-                ?.filter { System.currentTimeMillis() - it.lastModified() > 24 * 60 * 60 * 1000 }
-                ?.forEach(File::deleteRecursively)
-        }.start()
+                cacheDir
+                    .listFiles()
+                    ?.filter { it.name.startsWith("transfer-") || it.name.startsWith("analysis-") }
+                    ?.filter {
+                        System.currentTimeMillis() - it.lastModified() > 24 * 60 * 60 * 1000
+                    }
+                    ?.forEach(File::deleteRecursively)
+            }
+            .start()
     }
 }

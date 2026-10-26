@@ -5,7 +5,8 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class ClipboardInputTest {
-    @Test fun emptyOrImageClipboardDoesNotBecomeUrlError() {
+    @Test
+    fun emptyOrImageClipboardDoesNotBecomeUrlError() {
         val model = MainViewModel(ApplicationProvider.getApplicationContext())
         Transfers.update(TransferState())
         for (text in listOf(null, "", "ordinary text", "content://media/images/1")) {
@@ -14,7 +15,9 @@ class ClipboardInputTest {
             assertFalse(model.state.value.busy)
         }
     }
-    @Test fun multipleLinksRemainRejectedRatherThanSilentlyChoosingOne() {
+
+    @Test
+    fun multipleLinksRemainRejectedRatherThanSilentlyChoosingOne() {
         val model = MainViewModel(ApplicationProvider.getApplicationContext())
         Transfers.update(TransferState())
         model.paste("https://example.com/one https://example.com/two")
