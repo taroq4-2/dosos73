@@ -6,6 +6,15 @@ import org.junit.Test
 
 class AppResourcesTest {
     @Test
+    fun systemSplashUsesTheSameNavyCanvas() {
+        org.junit.Assume.assumeTrue(android.os.Build.VERSION.SDK_INT >= 31)
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val theme = context.resources.newTheme().apply { applyStyle(R.style.AppTheme, true) }
+        val value = android.util.TypedValue()
+        assertTrue(theme.resolveAttribute(android.R.attr.windowSplashScreenBackground, value, true))
+        assertEquals(android.graphics.Color.rgb(3, 8, 23), value.data)
+    }
+    @Test
     fun adaptiveForegroundHasDensityIndependentSize() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val resources = context.resources
@@ -37,3 +46,4 @@ class AppResourcesTest {
         assertEquals(setOf("ar", "en"), locales)
     }
 }
+

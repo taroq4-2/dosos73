@@ -59,6 +59,7 @@ internal fun Brand(compact: Boolean = false) {
                 BrandMark(Modifier.size(100.dp, 70.dp))
                 Spacer(Modifier.height(7.dp))
                 Wordmark(36)
+                Spacer(Modifier.height(6.dp))
                 Text(
                     stringResource(R.string.app_name),
                     fontSize = 10.sp,
@@ -710,3 +711,4 @@ internal fun NeonChip(
             ),
     )
 }
+
