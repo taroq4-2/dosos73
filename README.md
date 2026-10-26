@@ -1,66 +1,63 @@
 # dosos73
+
 ### Download open-source OS73
 
-<img src="branding/logo.png" width="112" alt="شعار dosos73" />
+<img src="branding/neon-reference.png" width="150" alt="dosos73 — الهوية الجديدة" />
 
-تطبيق أندرويد مفتوح المصدر لتنزيل الملفات والوسائط المدعومة، بواجهة عربية وإنجليزية، وحفظ الملفات في التنزيلات أو المجلد الذي تختاره.
+مدير تنزيلات مفتوح المصدر لأندرويد بواجهة عربية وإنجليزية، وهوية كحلية بتدرجات السماوي والأزرق والبنفسجي. نزّل الوسائط المدعومة، تابع المهام، وأدر ملفاتك من مكان واحد.
 
-## المميزات
+[**تنزيل dosos73 1.1.0 — APK**](https://github.com/taroq4-2/dosos73/releases/download/v1.1.0/dosos73-1.1.0.apk) · [تفاصيل الإصدار](https://github.com/taroq4-2/dosos73/releases/tag/v1.1.0) · [SHA256](https://github.com/taroq4-2/dosos73/releases/download/v1.1.0/SHA256SUMS.txt)
 
-- استقبال الروابط بالمشاركة أو اللصق.
-- اختيار الصيغ والجودات التي يوفرها المصدر فعلًا.
-- تنزيل الملفات دون سقف ثابت للحجم، مع مراعاة المساحة المتاحة.
-- التحقق من سلامة الوسائط قبل إعلان اكتمال التنزيل.
-- واجهة فاتحة، تقدم فعلي، وإشعار اكتمال يتيح فتح الملف.
-- صفحة تعريف بالمشروع ونموذج تواصل يفتح تطبيق البريد.
+يتطلب **Android 10 أو أحدث**. حزمة واحدة تدعم **arm64-v8a وx86_64**. تستخدم النسخة مفتاح توقيع الإصدار الرسمي السابق نفسه، ويمكن تثبيتها فوق 1.0.0 دون حذف التطبيق. النسخ القديمة الموقعة بتوقيع Debug تحتاج إلى إزالة أولًا؛ يؤدي ذلك إلى حذف إعداداتها، وتبقى ملفات التنزيلات العامة.
+
+## داخل التطبيق
+
+- رئيسية لإدخال الرابط وتحليل الصيغ والجودات المتاحة فعليًا.
+- شاشة تنزيلات بتقدم وسرعة وحجم حقيقيين، وقائمة انتظار محفوظة تعمل بالتتابع.
+- الاحتفاظ بالمهمات الفاشلة والملغاة لإعادة المحاولة. يتوقف الطابور عند الفشل حتى يختار المستخدم المتابعة.
+- إيقاف مؤقت واستئناف للتنزيل المباشر داخل الجلسة الحالية؛ تنزيلات محرك الوسائط تدعم الإلغاء وإعادة البدء.
+- مكتبة لملفات التطبيق، مع البحث والتصفية والترتيب والصور المصغرة والفتح والمشاركة وإعادة التسمية والحذف المؤكد.
+- الإزالة من سجل التنزيلات منفصلة عن حذف الملف نفسه.
+- اختيار مجلد الحفظ، وصفحات الإعدادات والتعريف والتواصل، ودعم العربية RTL والإنجليزية LTR.
+- تحميل بلا سقف ثابت لحجم الملف، مع فحص المساحة والتحقق من سلامة الناتج قبل إعلان الاكتمال.
 - دون إعلانات أو حسابات أو تحليلات سلوكية أو مراقبة للحافظة.
 
-## التنزيل والتثبيت
+## صور فعلية
 
-[تنزيل dosos73 1.0.1 لأندرويد](https://github.com/taroq4-2/dosos73/releases/download/v1.0.1/dosos73-1.0.1.apk) · [تفاصيل الإصدار](https://github.com/taroq4-2/dosos73/releases/tag/v1.0.1) · [بصمة SHA256](https://github.com/taroq4-2/dosos73/releases/download/v1.0.1/SHA256SUMS.txt)
+صور من التطبيق الجاري على Android 15؛ الملفات الظاهرة عينات عامة استُخدمت للاختبار. حالة التوقف والطابور ناتجة عن تنزيل حقيقي، والأعداد غير ثابتة.
 
-يتطلب Android 10 أو أحدث. يدعم arm64-v8a وx86_64. الحزمة موقّعة بمفتاح إصدار مستقل.
+<img src="screenshots/neon-home-ar.png" width="240" alt="الرئيسية العربية" /> <img src="screenshots/neon-downloads-ar.png" width="240" alt="التنزيلات والطابور" /> <img src="screenshots/neon-files-ar.png" width="240" alt="مكتبة الملفات" />
 
-**التثبيت لأول مرة:** افتح APK واسمح بالتثبيت من المصدر الذي تستخدمه. إذا كانت لديك نسخة Preview القديمة، احذفها أولًا لاختلاف التوقيع؛ سيؤدي ذلك إلى حذف إعدادات التطبيق، وتبقى الملفات المحفوظة في مجلد التنزيلات العام. الإصدارات الرسمية اللاحقة تستخدم المفتاح نفسه.
+<img src="screenshots/neon-settings-ar.png" width="240" alt="الإعدادات" /> <img src="screenshots/neon-home-en.png" width="240" alt="English home" /> <img src="screenshots/neon-icon.png" width="240" alt="أيقونة التطبيق في Android" />
 
-أكد مالك المشروع نجاح تنزيل YouTube على هاتفه في 26 أكتوبر 2026. اختبارات المحاكي المحلي رصدت أخطاء اتصال متقطعة؛ قد تتأثر الإتاحة بقيود المصدر والشبكة. [نتائج التحقق](docs/RELEASE_1.0.0.md).
-
-الإصدار 1.0.1 يحسّن توافق فحص الروابط، وتنسيق الأرقام العربية، ورسائل اللصق وأيقونة التطبيق. [تفاصيل المراجعة والإصلاحات](docs/REVIEW_1.0.1.md).
+[صور الواجهة السابقة](screenshots/01-main-ar.png) · [تقرير التصميم والتحقق](docs/NEON_REDESIGN.md)
 
 ## الاستخدام
 
-1. شارك رابطًا نصيًا واحدًا أو الصقه في التطبيق.
-2. اختر «تحليل»، ثم النوع والجودة والصيغة المتاحة.
-3. اختر مكان الحفظ.
-4. ابدأ التنزيل وافتح الملف بعد اكتماله والتحقق منه.
+1. ألصق رابطًا أو شاركه من تطبيق آخر.
+2. اضغط «تحميل» لتحليل المصدر، ثم اختر نوع الوسائط والجودة والصيغة.
+3. اضغط «ابدأ»؛ تتولى شاشة التنزيلات متابعة المهمة والطابور.
+4. افتح الملف بعد اكتماله من الإشعار أو المكتبة.
 
-التنزيل يحتاج إلى مساحة للنسخة المؤقتة والملف النهائي، وقد يحتاج الدمج مساحة إضافية. التنزيل الملغى يبدأ من جديد؛ لا يوجد استئناف في النسخة الحالية. لا يضمن ظهور عنوان الفيديو إمكانية تنزيله. حمّل المحتوى الذي يحق لك حفظه فقط؛ لا يتجاوز التطبيق قيود الوصول أو DRM.
+التنزيلات المتوقفة بعد إغلاق العملية تبدأ من جديد؛ لا يوجد استئناف دائم عبر إعادة تشغيل التطبيق. قد تمنع قيود المصدر أو الشبكة بعض الروابط. لا يستورد التطبيق بيانات تسجيل الدخول أو يتجاوز DRM. حمّل المحتوى الذي يحق لك حفظه فقط. إزالة عنصر من السجل لا تحذف ملفه؛ حذف الملف يتطلب تأكيدًا.
 
-## صور التطبيق
+## التطوير والتحقق
 
-صور فعلية من Android15. المثال المصوّر تنزيل مباشر لعينة عامة، وليس دليل نجاح YouTube.
+Kotlin وJetpack Compose؛ minSdk 29 وtargetSdk 35؛ JDK 17/21 وAndroid SDK 35. لا توجد مفاتيح أو كلمات مرور في المستودع.
 
-<img src="screenshots/01-main-ar.png" width="220" alt="الرئيسية" /> <img src="screenshots/02-analyzed-ar.png" width="220" alt="الصيغ المتاحة" />
-<img src="screenshots/03-download-ar.png" width="220" alt="التنزيل" /> <img src="screenshots/04-complete-ar.png" width="220" alt="اكتمال الحفظ" />
-<img src="screenshots/05-about-ar.png" width="220" alt="من نحن" /> <img src="screenshots/06-contact-ar.png" width="220" alt="التواصل" />
-
-## للمطورين
-
-Kotlin وJetpack Compose؛ Android10+؛ minSdk29 وtargetSdk35؛ arm64-v8a وx86_64. يلزم JDK17 أو21 وAndroid SDK35.
-
-~~~sh
+```sh
 ./gradlew testDebugUnitTest lintDebug assembleDebug assembleRelease
 ./gradlew connectedDebugAndroidTest
-~~~
+```
 
-على Windows استخدم gradlew.bat. اختبارات الوحدة لا تعتمد على الإنترنت؛ الاختبارات الحية منفصلة. للتوقيع اضبط DOSOS73_KEYSTORE وDOSOS73_STORE_PASSWORD في بيئة البناء. المفاتيح وبيانات الدخول غير موجودة في المستودع.
+على Windows استخدم `gradlew.bat`. الترجمتان تخضعان لفحص تطابق المفاتيح أثناء البناء. اختبارات الوحدة تستخدم خادمًا محليًا داخل الاختبار؛ اختبارات الشبكة العامة منفصلة وتتطلب التفعيل. للتوقيع اضبط `DOSOS73_KEYSTORE` و`DOSOS73_STORE_PASSWORD` في بيئة البناء. المصدر المثبت لمحرك الوسائط موجود في المستودع؛ لم يُستبدل ضمن إعادة التصميم.
 
-[الاختبارات](docs/V4_TEST_RESULTS.md) · [الإصلاحات](docs/REVIEW_FIXES.md) · [الأمان](docs/SECURITY.md) · [الأداء](docs/PERFORMANCE.md) · [مراجعة الكود](docs/FINAL_CODE_AUDIT.md) · [التراخيص](THIRD_PARTY_NOTICES.md)
+[نتائج إعادة التصميم](docs/NEON_REDESIGN.md) · [مراجعة الإصلاحات السابقة](docs/REVIEW_1.0.1.md) · [الأمان والحدود المعروفة](docs/SECURITY.md) · [التراخيص والمكونات](THIRD_PARTY_NOTICES.md)
 
 ## English
 
-dosos73 is a native Android downloader with Arabic/English UI, source-derived format selection, scoped storage and streaming transfers without a fixed file-size ceiling. Storage and source restrictions still apply.
+dosos73 is an open-source native Android media downloader with Arabic/English UI, a navy neon visual system, a durable sequential queue, retryable failures and an app-owned file library. File actions use Android scoped storage. Direct transfers support cooperative pause/resume within the current session; media-engine transfers support cancel/restart. Process-death resume is not implemented. Source availability and storage capacity still apply.
 
-Version 1.0.1 uses a dedicated release signing key. The project owner confirmed working YouTube downloads on their phone. Automated build/device results and intermittent local emulator network failures are documented separately. Upgrading from the older debug-signed preview requires uninstalling that preview first.
+Version 1.1.0 retains the official release signing key. Download and verification links are above. See the redesign report for executed tests and remaining limitations.
 
-First-party code: GPL-3.0-or-later. Dependencies and branding have separate terms. Developer: [OS73](https://os73.com). Contact: contact@os73.com.
+First-party code: **GPL-3.0-or-later**. Dependencies, fonts and supplied branding retain their own terms. Developer: [OS73](https://os73.com) · contact@os73.com.

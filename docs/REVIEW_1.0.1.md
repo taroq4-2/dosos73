@@ -23,3 +23,5 @@ The owner requested evaluation of a third-party review, not literal execution of
 ## Validation
 
 Results and signed GitHub artifact acceptance are appended after execution. Historical unresolved native/network/security audit items remain in their existing documents; this targeted review does not certify every behavior or provider.
+
+The reliability changes reviewed here are included in official1.1.0. Final APK and later queue/UI verification are in NEON_REDESIGN.md; the1.0.1 draft was superseded by1.1.0.

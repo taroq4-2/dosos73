@@ -22,3 +22,5 @@ No new production dependency was added for UI/contact. Existing Python/FFmpeg/Qu
 
 Still unmeasured: physical ARM memory/CPU, peak native merge RSS, battery/thermal effects, large-file throughput, statistical cold/warm launch distributions and first-ever native extraction overhead. A synthetic sparse file above 2 GiB is not a network or disk-throughput benchmark.
 
+
+1.1.0 neon acceptance (2026-10-26): universal signed APK 111,978,356 bytes; one local API35/SwiftShader cold launch 1833 ms and file-library PSS 51,834 KiB. Single observations only; no benchmark comparison. Tajawal fonts total182,632bytes; shared logo bitmap and 8MiB thumbnail cache. See NEON_REDESIGN.md.
