@@ -29,13 +29,15 @@ class UiFlowTest {
     fun sharedTextReturnsToHomeFromFileLibrary() {
         compose.onNodeWithTag("nav_files").performClick()
         compose.runOnIdle {
-            compose.activity.startActivity(
-                android.content
-                    .Intent(compose.activity, MainActivity::class.java)
-                    .setAction(android.content.Intent.ACTION_SEND)
-                    .setType("text/plain")
-                    .putExtra(android.content.Intent.EXTRA_TEXT, "not a URL")
-            )
+            InstrumentationRegistry.getInstrumentation()
+                .callActivityOnNewIntent(
+                    compose.activity,
+                    android.content
+                        .Intent(compose.activity, MainActivity::class.java)
+                        .setAction(android.content.Intent.ACTION_SEND)
+                        .setType("text/plain")
+                        .putExtra(android.content.Intent.EXTRA_TEXT, "not a URL"),
+                )
         }
         compose.waitUntil(5_000) {
             runCatching { compose.onAllNodesWithTag("url").fetchSemanticsNodes().isNotEmpty() }

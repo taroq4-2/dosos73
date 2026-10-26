@@ -124,7 +124,10 @@ class MainActivity : ComponentActivity() {
             }
         }
         LaunchedEffect(Unit) {
-            withContext(Dispatchers.IO) { DownloadQueue.initialize(this@MainActivity) }
+            withContext(Dispatchers.IO) {
+                DownloadQueue.initialize(this@MainActivity)
+                FailureJournal.initialize(this@MainActivity)
+            }
             refresh()
         }
         LaunchedEffect(transfer.phase) {
@@ -173,12 +176,13 @@ class MainActivity : ComponentActivity() {
                 message(R.string.error_start)
             }
         }
-        fun enqueue(task: DownloadTask) {
+        fun enqueue(task: DownloadTask, retryOf: String? = null) {
             if (submitting) return
             submitting = true
             scope.launch {
                 try {
                     DownloadQueue.enqueue(this@MainActivity, task)
+                    retryOf?.let { FailureJournal.remove(this@MainActivity, it) }
                     page = "downloads"
                     query = ""
                     runQueue()
@@ -397,6 +401,19 @@ class MainActivity : ComponentActivity() {
                                 },
                                 { runQueue() },
                                 ::action,
+                                { failed ->
+                                    enqueue(
+                                        failed.task.copy(
+                                            id = java.util.UUID.randomUUID().toString()
+                                        ),
+                                        failed.task.id,
+                                    )
+                                },
+                                { failed ->
+                                    scope.launch {
+                                        FailureJournal.remove(this@MainActivity, failed.task.id)
+                                    }
+                                },
                             )
                         "files" -> FileLibraryScreen(files, query, ::action, ::refresh)
                         "about" -> AboutScreen({ page = "more" }, { page = "contact" })

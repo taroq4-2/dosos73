@@ -80,7 +80,12 @@ class DownloadService : Service() {
                             }
                     while (task != null) {
                         paused.value = false
-                        processTask(task)
+                        if (processTask(task) == Phase.FAILED) {
+                            cancelled =
+                                true // Keep waiting tasks until the user explicitly retries or
+                                     // continues.
+                            break
+                        }
                         ensureActive()
                         task =
                             DownloadQueue.take(this@DownloadService)?.also {
@@ -124,6 +129,7 @@ class DownloadService : Service() {
         val directory = File(cacheDir, "transfer-${UUID.randomUUID()}")
         var stage = Stage.TRANSFER
         var terminal = TransferState(Phase.CANCELLED, task.analysis.title)
+        var failureCode: FailureCode? = null
         try {
             withContext(Dispatchers.IO) {
                 check(directory.mkdirs())
@@ -198,15 +204,27 @@ class DownloadService : Service() {
             terminal = TransferState(Phase.CANCELLED, task.analysis.title)
         } catch (e: Exception) {
             val failure = FailureClassifier.classify(stage, e)
+            failureCode = failure.code
             Diagnostics.event(failure.stage, "failed", code = failure.code)
             terminal =
                 TransferState(Phase.FAILED, task.analysis.title, error = failure.messageResource())
         } finally {
             withContext(NonCancellable + Dispatchers.IO) { directory.deleteRecursively() }
+            if (terminal.phase in setOf(Phase.FAILED, Phase.CANCELLED)) {
+                withContext(NonCancellable) {
+                    runCatching {
+                        FailureJournal.record(
+                            this@DownloadService,
+                            FailedDownload(task, failureCode, terminal.phase == Phase.CANCELLED),
+                        )
+                    }
+                }
+            }
             // Ownership remains active through cleanup before publishing terminal state.
             Transfers.update(terminal.copy(detail = detail))
             if (terminal.phase == Phase.COMPLETE) completionNotification(terminal)
         }
+        terminal.phase
     }
 
     private fun publish(state: TransferState) {

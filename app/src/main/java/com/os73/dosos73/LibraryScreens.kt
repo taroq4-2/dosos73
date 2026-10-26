@@ -291,7 +291,10 @@ internal fun DownloadsScreen(
     onRemove: (DownloadTask) -> Unit,
     onRunQueue: () -> Unit,
     onAction: (SavedFile, String) -> Unit,
+    onRetryFailed: (FailedDownload) -> Unit,
+    onForgetFailure: (FailedDownload) -> Unit,
 ) {
+    val failures by FailureJournal.failures.collectAsState()
     var filter by rememberSaveable { mutableIntStateOf(0) }
     LaunchedEffect(state.phase) {
         if (state.phase == Phase.COMPLETE) filter = 1 else if (state.active) filter = 0
@@ -332,9 +335,13 @@ internal fun DownloadsScreen(
             contentPadding = PaddingValues(top = 12.dp, bottom = 16.dp),
         ) {
             if (filter == 0) {
-                if (state.phase != Phase.IDLE && state.title.contains(query, true))
+                if (
+                    state.phase != Phase.IDLE &&
+                        state.title.contains(query, true) &&
+                        (state.active || failures.none { it.task.id == Transfers.currentTask?.id })
+                )
                     item { TransferCard(state, onCancel, onOpen, onPause, onRetry, onDetails) }
-                if (state.phase == Phase.IDLE)
+                if (state.phase == Phase.IDLE && failures.isEmpty())
                     item {
                         EmptyState(
                             Glyph.DOWNLOAD,
@@ -342,6 +349,38 @@ internal fun DownloadsScreen(
                             R.string.downloads_empty_body,
                         )
                     }
+                items(
+                    failures.filter { it.task.analysis.title.contains(query, true) },
+                    key = { "failed-${it.task.id}" },
+                ) { failed ->
+                    Panel {
+                        Text(
+                            failed.task.analysis.title,
+                            style = MaterialTheme.typography.titleSmall,
+                        )
+                        Text(
+                            stringResource(
+                                if (failed.cancelled) R.string.cancelled
+                                else
+                                    PipelineException(
+                                            Stage.TRANSFER,
+                                            failed.code ?: FailureCode.DOWNLOAD_FAILED,
+                                        )
+                                        .messageResource()
+                            ),
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                        Row {
+                            TextButton({ onRetryFailed(failed) }) {
+                                Text(stringResource(R.string.retry))
+                            }
+                            TextButton({ onForgetFailure(failed) }) {
+                                Text(stringResource(R.string.remove_history))
+                            }
+                        }
+                    }
+                }
                 if (waiting.isNotEmpty())
                     item {
                         Text(
