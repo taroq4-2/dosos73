@@ -13,6 +13,8 @@ First-party Kotlin, resources and build scripts are offered under GPL-3.0-or-lat
 | AndroidX/Compose | pinned in app/build.gradle.kts | Apache-2.0, https://android.googlesource.com/platform/frameworks/support/ |
 | Kotlin/coroutines | 2.0.21 / 1.9.0 | Apache-2.0, https://github.com/Kotlin/kotlinx.coroutines |
 | OkHttp/Okio | 4.12.0 / transitive | Apache-2.0, https://github.com/square/okhttp |
+| Jackson core/databind / annotations | 2.22.4 / 2.22 | Apache-2.0, https://github.com/FasterXML/jackson |
+| Commons Compress / IO / Lang | 1.27.1 / 2.19.0 / 3.18.0 | Apache-2.0, https://commons.apache.org/ |
 | JUnit | 4.13.2, tests only | EPL-1.0, https://github.com/junit-team/junit4 |
 | Gradle Wrapper | 8.9 | Apache-2.0, https://github.com/gradle/gradle |
 
@@ -23,4 +25,3 @@ The full transitive/native source-correspondence audit is not complete. The inve
 The current neon artwork was supplied by the project owner. The source image is retained in branding/neon-reference.png and used by the Android UI. The launcher uses the corresponding vector mark. Artwork is not covered by the code license; no unrestricted third-party reuse or independent trademark clearance is asserted.
 
 Tajawal (Regular/Medium/Bold), copyright 2018 Boutros International, SIL Open Font License 1.1. Unmodified fonts from https://github.com/google/fonts/tree/main/ofl/tajawal ; full license in docs/licenses/Tajawal-OFL.txt and the APK raw resources.
-

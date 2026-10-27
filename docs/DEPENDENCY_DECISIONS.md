@@ -18,3 +18,5 @@ Research date: 2026-10-25. Versions are pinned. Not every selected version is th
 | Media3 Transformer/platform codecs | Not selected for conversion: device codec variability and duplicate pipeline; platform retriever used only for validation. | https://developer.android.com/media/media3/transformer |
 
 No benchmark advantage is claimed. Exact native inventory, dependency advisories, codec availability, memory and APK size must be recorded from built artifacts. The bundled engine is not silently updated at runtime. This may limit current website support; secure, reproducible updates require a new audited application build.
+
+Release 1.1.2 overrides wrapper transitive Jackson via BOM 2.22.4, Commons Compress 1.27.1, IO 2.19.0 and Lang 3.18.0 after OSV findings on the original graph. The final resolved 85-coordinate Maven graph returned no OSV IDs on 2026-10-26. This is a point-in-time database check, not a native/Python vulnerability audit or guarantee. Archive/runtime compatibility is tested separately.
