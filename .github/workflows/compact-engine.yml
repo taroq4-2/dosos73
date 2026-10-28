@@ -17,6 +17,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: android-actions/setup-android@v3
+        with:
+          packages: 'platform-tools'
       - name: Install pinned NDK
         run: sdkmanager 'ndk;28.2.13676358'
       - name: Build experimental media engine
@@ -28,4 +30,5 @@ jobs:
           name: compact-engine-${{ matrix.abi }}
           path: native-out/
           if-no-files-found: error
+
 
