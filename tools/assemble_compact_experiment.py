@@ -24,7 +24,7 @@ for abi in ABIS:
 # Shared libraries live in the wrapper's extracted, non-executable library directory.
 archives = {}
 for abi in ABIS:
-    libs = sorted((a.engines / abi / 'usr' / 'lib').glob('*.so'))
+    libs = sorted((a.engines / abi / 'usr' / 'lib').glob('*.so*'))
     if not libs:
         raise ValueError(f'Missing shared libraries for {abi}')
     archive = io.BytesIO()

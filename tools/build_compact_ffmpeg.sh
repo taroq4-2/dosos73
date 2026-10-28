@@ -36,8 +36,8 @@ make -j2 ffmpeg ffprobe
 mkdir -p "$root/native-out/$abi"
 cp ffmpeg ffprobe config.h ffbuild/config.mak COPYING.LGPLv2.1 LICENSE.md "$root/native-out/$abi/"
 mkdir -p "$root/native-out/$abi/usr/lib"
-find . -type f -name 'lib*.so' -exec cp '{}' "$root/native-out/$abi/usr/lib/" ";"
-"$compiler/llvm-strip" "$root/native-out/$abi/ffmpeg" "$root/native-out/$abi/ffprobe" "$root/native-out/$abi/usr/lib/"*.so
+find . -type f -name 'lib*.so*' -exec cp '{}' "$root/native-out/$abi/usr/lib/" ";"
+"$compiler/llvm-strip" "$root/native-out/$abi/ffmpeg" "$root/native-out/$abi/ffprobe" "$root/native-out/$abi/usr/lib/"*.so*
 "$compiler/llvm-readelf" -l -d "$root/native-out/$abi/ffmpeg" > "$root/native-out/$abi/elf-audit.txt"
 cd "$root/native-out/$abi"
 sha256sum ffmpeg ffprobe > SHA256SUMS.txt
