@@ -94,6 +94,24 @@ class ParallelDownloaderTest {
     }
 
     @Test
+    fun cancellationOnFinalMergeReadDoesNotPublishOrFallback() = fixture { engine, file, server ->
+        val failure = runCatching {
+            engine.download(
+                "https://example.com/file", file, connections = 2,
+                awaitReady = {
+                    // At EOF of the last segment, cancel while the readiness gate is returning.
+                    val merged = File(file.parentFile, file.name + ".parallel-merge")
+                    if (merged.length() == bytes.size.toLong()) engine.cancel()
+                },
+            ) { _, _, _ -> }
+        }.exceptionOrNull()
+        assertTrue(failure is java.io.IOException)
+        assertFalse(file.exists())
+        assertEquals(3, server.requestCount)
+        assertTrue(file.parentFile!!.list()!!.isEmpty())
+    }
+
+    @Test
     fun ignoredRangeFallsBackOnceWithoutDuplicatingBytes() =
         fixture("ignored") { engine, file, server ->
             engine.download("https://example.com/file", file, connections = 2) { _, _, _ -> }

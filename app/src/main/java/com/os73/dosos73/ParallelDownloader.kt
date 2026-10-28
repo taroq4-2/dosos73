@@ -37,6 +37,7 @@ internal class ParallelDownloader(
         try {
             awaitReady()
             currentCoroutineContext().ensureActive()
+            if (cancelled.get()) throw IOException("Cancelled")
             val probe = workers[0].request(url, probe = true)
             val total: Long
             val tag: String
@@ -105,6 +106,8 @@ internal class ParallelDownloader(
                                             currentCoroutineContext().ensureActive()
                                             if (cancelled.get()) throw IOException("Cancelled")
                                             awaitReady()
+                                            currentCoroutineContext().ensureActive()
+                                            if (cancelled.get()) throw IOException("Cancelled")
                                             val n = input.read(buffer)
                                             if (n == -1) break
                                             if (n > expected - count)
@@ -152,6 +155,8 @@ internal class ParallelDownloader(
                         currentCoroutineContext().ensureActive()
                         if (cancelled.get()) throw IOException("Cancelled")
                         awaitReady()
+                        currentCoroutineContext().ensureActive()
+                        if (cancelled.get()) throw IOException("Cancelled")
                         val n = input.read(buffer)
                         if (n < 0) break
                         output.write(buffer, 0, n)
@@ -160,6 +165,8 @@ internal class ParallelDownloader(
                 output.fd.sync()
             }
             if (merged.length() != total) throw IOException("Parallel merge mismatch")
+            currentCoroutineContext().ensureActive()
+            if (cancelled.get()) throw IOException("Cancelled")
             java.nio.file.Files.move(
                 merged.toPath(),
                 destination.toPath(),
