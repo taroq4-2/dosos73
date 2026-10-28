@@ -16,3 +16,13 @@ Official references:
 - https://developer.android.com/topic/performance/reduce-apk-size
 - https://ffmpeg.org/download.html
 - https://github.com/yausername/youtubedl-android/blob/master/BUILD_FFMPEG.md
+
+## Measured candidate
+
+A four-ABI shared-library candidate assembled from the current release build measures 72,349,806 bytes unsigned and 72,397,560 bytes after 16KB ZIP alignment and production signing. This meets the 80,000,000-byte SIZE gate only. It is NOT yet accepted as functionally equivalent or published. The retained Python archives have only the build-time QuickJS static archive removed. All four CPU architectures remain.
+
+Shared FFmpeg/ffprobe tested on API35 x86_64: loader succeeds once libraries use their ELF-needed unversioned names; separate H264 video and AAC audio streams merge and ffprobe identifies both. Static prototype also passed WAV-to-AAC and SRT-to-WebVTT checks. Current user-facing functionality, other formats, YouTube and app integration remain acceptance gates.
+
+Old emulator installation was blocked by insufficient space. Automatic approval rejected clearing the isolated test user's app data; no deletion executed. A new independent AVD was created under work/compact-avds for clean installation, leaving original app data intact.
+
+Preview lifecycle repair: pause on background and do not auto-start if preparation completes while lifecycle is not resumed. After this change all59 JVM tests and lintDebug passed. Device lifecycle acceptance remains pending.
