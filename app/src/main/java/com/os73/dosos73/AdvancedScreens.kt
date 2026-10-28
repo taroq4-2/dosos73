@@ -147,6 +147,7 @@ internal fun safeSourceLabel(url: String?): String =
 internal fun OfflinePreview(item: SavedFile, onDismiss: () -> Unit, onExternal: () -> Unit) {
     val context = LocalContext.current
     val uri = remember(item.uri) { Uri.parse(item.uri) }
+    val lifecycle = androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
     var bitmap by remember(item.uri) { mutableStateOf<android.graphics.Bitmap?>(null) }
     var failed by remember(item.uri) { mutableStateOf(uri.scheme != "content") }
     var player by remember { mutableStateOf<VideoView?>(null) }
@@ -172,8 +173,16 @@ internal fun OfflinePreview(item: SavedFile, onDismiss: () -> Unit, onExternal: 
             failed = bitmap == null
         } else if (!item.mime.startsWith("video/") && !item.mime.startsWith("audio/")) failed = true
     }
-    DisposableEffect(Unit) {
+    DisposableEffect(lifecycle, item.uri) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_PAUSE ||
+                event == androidx.lifecycle.Lifecycle.Event.ON_STOP) {
+                runCatching { player?.pause() }
+            }
+        }
+        lifecycle.addObserver(observer)
         onDispose {
+            lifecycle.removeObserver(observer)
             runCatching { player?.stopPlayback() }
             player = null
         }
@@ -210,7 +219,9 @@ internal fun OfflinePreview(item: SavedFile, onDismiss: () -> Unit, onExternal: 
                                     failed = true
                                     true
                                 }
-                                setOnPreparedListener { start() }
+                                setOnPreparedListener {
+                                    if (lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED)) start()
+                                }
                                 try {
                                     setVideoURI(uri)
                                 } catch (_: Exception) {

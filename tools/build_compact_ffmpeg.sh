@@ -4,7 +4,7 @@ set -euo pipefail
 abi="$1"
 extra_options=()
 # Android x86 PIE cannot link the absolute relocations in this upstream assembly.
-if [ "$abi" = x86 ]; then extra_options+=(--disable-x86asm); fi
+if [ "$abi" = x86 ]; then extra_options+=(--disable-x86asm --disable-inline-asm); fi
 case "$abi" in
   arm64-v8a) arch=aarch64; triple=aarch64-linux-android; cpu=armv8-a ;;
   armeabi-v7a) arch=arm; triple=armv7a-linux-androideabi; cpu=armv7-a ;;
