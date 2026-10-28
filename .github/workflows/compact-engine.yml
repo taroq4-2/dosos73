@@ -1,5 +1,8 @@
 name: Compact native engine experiment
 on:
+  push:
+    branches: ['feature/reliable-download-platform']
+    paths: ['tools/build_compact_ffmpeg.sh', '.github/workflows/compact-engine.yml']
   workflow_dispatch:
 jobs:
   native:
@@ -25,3 +28,4 @@ jobs:
           name: compact-engine-${{ matrix.abi }}
           path: native-out/
           if-no-files-found: error
+
