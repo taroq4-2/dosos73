@@ -1,3 +1,5 @@
+> Development branch: **1.2.0-rc.1** adds verified direct resume, optional two-connection downloads, batch review, privacy controls and universal Android10+ packaging. [Scope, tests and remaining work](docs/CHARTER_DELIVERY.md). Stable download below remains1.1.2.
+
 <div align="center">
 <img src="branding/neon-reference.png" width="160" alt="dosos73 logo" />
 

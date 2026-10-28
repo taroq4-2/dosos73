@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.0-rc.1
+- Verified direct HTTP resume, opt-in two-range download and encrypted durable queue with priorities.
+- Network-bound Wi-Fi/unmetered controls, batch review, audio quality metadata, local preview, collections and privacy controls.
+- Universal four-ABI package plus smaller per-ABI APKs for Android10+.
+- Beta scope and remaining charter work: [delivery report](docs/CHARTER_DELIVERY.md).
+
 ## 1.1.2
 - Cleaned superseded assets, old screenshots and historical generated reports from the current tree; history and license notices retained.
 - Equivalent English and Arabic project pages, contribution guidance and explicit release evidence.
