@@ -24,7 +24,7 @@ git checkout --detach 946fcce07b6dcd0331c8cc609192aeff5e1924f8
   --cc="$compiler/${triple}29-clang" --cxx="$compiler/${triple}29-clang++" \
   --ar="$compiler/llvm-ar" --ranlib="$compiler/llvm-ranlib" --strip="$compiler/llvm-strip" \
   --enable-pic --enable-small --disable-debug --disable-doc --disable-autodetect \
-  --disable-shared --enable-static --disable-avdevice --disable-network \
+  --enable-shared --disable-static --disable-avdevice --disable-network \
   --disable-everything --enable-ffmpeg --enable-ffprobe \
   --enable-protocol=file,pipe --enable-demuxers --enable-muxers --enable-parsers --enable-bsfs \
   --enable-decoder=h264,hevc,vp8,vp9,aac,opus,vorbis,mp3,flac,pcm_s16le,pcm_s24le,pcm_s32le,subrip,webvtt \
@@ -35,7 +35,9 @@ git checkout --detach 946fcce07b6dcd0331c8cc609192aeff5e1924f8
 make -j2 ffmpeg ffprobe
 mkdir -p "$root/native-out/$abi"
 cp ffmpeg ffprobe config.h ffbuild/config.mak COPYING.LGPLv2.1 LICENSE.md "$root/native-out/$abi/"
-"$compiler/llvm-strip" "$root/native-out/$abi/ffmpeg" "$root/native-out/$abi/ffprobe"
+mkdir -p "$root/native-out/$abi/usr/lib"
+find . -type f -name 'lib*.so' -exec cp '{}' "$root/native-out/$abi/usr/lib/" ";"
+"$compiler/llvm-strip" "$root/native-out/$abi/ffmpeg" "$root/native-out/$abi/ffprobe" "$root/native-out/$abi/usr/lib/"*.so
 "$compiler/llvm-readelf" -l -d "$root/native-out/$abi/ffmpeg" > "$root/native-out/$abi/elf-audit.txt"
 cd "$root/native-out/$abi"
 sha256sum ffmpeg ffprobe > SHA256SUMS.txt

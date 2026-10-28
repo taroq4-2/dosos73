@@ -21,10 +21,17 @@ for abi in ABIS:
         path = a.engines / abi / binary
         if path.read_bytes()[:4] != b'\x7fELF':
             raise ValueError(f'Not ELF: {path}')
-# Wrapper expects an archive on init even when the executable links FFmpeg statically.
-placeholder = io.BytesIO()
-with zipfile.ZipFile(placeholder, 'w', compression=zipfile.ZIP_DEFLATED) as z:
-    z.writestr('COMPACT_ENGINE.txt', 'Experimental statically linked FFmpeg; see accompanying build source and licenses.\n')
+# Shared libraries live in the wrapper's extracted, non-executable library directory.
+archives = {}
+for abi in ABIS:
+    libs = sorted((a.engines / abi / 'usr' / 'lib').glob('*.so'))
+    if not libs:
+        raise ValueError(f'Missing shared libraries for {abi}')
+    archive = io.BytesIO()
+    with zipfile.ZipFile(archive, 'w', compression=zipfile.ZIP_DEFLATED, compresslevel=9) as z:
+        for lib in libs:
+            z.writestr('usr/lib/' + lib.name, lib.read_bytes())
+    archives[abi] = archive.getvalue()
 seen = set()
 with zipfile.ZipFile(a.apk) as source, zipfile.ZipFile(a.output, 'w') as target:
     for entry in source.infolist():
@@ -38,7 +45,7 @@ with zipfile.ZipFile(a.apk) as source, zipfile.ZipFile(a.output, 'w') as target:
             if name == prefix + 'libpython.zip.so':
                 data, _ = trim_runtime(data)
             elif name == prefix + 'libffmpeg.zip.so':
-                data = placeholder.getvalue()
+                data = archives[abi]
                 seen.add(name)
             elif name in (prefix + 'libffmpeg.so', prefix + 'libffprobe.so'):
                 binary = 'ffprobe' if name.endswith('libffprobe.so') else 'ffmpeg'
