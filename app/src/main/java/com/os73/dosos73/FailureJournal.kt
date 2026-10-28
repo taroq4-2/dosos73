@@ -1,8 +1,6 @@
 package com.os73.dosos73
 
 import android.content.Context
-import android.util.AtomicFile
-import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -25,34 +23,30 @@ internal object FailureJournal {
     private val mutable = MutableStateFlow<List<FailedDownload>>(emptyList())
     val failures = mutable.asStateFlow()
 
-    private fun file(context: Context) = AtomicFile(File(context.filesDir, "failed-downloads.json"))
+    private fun file(context: Context) = PrivateJournal(context, "failed-downloads.json")
 
     private fun load(context: Context) {
         if (loaded) return
+        val text = file(context).readOrNull()
+        val array = if (text == null) JSONArray() else JSONArray(text)
         mutable.value =
-            runCatching {
-                    val array =
-                        JSONArray(file(context).openRead().bufferedReader().use { it.readText() })
-                    (0 until array.length()).map {
-                        array.getJSONObject(it).let { json ->
-                            FailedDownload(
-                                DownloadQueue.decodeTask(json.getJSONObject("task")),
-                                if (json.isNull("code")) null
-                                else
-                                    runCatching { FailureCode.valueOf(json.getString("code")) }
-                                        .getOrDefault(FailureCode.DOWNLOAD_FAILED),
-                                json.getBoolean("cancelled"),
-                            )
-                        }
-                    }
-                }
-                .getOrDefault(emptyList())
+            (0 until array.length()).map {
+                val json = array.getJSONObject(it)
+                FailedDownload(
+                    DownloadQueue.decodeTask(json.getJSONObject("task")),
+                    if (json.isNull("code")) null
+                    else
+                        runCatching { FailureCode.valueOf(json.getString("code")) }
+                            .getOrDefault(FailureCode.DOWNLOAD_FAILED),
+                    json.getBoolean("cancelled"),
+                )
+            }
         loaded = true
     }
 
-    private fun save(context: Context) {
+    private fun save(context: Context, entries: List<FailedDownload>) {
         val array = JSONArray()
-        mutable.value.forEach {
+        entries.forEach {
             array.put(
                 JSONObject()
                     .put("task", DownloadQueue.encodeTask(it.task))
@@ -60,15 +54,8 @@ internal object FailureJournal {
                     .put("cancelled", it.cancelled)
             )
         }
-        val atomic = file(context)
-        val stream = atomic.startWrite()
-        try {
-            stream.write(array.toString().toByteArray())
-            atomic.finishWrite(stream)
-        } catch (error: Exception) {
-            atomic.failWrite(stream)
-            throw error
-        }
+        file(context).write(array.toString())
+        mutable.value = entries
     }
 
     suspend fun initialize(context: Context) =
@@ -78,20 +65,37 @@ internal object FailureJournal {
         withContext(Dispatchers.IO) {
             lock.withLock {
                 load(context)
-                mutable.value =
+                val next =
                     (listOf(entry) + mutable.value.filterNot { it.task.id == entry.task.id }).take(
                         100
                     )
-                save(context)
+                save(context, next)
             }
         }
 
-    suspend fun remove(context: Context, id: String) =
+    suspend fun remove(context: Context, id: String, discardPartial: Boolean = true) =
         withContext(Dispatchers.IO) {
             lock.withLock {
                 load(context)
-                mutable.value = mutable.value.filterNot { it.task.id == id }
-                save(context)
+                save(context, mutable.value.filterNot { it.task.id == id })
+                if (
+                    discardPartial &&
+                        !(Transfers.state.value.active && Transfers.currentTask?.id == id)
+                )
+                    TransferFiles.discard(context, id)
+            }
+        }
+
+    suspend fun clear(context: Context) =
+        withContext(Dispatchers.IO) {
+            lock.withLock {
+                load(context)
+                val old = mutable.value
+                save(context, emptyList())
+                old.filterNot {
+                        Transfers.state.value.active && Transfers.currentTask?.id == it.task.id
+                    }
+                    .forEach { TransferFiles.discard(context, it.task.id) }
             }
         }
 }

@@ -123,7 +123,9 @@ internal fun SavedFileRow(
                 IconAction(Glyph.MORE, stringResource(R.string.file_actions), { menu = true })
                 DropdownMenu(menu, { menu = false }) {
                     listOf(
-                            "open" to R.string.open,
+                            "open" to R.string.preview,
+                            "external" to R.string.open_external,
+                            "collection" to R.string.collection,
                             "share" to R.string.share,
                             "info" to R.string.details,
                         )
@@ -181,13 +183,26 @@ internal fun FileLibraryScreen(
     var category by rememberSaveable { mutableIntStateOf(0) }
     var sort by rememberSaveable { mutableIntStateOf(0) }
     var ascending by rememberSaveable { mutableStateOf(false) }
+    val context = LocalContext.current
+    var selectedCollection by rememberSaveable { mutableStateOf("") }
+    var largeOnly by rememberSaveable { mutableStateOf(false) }
+    val collections =
+        files
+            .map { LibraryPreferences.collection(context, it.uri) }
+            .filter { it.isNotBlank() }
+            .distinct()
+            .sorted()
     val filtered =
-        remember(files, query, category, sort, ascending) {
+        remember(files, query, category, sort, ascending, selectedCollection, largeOnly) {
             val rows =
                 files.filter {
                     (category == 0 ||
                         (category == 1 && it.kind == Kind.VIDEO) ||
-                        (category == 2 && it.kind == Kind.AUDIO)) && it.name.contains(query, true)
+                        (category == 2 && it.kind == Kind.AUDIO)) &&
+                        (it.name.contains(query, true) || it.mime.contains(query, true)) &&
+                        (!largeOnly || it.bytes >= 100L * 1024 * 1024) &&
+                        (selectedCollection.isEmpty() ||
+                            LibraryPreferences.collection(context, it.uri) == selectedCollection)
                 }
             val comparator =
                 when (sort) {
@@ -259,6 +274,25 @@ internal fun FileLibraryScreen(
                 { ascending = !ascending },
             )
             IconAction(Glyph.CLOCK, stringResource(R.string.refresh), onRefresh)
+        }
+        Row(Modifier.horizontalScroll(rememberScrollState())) {
+            FilterChip(
+                largeOnly,
+                { largeOnly = !largeOnly },
+                label = { Text(stringResource(R.string.large_files)) },
+            )
+            FilterChip(
+                selectedCollection.isEmpty(),
+                { selectedCollection = "" },
+                label = { Text(stringResource(R.string.all_collections)) },
+            )
+            collections.forEach { group ->
+                FilterChip(
+                    selectedCollection == group,
+                    { selectedCollection = group },
+                    label = { Text(group) },
+                )
+            }
         }
         if (filtered.isEmpty())
             EmptyState(
@@ -379,6 +413,7 @@ internal fun DownloadsScreen(
                                 Text(stringResource(R.string.remove_history))
                             }
                         }
+                        DiagnosticActions(failed.code)
                     }
                 }
                 if (waiting.isNotEmpty())
@@ -427,7 +462,10 @@ internal fun DownloadsScreen(
                                     style = MaterialTheme.typography.titleSmall,
                                 )
                                 Text(
-                                    stringResource(R.string.waiting_to_start),
+                                    stringResource(
+                                        if (task.userPaused) R.string.paused
+                                        else R.string.waiting_to_start
+                                    ),
                                     color = Neon.Muted,
                                     style = MaterialTheme.typography.bodySmall,
                                 )
@@ -438,6 +476,7 @@ internal fun DownloadsScreen(
                                 { onRemove(task) },
                             )
                         }
+                        QueueControls(task)
                     }
                 }
             }

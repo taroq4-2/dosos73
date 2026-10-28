@@ -17,6 +17,9 @@ data class Choice(
     val quality: String,
     val expectedHeight: Int? = null,
     val expectsAudio: Boolean = false,
+    val estimatedBytes: Long? = null,
+    val bitrateKbps: Int? = null,
+    val language: String? = null,
 )
 
 data class Analysis(
@@ -27,16 +30,26 @@ data class Analysis(
     val sizeBytes: Long? = null,
 )
 
+enum class TaskPriority {
+    HIGH,
+    NORMAL,
+    LOW,
+}
+
 data class DownloadTask(
     val analysis: Analysis,
     val choice: Choice,
     val tree: Uri?,
     val id: String = java.util.UUID.randomUUID().toString(),
+    val priority: TaskPriority = TaskPriority.NORMAL,
+    val userPaused: Boolean = false,
+    val notBefore: Long = 0,
 )
 
 enum class Phase {
     IDLE,
     PAUSED,
+    WAITING,
     DOWNLOADING,
     PROCESSING,
     SAVING,
@@ -58,7 +71,15 @@ data class TransferState(
     val detail: String = "",
 ) {
     val active
-        get() = phase in setOf(Phase.PAUSED, Phase.DOWNLOADING, Phase.PROCESSING, Phase.SAVING)
+        get() =
+            phase in
+                setOf(
+                    Phase.PAUSED,
+                    Phase.WAITING,
+                    Phase.DOWNLOADING,
+                    Phase.PROCESSING,
+                    Phase.SAVING,
+                )
 }
 
 /** Process-local single-flight ownership. Service owns transfer lifetime, never an Activity. */

@@ -90,6 +90,8 @@ class DirectDownloaderTest {
                     block(server, DirectDownloader(client), file)
                 } finally {
                     file.delete()
+                    File(file.parentFile, file.name + ".resume").delete()
+                    File(file.parentFile, file.name + ".resume.tmp").delete()
                 }
             }
         }
@@ -233,5 +235,203 @@ class DirectDownloaderTest {
     fun rejectsPrivateRedirectTargetThroughProductionDns() = runBlocking {
         val downloader = DirectDownloader()
         assertTrue(runCatching { downloader.analyze("http://127.0.0.1/file.mp4") }.isFailure)
+    }
+
+    private fun seed(
+        server: MockWebServer,
+        file: File,
+        offset: Long = 4,
+        total: Long = 10,
+        tag: String = "\"v1\"",
+    ) {
+        file.writeText("0123uncommitted-tail")
+        ResumeJournal(file)
+            .write(
+                ResumeCheckpoint(
+                    ResumeCheckpoint.hash("https://example.com/file"),
+                    ResumeCheckpoint.hash(server.url("/file").toString()),
+                    tag,
+                    total,
+                    offset,
+                )
+            )
+    }
+
+    @Test
+    fun resumesDurableOffsetAndTruncatesUncommittedTail() = fixture { server, engine, file ->
+        seed(server, file)
+        server.enqueue(
+            MockResponse()
+                .setResponseCode(206)
+                .setHeader("ETag", "\"v1\"")
+                .setHeader("Content-Range", "bytes 4-9/10")
+                .setBody("456789")
+        )
+        engine.download("https://example.com/file", file) { _, _, _ -> }
+        assertEquals(ResumeCheckpoint.hash("0123456789"), ResumeCheckpoint.hash(file.readText()))
+        val request = server.takeRequest()
+        assertEquals("bytes=4-", request.getHeader("Range"))
+        assertEquals("\"v1\"", request.getHeader("If-Range"))
+        assertNull(ResumeJournal(file).read())
+    }
+
+    @Test
+    fun ignoredRangeOrChangedRepresentationRestartsWithoutAppending() =
+        fixture { server, engine, file ->
+            seed(server, file)
+            server.enqueue(MockResponse().setHeader("ETag", "\"v2\"").setBody("replacement"))
+            engine.download("https://example.com/file", file) { _, _, _ -> }
+            assertEquals("replacement", file.readText())
+        }
+
+    @Test
+    fun unsatisfiedRangeRestartsOnceAndNeverTrustsLocalLength() = fixture { server, engine, file ->
+        seed(server, file)
+        server.enqueue(MockResponse().setResponseCode(416).setHeader("Content-Range", "bytes */4"))
+        server.enqueue(MockResponse().setBody("new file"))
+        engine.download("https://example.com/file", file) { _, _, _ -> }
+        assertEquals("new file", file.readText())
+        assertEquals("bytes=4-", server.takeRequest().getHeader("Range"))
+        assertNull(server.takeRequest().getHeader("Range"))
+    }
+
+    @Test
+    fun invalidRangesCannotAlterDurablePrefix() = fixture { server, engine, file ->
+        for (range in
+            listOf(
+                "bytes 3-9/10",
+                "bytes 4-8/10",
+                "bytes 4-9/11",
+                "bytes 9-4/10",
+                "bytes 4-10/10",
+                "bytes 4-9/*",
+                "bytes 4-9/99999999999999999999999",
+            )) {
+            seed(server, file)
+            server.enqueue(
+                MockResponse()
+                    .setResponseCode(206)
+                    .setHeader("ETag", "\"v1\"")
+                    .setHeader("Content-Range", range)
+                    .setBody("456789")
+            )
+            assertTrue(
+                range,
+                runCatching { engine.download("https://example.com/file", file) { _, _, _ -> } }
+                    .isFailure,
+            )
+            assertEquals("0123uncommitted-tail", file.readText())
+        }
+    }
+
+    @Test
+    fun changedOrWeakValidatorCannotAppend() = fixture { server, engine, file ->
+        for (tag in listOf("\"v2\"", "W/\"v1\"", "")) {
+            seed(server, file)
+            server.enqueue(
+                MockResponse()
+                    .setResponseCode(206)
+                    .setHeader("ETag", tag)
+                    .setHeader("Content-Range", "bytes 4-9/10")
+                    .setBody("456789")
+            )
+            assertTrue(
+                runCatching { engine.download("https://example.com/file", file) { _, _, _ -> } }
+                    .isFailure
+            )
+            assertEquals("0123uncommitted-tail", file.readText())
+        }
+    }
+
+    @Test
+    fun wrongLengthAndEncodingAreRejectedBeforeAppend() = fixture { server, engine, file ->
+        seed(server, file)
+        server.enqueue(
+            MockResponse()
+                .setResponseCode(206)
+                .setHeader("ETag", "\"v1\"")
+                .setHeader("Content-Range", "bytes 4-9/10")
+                .setBody("short")
+        )
+        assertTrue(
+            runCatching { engine.download("https://example.com/file", file) { _, _, _ -> } }
+                .isFailure
+        )
+        server.enqueue(MockResponse().setHeader("Content-Encoding", "gzip").setBody("encoded"))
+        assertTrue(
+            runCatching { engine.download("https://example.com/file", file) { _, _, _ -> } }
+                .isFailure
+        )
+        assertEquals("0123uncommitted-tail", file.readText())
+    }
+
+    @Test
+    fun interruptedTransferResumesAcrossDownloaderInstances() = fixture { server, engine, file ->
+        val expected = "abcdefghij".repeat(10000)
+        server.enqueue(
+            MockResponse()
+                .setHeader("ETag", "\"stable\"")
+                .setBody(expected)
+                .setSocketPolicy(SocketPolicy.DISCONNECT_DURING_RESPONSE_BODY)
+        )
+        assertTrue(
+            runCatching { engine.download("https://example.com/file", file) { _, _, _ -> } }
+                .isFailure
+        )
+        val saved = ResumeJournal(file).read()!!
+        assertTrue(saved.offset in 1 until expected.length.toLong())
+        server.enqueue(
+            MockResponse()
+                .setResponseCode(206)
+                .setHeader("ETag", "\"stable\"")
+                .setHeader(
+                    "Content-Range",
+                    "bytes ${saved.offset}-${expected.length - 1}/${expected.length}",
+                )
+                .setBody(expected.substring(saved.offset.toInt()))
+        )
+        val restarted =
+            DirectDownloader(
+                OkHttpClient.Builder()
+                    .followRedirects(false)
+                    .retryOnConnectionFailure(false)
+                    .addInterceptor { chain ->
+                        chain.proceed(
+                            chain
+                                .request()
+                                .newBuilder()
+                                .url(server.url(chain.request().url.encodedPath))
+                                .build()
+                        )
+                    }
+                    .build()
+            )
+        restarted.download("https://example.com/file", file) { _, _, _ -> }
+        assertEquals(ResumeCheckpoint.hash(expected), ResumeCheckpoint.hash(file.readText()))
+    }
+
+    @Test
+    fun urlBindingAndMissingValidatorsRestartSafely() = fixture { server, engine, file ->
+        seed(server, file)
+        server.enqueue(MockResponse().setBody("different URL"))
+        engine.download("https://example.com/another", file) { _, _, _ -> }
+        assertNull(server.takeRequest().getHeader("Range"))
+        assertEquals("different URL", file.readText())
+        server.enqueue(
+            MockResponse()
+                .setHeader("ETag", "W/\"weak\"")
+                .setBody("x".repeat(10000))
+                .setSocketPolicy(SocketPolicy.DISCONNECT_DURING_RESPONSE_BODY)
+        )
+        assertTrue(
+            runCatching { engine.download("https://example.com/file", file) { _, _, _ -> } }
+                .isFailure
+        )
+        assertNull(ResumeJournal(file).read())
+    }
+
+    @Test
+    fun productionDoesNotDelegateDnsPolicyToSystemProxy() {
+        assertEquals(java.net.Proxy.NO_PROXY, DirectDownloader.secureClient().proxy)
     }
 }

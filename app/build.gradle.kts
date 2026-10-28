@@ -10,10 +10,13 @@ android {
         applicationId = "com.os73.dosos73"
         minSdk = 29
         targetSdk = 35
-        versionCode = 8
-        versionName = "1.1.2"
+        versionCode = 9
+        versionName = "1.2.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        ndk { abiFilters += (providers.gradleProperty("targetAbi").orNull?.let { listOf(it) } ?: listOf("arm64-v8a", "x86_64")) }
+        val supportedAbis = listOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
+        val selectedAbi = providers.gradleProperty("targetAbi").orNull
+        require(selectedAbi == null || selectedAbi in supportedAbis) { "Unsupported targetAbi" }
+        ndk { abiFilters += selectedAbi?.let { listOf(it) } ?: supportedAbis }
     }
     signingConfigs {
         val keyPath = System.getenv("DOSOS73_KEYSTORE")
@@ -89,4 +92,3 @@ val verifyTranslations by tasks.registering {
     }
 }
 tasks.named("preBuild") { dependsOn(verifyTranslations) }
-

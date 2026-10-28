@@ -39,10 +39,7 @@ class ServiceQueueTest {
             assertNotNull(failed.code)
             assertEquals(first, failed.task)
             assertTrue(
-                java.io
-                    .File(context.filesDir, "failed-downloads.json")
-                    .readText()
-                    .contains(first.id)
+                PrivateJournal(context, "failed-downloads.json").readOrNull()!!.contains(first.id)
             )
             // Removing a failed history entry must not discard the waiting job.
             FailureJournal.remove(context, first.id)

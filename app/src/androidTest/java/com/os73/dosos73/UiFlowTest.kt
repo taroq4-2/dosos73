@@ -26,14 +26,34 @@ class UiFlowTest {
     }
 
     @Test
+    fun privacyAndBatchPagesAreReachableWithoutStartingDownloads() {
+        compose.onNodeWithTag("nav_more").performClick()
+        compose.onNodeWithTag("privacy").performScrollTo().performClick()
+        compose.onNodeWithText(compose.activity.getString(R.string.clear_history)).assertExists()
+        compose.onNodeWithTag("nav_more").performClick()
+        compose.onNodeWithTag("batch").performScrollTo().performClick()
+        compose
+            .onNodeWithText(compose.activity.getString(R.string.batch_queue))
+            .assertIsNotEnabled()
+    }
+
+    @Test
     fun closingSearchRestoresUnfilteredLibrary() {
         compose.onNodeWithTag("nav_files").performClick()
-        compose.onNodeWithContentDescription(compose.activity.getString(R.string.search)).performClick()
+        compose
+            .onNodeWithContentDescription(compose.activity.getString(R.string.search))
+            .performClick()
         compose.onNodeWithTag("search").performTextInput("no-matching-fixture")
-        compose.onNodeWithText(compose.activity.getString(R.string.no_search_results)).assertExists()
-        compose.onNodeWithContentDescription(compose.activity.getString(R.string.search)).performClick()
+        compose
+            .onNodeWithText(compose.activity.getString(R.string.no_search_results))
+            .assertExists()
+        compose
+            .onNodeWithContentDescription(compose.activity.getString(R.string.search))
+            .performClick()
         compose.onNodeWithTag("search").assertDoesNotExist()
-        compose.onNodeWithText(compose.activity.getString(R.string.no_search_results)).assertDoesNotExist()
+        compose
+            .onNodeWithText(compose.activity.getString(R.string.no_search_results))
+            .assertDoesNotExist()
     }
 
     @Test

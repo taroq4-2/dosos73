@@ -16,6 +16,19 @@ import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 
 class OutputStore(private val context: Context) {
+    suspend fun recover(task: DownloadTask): Pair<Uri, String>? =
+        withContext(Dispatchers.IO) {
+            PublicationReceipt(context, task.id).recover()?.also { (uri, mime) ->
+                val bytes =
+                    context.contentResolver.openFileDescriptor(uri, "r")?.use {
+                        it.statSize.coerceAtLeast(0)
+                    } ?: 0L
+                LibraryRepository.remember(context, uri, mime, task.analysis.title, bytes)
+            }
+        }
+
+    fun forget(id: String) = PublicationReceipt(context, id).forget()
+
     fun preflight(tree: Uri?) {
         if (tree == null) return
         val folder =
@@ -77,6 +90,7 @@ class OutputStore(private val context: Context) {
     ): Pair<Uri, String> =
         withContext(Dispatchers.IO) {
             val resolver = context.contentResolver
+            val expected = file.inputStream().use(StreamIntegrity::fingerprint)
             val mime =
                 MimeTypeMap.getSingleton().getMimeTypeFromExtension(task.choice.extension)
                     ?: "application/octet-stream"
@@ -107,7 +121,10 @@ class OutputStore(private val context: Context) {
                             ?: throw IOException("Cannot create output")
                     document!!.uri
                 }
+            val receipt = PublicationReceipt(context, task.id)
+            var committed = false
             try {
+                receipt.record(uri, mime, expected, false)
                 resolver.openOutputStream(uri, "w")?.use { output ->
                     file.inputStream().use { input ->
                         val buffer = ByteArray(64 * 1024)
@@ -135,6 +152,11 @@ class OutputStore(private val context: Context) {
                     if (descriptor.statSize >= 0 && descriptor.statSize != file.length())
                         throw IOException("Output size mismatch")
                 } ?: throw IOException("Output cannot be opened")
+                resolver.openInputStream(uri)?.use { input ->
+                    StreamIntegrity.requireSame(expected, StreamIntegrity.fingerprint(input))
+                } ?: throw IOException("Output cannot be verified")
+                // MediaStore URI is stable: persist verified ownership before making it visible.
+                if (document == null) receipt.record(uri, mime, expected, true)
                 val finalUri =
                     if (document != null) {
                         // Unique suffix prevents provider-dependent replacement of an existing user
@@ -160,6 +182,8 @@ class OutputStore(private val context: Context) {
                             throw IOException("Cannot publish output")
                         uri
                     }
+                committed = true
+                receipt.record(finalUri, mime, expected, true)
                 resolver.openFileDescriptor(finalUri, "r")?.use { descriptor ->
                     if (descriptor.statSize >= 0 && descriptor.statSize != file.length())
                         throw IOException("Output size mismatch")
@@ -169,8 +193,12 @@ class OutputStore(private val context: Context) {
                 }
                 finalUri to mime
             } catch (error: Exception) {
-                runCatching {
-                    if (document != null) document!!.delete() else resolver.delete(uri, null, null)
+                if (!committed) {
+                    runCatching {
+                            if (document != null) check(document!!.delete())
+                            else check(resolver.delete(uri, null, null) == 1)
+                        }
+                        .onSuccess { receipt.forget() }
                 }
                 throw error
             }

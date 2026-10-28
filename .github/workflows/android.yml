@@ -1,7 +1,7 @@
 name: Android verification
 on:
   push:
-    branches: [main, 'maintenance/**']
+    branches: [main, 'maintenance/**', 'feature/**']
     tags: ['v*']
   pull_request:
   workflow_dispatch:
@@ -70,4 +70,3 @@ jobs:
           name: device-test-reports-api-${{ matrix.api }}
           path: |
             app/build/reports/androidTests/
-
