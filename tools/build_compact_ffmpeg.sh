@@ -2,6 +2,9 @@
 # Experimental build only. Do not replace production until the feature matrix passes.
 set -euo pipefail
 abi="$1"
+extra_options=()
+# Android x86 PIE cannot link the absolute relocations in this upstream assembly.
+if [ "$abi" = x86 ]; then extra_options+=(--disable-x86asm); fi
 case "$abi" in
   arm64-v8a) arch=aarch64; triple=aarch64-linux-android; cpu=armv8-a ;;
   armeabi-v7a) arch=arm; triple=armv7a-linux-androideabi; cpu=armv7-a ;;
@@ -17,7 +20,7 @@ cd native-build
 if [ ! -d ffmpeg/.git ]; then git clone --filter=blob:none --no-checkout https://github.com/FFmpeg/FFmpeg.git ffmpeg; fi
 cd ffmpeg
 git checkout --detach 946fcce07b6dcd0331c8cc609192aeff5e1924f8
-./configure --target-os=android --arch="$arch" --cpu="$cpu" --enable-cross-compile \
+./configure "${extra_options[@]}" --target-os=android --arch="$arch" --cpu="$cpu" --enable-cross-compile \
   --cc="$compiler/${triple}29-clang" --cxx="$compiler/${triple}29-clang++" \
   --ar="$compiler/llvm-ar" --ranlib="$compiler/llvm-ranlib" --strip="$compiler/llvm-strip" \
   --enable-pic --enable-small --disable-debug --disable-doc --disable-autodetect \

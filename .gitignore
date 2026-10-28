@@ -11,3 +11,4 @@ local.properties
 *.log
 *.hprof
 captures/
+__pycache__/
