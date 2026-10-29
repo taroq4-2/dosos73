@@ -11,4 +11,8 @@ Validation on 2026-10-29:
 - Universal packaging passed in the same Actions run. Signed RC3 APK: 72,717,048 bytes, SHA256 f2a3ac349b9547a57e9163fd46f39b7146ac1d7a739ecedb969155476e6cecc5. Existing production certificate retained. API35 x86_64 update installation and normal UI startup passed. The debug instrumentation runner failed against the minified release because its Kotlin class references were removed/renamed; release instrumentation is not claimed. The compact debug encoder test above is the native MP3 verification.
 - ELF segment audit: 608 ELF files, zero 64-bit 16KB segment failures; 286 32-bit informational entries. No physical-device 16KB execution certification.
 
-Uncommitted batch-review persistence is separate from the published MP3 source changes. This candidate does not close the full project acceptance matrix or certify all physical Android devices.
+Batch-review persistence and later source changes are included in RC4. Current signed-artifact checks are recorded in [VERIFICATION.md](VERIFICATION.md). This candidate does not close the full project acceptance matrix or certify all physical Android devices.
+
+The TLS failure above was an earlier RC3 emulator attempt. RC4 fresh-profile YouTube analysis, 720p download and local VP9/AAC playback succeeded on 2026-10-29; do not treat the earlier network failure as current universal failure.
+
+RC4 signed universal fresh-profile acceptance also completed an actual YouTube-to-MP3 transfer (about7.45MiB). Platform playback identified audio/mpeg with the Android MP3 decoder, not a renamed M4A. The foreground service stopped after completion.

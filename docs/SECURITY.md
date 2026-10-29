@@ -12,7 +12,7 @@ Cleartext is enabled to support explicitly supplied public HTTP files and the lo
 - Confirm that every extractor/helper and FFmpeg request honors the configured proxy; current proxy code alone is not proof of full native isolation.
 - Native cancellation race between process registration and cancellation requires stress tests.
 - Native/transitive advisory scan, exact binary license inventory and 16 KB verification are pending.
-- SAF partial documents and MediaStore pending rows can survive process death; transaction recovery needs a durable journal.
+- Encrypted pre-creation publication plans now recover known MediaStore/SAF interruptions and changed rename URIs. Provider normalization, inaccessible storage and ambiguous listings remain bounded recovery limits; see PUBLICATION_RECOVERY.md.
 - Android service lifecycle and OS stop behavior require tests beyond normal cancellation.
 
 This is a living hardening list, including limitations carried forward from release 1.0.0. The release is not security certified or fully MASVS compliant. No raw URLs or native error strings are logged by first-party code. Inspection of individual packaged ELF files is narrower than a complete 16 KB audit of the extracted Python/FFmpeg runtime and real-device behavior.
