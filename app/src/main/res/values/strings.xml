@@ -181,5 +181,6 @@
     <string name="parallel_connections">Two connections for direct files</string>
     <string name="parallel_connections_hint">Optional. Uses two verified byte ranges on compatible servers; otherwise uses one connection. Speed depends on the source and network.</string>
     <string name="batch_storage_error">Could not save or restore the link review. Your existing draft is preserved. Check storage and retry.</string>
+    <string name="error_publication_review">A saved file needs recovery. Reconnect its storage and retry this task. The existing file has been preserved; do not start a duplicate download.</string>
 </resources>
 

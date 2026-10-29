@@ -28,6 +28,7 @@ enum class FailureCode {
     STORAGE_PERMISSION_DENIED,
     STORAGE_FULL,
     OUTPUT_WRITE_FAILED,
+    PUBLICATION_REVIEW_REQUIRED,
     EXTRACTION_FAILED,
     DOWNLOAD_FAILED,
 }
@@ -78,6 +79,7 @@ object FailureClassifier {
 
 fun PipelineException.messageResource(): Int =
     when (code) {
+        FailureCode.PUBLICATION_REVIEW_REQUIRED -> R.string.error_publication_review
         FailureCode.STORAGE_FULL -> R.string.error_disk_full
         FailureCode.NETWORK_TLS -> R.string.error_tls
         FailureCode.AUTHENTICATION_REQUIRED -> R.string.error_auth_required

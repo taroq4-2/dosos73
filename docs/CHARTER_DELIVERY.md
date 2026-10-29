@@ -8,6 +8,8 @@ A live direct-transfer process-kill test also completed: a 4,372,373-byte W3C fi
 
 A separate reboot test also completed: a second direct-transfer task had a saved partial and checkpoint before emulator reboot. After boot and opening the app, exactly one further 4,372,373-byte file was published with the same reference hash and empty staging. This proves recovery after user relaunch; there is no BOOT_COMPLETED receiver or claim of automatic foreground restart at boot.
 
+A further publication-recovery increment adds an encrypted pre-creation plan, verified-before-rename state and name-based recovery for changed SAF URIs. 17 focused and OK(52) full local API35 tests passed; release lint/build passed. See PUBLICATION_RECOVERY.md for exact cases and provider limits.
+
 Open work remains: native process cancellation-registration race; orphan publication/SAF rename crash recovery; physical network/OEM/battery matrix; resumable adaptive parallel parts; multiple active downloads; OS scheduling; subtitle sidecars; missing-file classifications; full history retention deletion; durable diagnostics; complete native/Python supply-chain correspondence. API29+ and four ABIs are the intended compatibility scope; physical coverage is incomplete.
 
 RC3 was additionally downloaded through the public release URL, independently hashed and signature/badging checked, then that downloaded file installed as an update and its UI opened. SHA256 matched f2a3ac349b9547a57e9163fd46f39b7146ac1d7a739ecedb969155476e6cecc5; the prior saved reboot fixture retained its reference hash. This is not a fresh-install or stable-to-RC migration certification.
