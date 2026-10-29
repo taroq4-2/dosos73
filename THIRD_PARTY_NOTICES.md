@@ -25,3 +25,7 @@ The full transitive/native source-correspondence audit is not complete. The inve
 The current neon artwork was supplied by the project owner. The source image is retained in branding/neon-reference.png and used by the Android UI. The launcher uses the corresponding vector mark. Artwork is not covered by the code license; no unrestricted third-party reuse or independent trademark clearance is asserted.
 
 Tajawal (Regular/Medium/Bold), copyright 2018 Boutros International, SIL Open Font License 1.1. Unmodified fonts from https://github.com/google/fonts/tree/main/ofl/tajawal ; full license in docs/licenses/Tajawal-OFL.txt and the APK raw resources.
+
+## Compact engine candidate with MP3
+
+The compact candidate replaces the wrapper FFmpeg binaries with FFmpeg 9.0.2 (commit 946fcce07b6dcd0331c8cc609192aeff5e1924f8), LGPL-2.1-or-later configuration, and LAME 3.100, LGPL-2.0-or-later. The pinned source URLs, SHA256 and cross-build recipe are in tools/build_compact_ffmpeg.sh. LAME license: docs/licenses/LAME-3.100.txt. Official source: https://downloads.sourceforge.net/project/lame/lame/3.100/lame-3.100.tar.gz . Native build artifacts retain configurations and licenses. This candidate remains subject to the documented acceptance gates.
