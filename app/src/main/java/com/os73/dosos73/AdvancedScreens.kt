@@ -33,6 +33,7 @@ internal data class BatchEntry(
     val selected: Boolean,
     val analysis: Analysis? = null,
     val error: Int? = null,
+    val choice: Choice? = null,
 )
 
 internal object BatchInput {
@@ -86,6 +87,7 @@ internal fun BatchScreen(
     onSelect: (Int, Boolean) -> Unit,
     onAnalyze: () -> Unit,
     onCancel: () -> Unit,
+    onChoice: (Int, Choice) -> Unit,
     onQueue: () -> Unit,
 ) {
     var input by rememberSaveable { mutableStateOf("") }
@@ -124,8 +126,22 @@ internal fun BatchScreen(
                             row.error?.let {
                                 Text(stringResource(it), color = MaterialTheme.colorScheme.error)
                             }
-                            if (row.analysis != null)
+                            if (row.analysis != null) {
                                 Text(stringResource(R.string.batch_ready), color = Neon.Cyan)
+                                val selected = row.choice ?: row.analysis.choices.firstOrNull()
+                                ChoiceMenu(
+                                    stringResource(R.string.format),
+                                    selected?.let { "${it.extension.uppercase()} \u00b7 ${it.quality}" }.orEmpty(),
+                                ) { close ->
+                                    row.analysis.choices.forEach { option ->
+                                        DropdownMenuItem(
+                                            text = { Text("${option.extension.uppercase()} \u00b7 ${option.quality}") },
+                                            onClick = { onChoice(index, option); close() },
+                                            enabled = !busy,
+                                        )
+                                    }
+                                }
+                            }
                         }
                     }
                 }

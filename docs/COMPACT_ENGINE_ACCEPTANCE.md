@@ -42,3 +42,9 @@ Still not approved as full charter completion. HLS/DASH adversarial coverage, al
 ### ELF segment audit
 
 Read-only scanner inspected608 ELF entries including libraries inside bundled Python/FFmpeg ZIPs. No ARM64 or x86_64 ELF failed the16KB PT_LOAD alignment/congruence check.28632-bit entries use smaller alignment; these are informational, not failures of the64-bit requirement. This is a structural gate only; runtime on a16KB device remains untested. Scope follows https://developer.android.com/guide/practices/page-sizes and https://android.googlesource.com/platform/ndk/+/refs/heads/master/docs/BuildSystemMaintainers.md . Reproduce using tools/audit_elf_alignment.py.
+
+### Batch increment — 2026-10-29
+
+Each analyzed batch entry now offers its actual format/quality choices, and enqueue uses the selected choice. Selection is validated against that entry's analysis. Successfully enqueued entries are removed individually; failed and unselected entries are retained rather than clearing the entire list. Existing sequential analysis skips successful entries, enabling retry of failed selected entries.
+
+Validation: JVM suite/lint passed; two API35 instrumentation tests passed after repairing a text-encoding issue discovered by the UI test. Tests cover selecting WebM without auto-enqueue, retaining failed/unselected rows when an enqueued row is removed, and rejecting a choice for an unanalyzed row. Per-entry destination, process-death persistence of review state and full enqueue integration under failure remain open. These changes are not yet in the previously measured signed72.4MB candidate.

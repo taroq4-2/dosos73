@@ -97,6 +97,14 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             }
     }
 
+    fun chooseBatch(index: Int, choice: Choice) {
+        if (batchBusyMutable.value) return
+        batchMutable.value = batchMutable.value.mapIndexed { i, item ->
+            if (i == index && item.analysis?.choices?.contains(choice) == true) item.copy(choice = choice)
+            else item
+        }
+    }
+
     fun analyzeBatch() {
         if (batchBusyMutable.value || mutable.value.busy) return
         batchBusyMutable.value = true
@@ -121,7 +129,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                                             }
                                         directResult ?: media.analyze(entry.url)
                                     }
-                                entry.copy(analysis = analysis, error = null)
+                                entry.copy(analysis = analysis, error = null, choice = analysis.choices.firstOrNull())
                             } catch (error: TimeoutCancellationException) {
                                 direct.cancel()
                                 media.cancel()

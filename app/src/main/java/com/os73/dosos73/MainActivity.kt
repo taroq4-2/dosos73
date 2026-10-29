@@ -467,6 +467,7 @@ class MainActivity : ComponentActivity() {
                                 model::selectBatch,
                                 model::analyzeBatch,
                                 model::cancelAnalysis,
+                                model::chooseBatch,
                             ) {
                                 if (!submitting) {
                                     submitting = true
@@ -481,13 +482,13 @@ class MainActivity : ComponentActivity() {
                                                     this@MainActivity,
                                                     DownloadTask(
                                                         analysis,
-                                                        analysis.choices.first(),
+                                                        entry.choice?.takeIf { it in analysis.choices } ?: analysis.choices.first(),
                                                         tree,
                                                     ),
                                                 )
                                                 model.removeBatch(entry)
                                             }
-                                            model.clearBatch()
+                                            // Failed and unselected entries remain available for retry.
                                             page = "downloads"
                                             runQueue()
                                         } catch (_: Exception) {
