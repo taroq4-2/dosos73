@@ -1,5 +1,6 @@
 package com.os73.dosos73
 
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -57,9 +58,18 @@ internal fun SavedFileRow(
     val locale = LocalConfiguration.current.locales[0]
     var bitmap by remember(item.uri, item.date) { mutableStateOf<android.graphics.Bitmap?>(null) }
     var availability by remember(item.uri) { mutableStateOf<FileAvailability?>(null) }
-    LaunchedEffect(item.uri, item.date, refreshToken) {
-        availability = FileAccess.inspect(context, android.net.Uri.parse(item.uri))
-        bitmap = if (availability == FileAvailability.AVAILABLE) LibraryRepository.thumbnail(context, item) else null
+    val lifecycle = androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
+    LaunchedEffect(item.uri, item.date, refreshToken, lifecycle) {
+        lifecycle.repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.STARTED) {
+            val access = FileAccess.inspect(context, android.net.Uri.parse(item.uri))
+            val image = if (access == FileAvailability.AVAILABLE) LibraryRepository.thumbnail(context, item) else null
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main.immediate) {
+                androidx.compose.runtime.snapshots.Snapshot.withMutableSnapshot {
+                    availability = access
+                    bitmap = image
+                }
+            }
+        }
     }
     fun previewAction() = when (availability) {
         FileAvailability.MISSING -> "missing"

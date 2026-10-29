@@ -10,8 +10,8 @@ android {
         applicationId = "com.os73.dosos73"
         minSdk = 29
         targetSdk = 35
-        versionCode = 9
-        versionName = "1.2.0"
+        versionCode = 10
+        versionName = "1.2.0-rc.4"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         val supportedAbis = listOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
         val selectedAbi = providers.gradleProperty("targetAbi").orNull

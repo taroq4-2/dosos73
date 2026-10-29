@@ -540,9 +540,18 @@ internal fun TaskTimelineDialog(onDismiss: () -> Unit) {
     var events by remember { mutableStateOf<List<TimelineEvent>?>(null) }
     var failed by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) {
-        try { events = TaskTimeline.read(context) }
+        try {
+            val loaded = TaskTimeline.read(context)
+            withContext(Dispatchers.Main.immediate) {
+                androidx.compose.runtime.snapshots.Snapshot.withMutableSnapshot { events = loaded }
+            }
+        }
         catch (error: kotlinx.coroutines.CancellationException) { throw error }
-        catch (_: Exception) { failed = true }
+        catch (_: Exception) {
+            withContext(Dispatchers.Main.immediate) {
+                androidx.compose.runtime.snapshots.Snapshot.withMutableSnapshot { failed = true }
+            }
+        }
     }
     AlertDialog(onDismissRequest = onDismiss, title = { Text(stringResource(R.string.timeline_title)) },
         text = {
@@ -550,7 +559,7 @@ internal fun TaskTimelineDialog(onDismiss: () -> Unit) {
                 Text(stringResource(R.string.timeline_privacy), style = MaterialTheme.typography.bodySmall)
                 when {
                     failed -> Text(stringResource(R.string.error_storage))
-                    events == null -> CircularProgressIndicator()
+                    events == null -> CircularProgressIndicator(Modifier.testTag("timeline_loading"))
                     events!!.isEmpty() -> Text(stringResource(R.string.timeline_empty))
                     else -> LazyColumn(Modifier.heightIn(max = 400.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         events!!.groupBy { it.taskId }.values.sortedByDescending { it.last().at }.forEachIndexed { index, rows ->

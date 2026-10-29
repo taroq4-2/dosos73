@@ -48,6 +48,8 @@ class UiFlowTest {
         compose.onNodeWithText(compose.activity.getString(R.string.clear_history)).assertExists()
         compose.onNodeWithText(compose.activity.getString(R.string.timeline_title)).performScrollTo().performClick()
         compose.onNodeWithText(compose.activity.getString(R.string.timeline_privacy)).assertExists()
+        compose.waitUntil(10000) { compose.onAllNodesWithTag("timeline_loading").fetchSemanticsNodes().isEmpty() }
+        android.os.SystemClock.sleep(500) // Wait for the platform dialog window animation.
         capture("07-task-timeline-ar.png")
         compose.onNodeWithText(compose.activity.getString(R.string.close)).performClick()
         compose.onNodeWithTag("nav_more").performClick()
