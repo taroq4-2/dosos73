@@ -92,7 +92,11 @@ internal fun BatchScreen(
     onChoice: (Int, Choice) -> Unit,
     onDestination: (Int, Boolean) -> Unit,
     onQueue: () -> Unit,
+    saving: Boolean = false,
+    storageError: Boolean = false,
+    onRetryStorage: () -> Unit = {},
 ) {
+    val blocked = busy || saving || storageError
     var input by rememberSaveable { mutableStateOf("") }
     Column(Modifier.fillMaxSize().padding(16.dp)) {
         Text(stringResource(R.string.batch_title), style = MaterialTheme.typography.headlineSmall)
@@ -101,20 +105,24 @@ internal fun BatchScreen(
             input,
             { input = it.take(32768) },
             Modifier.fillMaxWidth(),
-            enabled = !busy,
+            enabled = !blocked,
             maxLines = 4,
             label = { Text(stringResource(R.string.batch_links)) },
         )
         Row {
-            TextButton({ onInput(input) }, enabled = !busy && input.isNotBlank()) {
+            TextButton({ onInput(input) }, enabled = !blocked && input.isNotBlank()) {
                 Text(stringResource(R.string.batch_review))
             }
-            TextButton(onAnalyze, enabled = !busy && rows.any { it.selected && it.url != null }) {
+            TextButton(onAnalyze, enabled = !blocked && rows.any { it.selected && it.url != null }) {
                 Text(stringResource(R.string.analyze))
             }
             if (busy) TextButton(onCancel) { Text(stringResource(R.string.cancel)) }
         }
-        if (busy) LinearProgressIndicator(Modifier.fillMaxWidth())
+        if (busy || saving) LinearProgressIndicator(Modifier.fillMaxWidth())
+        if (storageError) {
+            Text(stringResource(R.string.batch_storage_error), color = MaterialTheme.colorScheme.error)
+            TextButton(onRetryStorage, enabled = !saving) { Text(stringResource(R.string.retry)) }
+        }
         LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             itemsIndexed(rows) { index, row ->
                 Panel {
@@ -122,7 +130,7 @@ internal fun BatchScreen(
                         Checkbox(
                             row.selected,
                             { onSelect(index, it) },
-                            enabled = !busy && row.url != null,
+                            enabled = !blocked && row.url != null,
                         )
                         Column(Modifier.weight(1f)) {
                             Text(row.analysis?.title ?: safeSourceLabel(row.url), maxLines = 2)
@@ -131,10 +139,10 @@ internal fun BatchScreen(
                             }
                             if (row.analysis != null) {
                                 Row {
-                                    TextButton({ onDestination(index, false) }, enabled = !busy) {
+                                    TextButton({ onDestination(index, false) }, enabled = !blocked) {
                                         Text(stringResource(if (row.destination != null) R.string.custom_folder else R.string.destination))
                                     }
-                                    TextButton({ onDestination(index, true) }, enabled = !busy) {
+                                    TextButton({ onDestination(index, true) }, enabled = !blocked) {
                                         Text(stringResource(R.string.default_folder))
                                     }
                                 }
@@ -148,7 +156,7 @@ internal fun BatchScreen(
                                         DropdownMenuItem(
                                             text = { Text("${option.extension.uppercase()} \u00b7 ${option.quality}") },
                                             onClick = { onChoice(index, option); close() },
-                                            enabled = !busy,
+                                            enabled = !blocked,
                                         )
                                     }
                                 }
@@ -162,7 +170,7 @@ internal fun BatchScreen(
             stringResource(R.string.batch_queue),
             onQueue,
             Modifier.fillMaxWidth(),
-            !busy && rows.any { it.selected && it.analysis != null },
+            !blocked && rows.any { it.selected && it.analysis != null },
         )
     }
 }

@@ -27,6 +27,64 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     val batchBusy = batchBusyMutable.asStateFlow()
     private var direct = DirectDownloader()
 
+    private val draft = BatchDraft(app)
+    private val draftWrites = kotlinx.coroutines.channels.Channel<Pair<Long, List<BatchEntry>>>(kotlinx.coroutines.channels.Channel.CONFLATED)
+    private var draftRevision = 0L
+    private val savingMutable = MutableStateFlow(true)
+    val batchSaving = savingMutable.asStateFlow()
+
+    private val draftRetries = kotlinx.coroutines.channels.Channel<Unit>(kotlinx.coroutines.channels.Channel.CONFLATED)
+    private val draftErrorMutable = MutableStateFlow(false)
+    val batchStorageError = draftErrorMutable.asStateFlow()
+
+    init {
+        viewModelScope.launch {
+            while (true) {
+                try {
+                    val restored = withContext(Dispatchers.IO) { draft.read() }
+                    if (draftRevision == 0L) {
+                        batchMutable.value = restored
+                        savingMutable.value = false
+                    }
+                    draftErrorMutable.value = false
+                    break
+                } catch (error: CancellationException) { throw error }
+                catch (_: Exception) { awaitDraftRetry() }
+            }
+            for ((revision, rows) in draftWrites) {
+                while (true) {
+                    try {
+                        withContext(Dispatchers.IO) { draft.write(rows) }
+                        draftErrorMutable.value = false
+                        if (revision == draftRevision) savingMutable.value = false
+                        break
+                    } catch (error: CancellationException) { throw error }
+                    catch (_: Exception) { awaitDraftRetry() }
+                }
+            }
+        }
+    }
+
+    private suspend fun awaitDraftRetry() {
+        // Keep the encrypted file and in-memory review; retry only on explicit user action.
+        draftErrorMutable.value = true
+        savingMutable.value = false
+        draftRetries.receive()
+    }
+
+    fun retryBatchDraft() {
+        if (!draftErrorMutable.value) return
+        savingMutable.value = true
+        draftRetries.trySend(Unit)
+    }
+
+    private fun persistBatch() {
+        draftRevision++
+        savingMutable.value = true
+        if (draftWrites.trySend(draftRevision to batchMutable.value.toList()).isFailure)
+            mutable.value = mutable.value.copy(error = R.string.error_storage)
+    }
+
     private fun directForNetwork(): DirectDownloader {
         val app = getApplication<Application>()
         return DirectDownloader(NetworkSettings.client(app, NetworkSettings.requireNetwork(app)))
@@ -74,7 +132,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun prepareBatch(text: String) {
-        if (mutable.value.busy || batchBusyMutable.value) return
+        if (mutable.value.busy || batchBusyMutable.value || draftErrorMutable.value) return
         batchMutable.value =
             BatchInput.parse(text)
                 .map { raw ->
@@ -87,22 +145,25 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                     )
                 }
                 .distinctBy { it.url ?: it.raw }
+        persistBatch()
     }
 
     fun selectBatch(index: Int, selected: Boolean) {
-        if (batchBusyMutable.value) return
+        if (batchBusyMutable.value || draftErrorMutable.value) return
         batchMutable.value =
             batchMutable.value.mapIndexed { i, item ->
                 if (i == index && item.url != null) item.copy(selected = selected) else item
             }
+        persistBatch()
     }
 
     fun chooseBatch(index: Int, choice: Choice) {
-        if (batchBusyMutable.value) return
+        if (batchBusyMutable.value || draftErrorMutable.value) return
         batchMutable.value = batchMutable.value.mapIndexed { i, item ->
             if (i == index && item.analysis?.choices?.contains(choice) == true) item.copy(choice = choice)
             else item
         }
+        persistBatch()
     }
 
     fun batchDestination(url: String, destination: String?) {
@@ -111,10 +172,11 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         batchMutable.value = batchMutable.value.map { item ->
             if (item.url == url) item.copy(destination = destination, destinationOverride = true) else item
         }
+        persistBatch()
     }
 
     fun analyzeBatch() {
-        if (batchBusyMutable.value || mutable.value.busy) return
+        if (batchBusyMutable.value || mutable.value.busy || draftErrorMutable.value) return
         batchBusyMutable.value = true
         job =
             viewModelScope.launch {
@@ -155,6 +217,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                             batchMutable.value.mapIndexed { i, item ->
                                 if (i == index) result else item
                             }
+                        persistBatch()
                     }
                 } finally {
                     batchBusyMutable.value = false
@@ -164,10 +227,14 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     internal fun removeBatch(entry: BatchEntry) {
         batchMutable.value = batchMutable.value.filterNot { it == entry }
+        persistBatch()
     }
 
     fun clearBatch() {
-        if (!batchBusyMutable.value) batchMutable.value = emptyList()
+        if (!batchBusyMutable.value) {
+            batchMutable.value = emptyList()
+            persistBatch()
+        }
     }
 
     private var preferred = Kind.VIDEO

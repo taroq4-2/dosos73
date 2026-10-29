@@ -5,6 +5,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.assertIsNotEnabled
 import org.junit.Assert.*
 import org.junit.Rule
 import org.junit.Test
@@ -60,5 +61,20 @@ class BatchChoiceUiTest {
         model.chooseBatch(1, Choice("fake", Kind.VIDEO, "mp4", "4K"))
         assertNull(model.batch.value.last().choice)
     }
+    @Test fun storageFailureOffersRetryAndPreventsEnqueue() {
+        val context = androidx.test.core.app.ApplicationProvider.getApplicationContext<android.content.Context>()
+        val choice = Choice("a", Kind.AUDIO, "mp3", "MP3 V0")
+        val analysis = Analysis("https://example.com/a", "Example", listOf(choice), false)
+        var retried = false
+        compose.setContent { MaterialTheme {
+            BatchScreen(listOf(BatchEntry(analysis.url, analysis.url, true, analysis)), false,
+                {}, { _, _ -> }, {}, {}, { _, _ -> }, { _, _ -> }, {},
+                storageError = true, onRetryStorage = { retried = true })
+        } }
+        compose.onNodeWithText(context.getString(R.string.batch_queue)).assertIsNotEnabled()
+        compose.onNodeWithText(context.getString(R.string.retry)).performClick()
+        compose.runOnIdle { assertTrue(retried) }
+    }
+
 }
 

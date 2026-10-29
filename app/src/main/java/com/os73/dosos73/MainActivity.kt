@@ -92,6 +92,8 @@ class MainActivity : ComponentActivity() {
         val queue by DownloadQueue.tasks.collectAsStateWithLifecycle()
         val batch by model.batch.collectAsStateWithLifecycle()
         val batchBusy by model.batchBusy.collectAsStateWithLifecycle()
+        val batchSaving by model.batchSaving.collectAsStateWithLifecycle()
+        val batchStorageError by model.batchStorageError.collectAsStateWithLifecycle()
         val scope = rememberCoroutineScope()
         val snackbar = remember { SnackbarHostState() }
         var page by rememberSaveable { mutableStateOf("home") }
@@ -489,37 +491,41 @@ class MainActivity : ComponentActivity() {
                                         }
                                     }
                                 },
-                            ) {
-                                if (!submitting) {
-                                    submitting = true
-                                    scope.launch {
-                                        try {
-                                            val ready =
-                                                batch.filter { it.selected && it.analysis != null }
-                                            require(queue.size + ready.size <= 50)
-                                            ready.forEach { entry ->
-                                                val analysis = entry.analysis!!
-                                                DownloadQueue.enqueue(
-                                                    this@MainActivity,
-                                                    DownloadTask(
-                                                        analysis,
-                                                        entry.choice?.takeIf { it in analysis.choices } ?: analysis.choices.first(),
-                                                        if (entry.destinationOverride) entry.destination?.let(Uri::parse) else tree,
-                                                    ),
-                                                )
-                                                model.removeBatch(entry)
+                                saving = batchSaving,
+                                storageError = batchStorageError,
+                                onRetryStorage = model::retryBatchDraft,
+                                onQueue = {
+                                    if (!submitting && !batchSaving && !batchStorageError) {
+                                        submitting = true
+                                        scope.launch {
+                                            try {
+                                                val ready =
+                                                    batch.filter { it.selected && it.analysis != null }
+                                                require(queue.size + ready.size <= 50)
+                                                ready.forEach { entry ->
+                                                    val analysis = entry.analysis!!
+                                                    DownloadQueue.enqueue(
+                                                        this@MainActivity,
+                                                        DownloadTask(
+                                                            analysis,
+                                                            entry.choice?.takeIf { it in analysis.choices } ?: analysis.choices.first(),
+                                                            if (entry.destinationOverride) entry.destination?.let(Uri::parse) else tree,
+                                                        ),
+                                                    )
+                                                    model.removeBatch(entry)
+                                                }
+                                                // Failed and unselected entries remain available for retry.
+                                                page = "downloads"
+                                                runQueue()
+                                            } catch (_: Exception) {
+                                                message(R.string.error_start)
+                                            } finally {
+                                                submitting = false
                                             }
-                                            // Failed and unselected entries remain available for retry.
-                                            page = "downloads"
-                                            runQueue()
-                                        } catch (_: Exception) {
-                                            message(R.string.error_start)
-                                        } finally {
-                                            submitting = false
                                         }
                                     }
-                                }
-                            }
+                                },
+                            )
                         "about" -> AboutScreen({ page = "more" }, { page = "contact" })
                         "contact" -> ContactScreen { page = "about" }
                         "settings" ->

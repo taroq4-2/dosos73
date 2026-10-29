@@ -136,7 +136,7 @@
     <string name="delete_confirmation">هل تريد حذف «%1$s» من التخزين؟ لا يمكن التراجع عن ذلك.</string>
     <string name="action_done">تم بنجاح</string>
     <string name="batch_title">تنزيل دفعة روابط</string>
-    <string name="batch_hint">راجع حتى 20 رابطًا تفصلها مسافات أو أسطر. التحليل لا يبدأ التنزيل. تُستخدم أول صيغة متاحة بعد التأكيد.</string>
+    <string name="batch_hint">راجع حتى 20 رابطًا تفصلها مسافات أو أسطر. اختر صيغة كل رابط ومجلده قبل إضافته إلى الطابور. التحليل لا يبدأ التنزيل.</string>
     <string name="batch_links">الروابط للمراجعة</string>
     <string name="batch_review">مراجعة</string>
     <string name="batch_ready">تم التحليل وجاهز</string>
@@ -180,5 +180,6 @@
     <string name="error_server">تعذّر تنفيذ الطلب في خادم المصدر. حاول لاحقًا.</string>
     <string name="parallel_connections">اتصالان للملفات المباشرة</string>
     <string name="parallel_connections_hint">اختياري. يستخدم نطاقين متحققًا منهما على الخوادم المتوافقة، وإلا يعود لاتصال واحد. السرعة تعتمد على المصدر والشبكة.</string>
+    <string name="batch_storage_error">تعذّر حفظ قائمة الروابط أو استعادتها. احتُفظ بالمسودة الموجودة. تحقق من التخزين وأعد المحاولة.</string>
 </resources>
 

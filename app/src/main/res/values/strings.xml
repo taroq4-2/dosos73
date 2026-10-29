@@ -136,7 +136,7 @@
     <string name="delete_confirmation">Delete “%1$s” from storage? This cannot be undone.</string>
     <string name="action_done">Done</string>
     <string name="batch_title">Batch downloads</string>
-    <string name="batch_hint">Review up to 20 whitespace-separated links. Analysis does not start downloads. The first available format is used after confirmation.</string>
+    <string name="batch_hint">Review up to 20 links separated by spaces or lines. Choose each format and folder before adding to the queue. Analysis does not start downloading.</string>
     <string name="batch_links">Links to review</string>
     <string name="batch_review">Review</string>
     <string name="batch_ready">Analyzed and ready</string>
@@ -180,5 +180,6 @@
     <string name="error_server">The source server failed. Try again later.</string>
     <string name="parallel_connections">Two connections for direct files</string>
     <string name="parallel_connections_hint">Optional. Uses two verified byte ranges on compatible servers; otherwise uses one connection. Speed depends on the source and network.</string>
+    <string name="batch_storage_error">Could not save or restore the link review. Your existing draft is preserved. Check storage and retry.</string>
 </resources>
 
