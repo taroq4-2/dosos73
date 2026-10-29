@@ -114,7 +114,13 @@ class MainActivity : ComponentActivity() {
         var renamed by remember { mutableStateOf("") }
         var preview by remember { mutableStateOf<SavedFile?>(null) }
         var libraryRevision by remember { mutableIntStateOf(0) }
-        LaunchedEffect(batch) { if (batch.isNotEmpty()) page = "batch" }
+        val batchRequested by model.batchRequested.collectAsStateWithLifecycle()
+        LaunchedEffect(batchRequested) {
+            if (batchRequested) {
+                page = "batch"
+                model.batchOpened()
+            }
+        }
         var hidden by remember { mutableStateOf(LibraryRepository.hidden(this)) }
         val savedPages = rememberSaveableStateHolder()
         val preferences = remember { getSharedPreferences("destination", MODE_PRIVATE) }

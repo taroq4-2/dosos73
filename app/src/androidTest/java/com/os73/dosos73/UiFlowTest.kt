@@ -26,6 +26,20 @@ class UiFlowTest {
     }
 
     @Test
+    fun restoredBatchDoesNotOverrideManualHomeNavigation() {
+        val model = androidx.lifecycle.ViewModelProvider(compose.activity)[MainViewModel::class.java]
+        compose.runOnIdle { model.prepareBatch("https://example.com/a https://example.net/b") }
+        compose.waitUntil(5000) { !model.batchSaving.value }
+        compose.onNodeWithTag("nav_home").performClick()
+        compose.activityRule.scenario.recreate()
+        compose.onNodeWithTag("url").assertExists()
+        compose.onNodeWithTag("nav_more").performClick()
+        compose.onNodeWithTag("batch").performScrollTo().performClick()
+        compose.onNodeWithText("example.com").assertExists()
+        compose.onNodeWithText("example.net").assertExists()
+    }
+
+    @Test
     fun privacyAndBatchPagesAreReachableWithoutStartingDownloads() {
         compose.onNodeWithTag("nav_more").performClick()
         compose.onNodeWithTag("privacy").performScrollTo().performClick()

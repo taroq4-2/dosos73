@@ -23,6 +23,9 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     private var job: Job? = null
     private val batchMutable = MutableStateFlow<List<BatchEntry>>(emptyList())
     internal val batch = batchMutable.asStateFlow()
+    private val batchRequestedMutable = MutableStateFlow(false)
+    val batchRequested = batchRequestedMutable.asStateFlow()
+    fun batchOpened() { batchRequestedMutable.value = false }
     private val batchBusyMutable = MutableStateFlow(false)
     val batchBusy = batchBusyMutable.asStateFlow()
     private var direct = DirectDownloader()
@@ -145,6 +148,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                     )
                 }
                 .distinctBy { it.url ?: it.raw }
+        batchRequestedMutable.value = true
         persistBatch()
     }
 
