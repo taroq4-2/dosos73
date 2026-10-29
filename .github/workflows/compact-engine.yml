@@ -35,3 +35,40 @@ jobs:
 
 
 
+  package:
+    needs: native
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: 'platform-tools'
+      - run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
+      - uses: gradle/actions/setup-gradle@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: compact-engine-*
+          merge-multiple: true
+          path: compact-engines
+      - name: Build and validate universal candidate
+        run: |
+          chmod +x gradlew
+          ./gradlew testDebugUnitTest lintRelease assembleRelease --console=plain
+          python3 tools/assemble_compact_experiment.py app/build/outputs/apk/release/app-release-unsigned.apk compact-engines compact-universal-unsigned.apk
+          "$ANDROID_HOME/build-tools/35.0.0/zipalign" -P 16 -f 4 compact-universal-unsigned.apk compact-universal-aligned-unsigned.apk
+          python3 -c "from pathlib import Path; p=Path('compact-universal-aligned-unsigned.apk'); print(p.stat().st_size); assert p.stat().st_size < 80000000"
+          sha256sum compact-universal-aligned-unsigned.apk > compact-SHA256SUMS.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: compact-universal-UNSIGNED-experiment
+          path: |
+            compact-universal-aligned-unsigned.apk
+            compact-SHA256SUMS.txt
+          if-no-files-found: error

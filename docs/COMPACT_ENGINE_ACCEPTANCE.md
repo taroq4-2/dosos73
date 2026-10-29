@@ -20,3 +20,9 @@ The size target never overrides functional acceptance. No production engine repl
 | Licenses | Preserve pinned source, configuration, notices and applicable relinking requirements before release. |
 
 Local JVM suite after cancellation repair: 59 tests; lintDebug passed. ARM binaries were built but not executed on physical ARM devices.
+
+## 2026-10-29 device evidence
+
+The signed 72,397,560-byte universal candidate (SHA256 a2fd994b4956e6ab7b6f65b85f991fc39a3375bdd306de3c56cbda12ad5b88ba) installed successfully on a new independent API35 x86_64 emulator. All four ABI builds succeeded in run40705866559 (normalized library filenames). The tested candidate combines equivalent earlier successful builds with locally normalized library names; full source/artifact provenance remains to be packaged before publication.
+
+YouTube link oexYI9IGKkM analysis returned qualities through2160p. Selected720p MP4: completed download/publication29.39MiB; tapping the saved entry opened the in-app preview and a video frame rendered. Screenshot: work/compact-playback.png (local evidence). No AndroidRuntime crash logged during these steps. This does not certify all codecs/devices or the whole charter. Audio and other formats remain under test.
