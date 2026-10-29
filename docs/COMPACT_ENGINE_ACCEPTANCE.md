@@ -38,3 +38,7 @@ YouTube link oexYI9IGKkM analysis returned qualities through2160p. Selected720p 
 - Playback lifecycle tested on updated candidate: media.player dump shows foreground renderer paused(0), state5; after HOME renderer paused(1), state6. Evidence in work/compact-player-foreground.txt and compact-player-background.txt.
 
 Still not approved as full charter completion. HLS/DASH adversarial coverage, all devices/ABIs, physical ARM, native supply-chain/16KB acceptance, original stable-to-compact migration, durable scheduling/multi-active jobs and other charter items remain open. Do not publish as stable merely because the size target passed.
+
+### ELF segment audit
+
+Read-only scanner inspected608 ELF entries including libraries inside bundled Python/FFmpeg ZIPs. No ARM64 or x86_64 ELF failed the16KB PT_LOAD alignment/congruence check.28632-bit entries use smaller alignment; these are informational, not failures of the64-bit requirement. This is a structural gate only; runtime on a16KB device remains untested. Scope follows https://developer.android.com/guide/practices/page-sizes and https://android.googlesource.com/platform/ndk/+/refs/heads/master/docs/BuildSystemMaintainers.md . Reproduce using tools/audit_elf_alignment.py.
