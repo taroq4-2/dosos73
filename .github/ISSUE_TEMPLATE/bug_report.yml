@@ -1,0 +1,35 @@
+name: Bug report / الإبلاغ عن مشكلة
+description: Report a reproducible app problem / بلّغ عن مشكلة قابلة للتكرار
+title: "[Bug] "
+body:
+  - type: markdown
+    attributes:
+      value: "Please exclude private URLs, credentials and personal files. لا ترفق روابط خاصة أو بيانات دخول أو ملفات شخصية."
+  - type: input
+    id: version
+    attributes:
+      label: App version / إصدار التطبيق
+      placeholder: 1.2.0-rc.4
+    validations:
+      required: true
+  - type: input
+    id: device
+    attributes:
+      label: Device and Android version / الجهاز وإصدار أندرويد
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps and actual result / الخطوات والنتيجة الفعلية
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior / النتيجة المتوقعة
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Safe diagnostic report or screenshot / تقرير التشخيص الآمن أو صورة
+      description: Use the app report. Remove any personal data before posting.

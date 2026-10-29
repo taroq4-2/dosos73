@@ -2,7 +2,10 @@ package com.os73.dosos73
 
 import java.io.File
 import java.io.IOException
+import java.io.RandomAccessFile
+import java.net.Proxy
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
@@ -13,12 +16,22 @@ import okhttp3.Response
 
 class DirectDownloader(private val client: OkHttpClient = secureClient()) {
     @Volatile private var activeCall: okhttp3.Call? = null
+    private val cancelled = AtomicBoolean(false)
+    @Volatile private var parallel: ParallelDownloader? = null
 
     fun cancel() {
+        cancelled.set(true)
+        parallel?.cancel()
         activeCall?.cancel()
     }
 
-    private fun request(url: String, head: Boolean = false, probe: Boolean = false): Response {
+    internal fun request(
+        url: String,
+        head: Boolean = false,
+        probe: Boolean = false,
+        resume: ResumeCheckpoint? = null,
+        rangeEnd: Long? = null,
+    ): Response {
         var current = Safety.url(url)
         repeat(6) {
             val request =
@@ -29,10 +42,16 @@ class DirectDownloader(private val client: OkHttpClient = secureClient()) {
                     .apply {
                         if (head) head()
                         if (probe) header("Range", "bytes=0-0")
+                        if (resume != null) {
+                            header("Range", "bytes=${resume.offset}-${rangeEnd ?: ""}")
+                            header("If-Range", resume.etag)
+                        }
                     }
                     .build()
+            if (cancelled.get()) throw IOException("Cancelled")
             val call = client.newCall(request)
             activeCall = call
+            if (cancelled.get()) call.cancel()
             val response = call.execute()
             if (response.code in setOf(301, 302, 303, 307, 308)) {
                 val next = response.header("Location")?.let { response.request.url.resolve(it) }
@@ -47,6 +66,8 @@ class DirectDownloader(private val client: OkHttpClient = secureClient()) {
 
     suspend fun analyze(url: String): Analysis? =
         withContext(Dispatchers.IO) {
+            cancelled.set(false)
+            currentCoroutineContext().ensureActive()
             val head = request(url, true)
             var candidate =
                 if (head.code in setOf(403, 405, 501)) {
@@ -118,53 +139,183 @@ class DirectDownloader(private val client: OkHttpClient = secureClient()) {
         url: String,
         destination: File,
         awaitReady: suspend () -> Unit = {},
+        connections: Int = 1,
         progress: (Long, Long?, Long) -> Unit,
     ) =
         withContext(Dispatchers.IO) {
-            request(url).use { response ->
-                if (!response.isSuccessful || response.code == 206)
-                    throw IOException("HTTP ${response.code}")
+            cancelled.set(false)
+            currentCoroutineContext().ensureActive()
+            if (
+                connections > 1 &&
+                    !File(destination.parentFile, destination.name + ".resume").exists()
+            ) {
+                val accelerator = ParallelDownloader(client)
+                parallel = accelerator
+                if (cancelled.get()) accelerator.cancel()
+                try {
+                    if (accelerator.download(url, destination, awaitReady, progress))
+                        return@withContext
+                } finally {
+                    parallel = null
+                }
+                if (cancelled.get()) throw IOException("Cancelled")
+                currentCoroutineContext().ensureActive()
+            }
+            val sourceHash = ResumeCheckpoint.hash(Safety.url(url))
+            val journal = ResumeJournal(destination)
+            var checkpoint =
+                journal.read()?.takeIf {
+                    it.sourceHash == sourceHash &&
+                        destination.isFile &&
+                        destination.length() >= it.offset
+                }
+            if (checkpoint == null) journal.clear()
+            // A previously durable complete body still needs origin validation: never trust 416
+            // alone.
+            if (checkpoint != null && checkpoint.offset == checkpoint.total) checkpoint = null
+            var response = request(url, resume = checkpoint?.takeIf { it.offset > 0 })
+            try {
+                if (checkpoint != null && checkpoint.offset > 0 && response.code == 416) {
+                    response.close()
+                    checkpoint = null
+                    journal.clear()
+                    response = request(url)
+                }
+                requireIdentity(response)
                 val body = response.body ?: throw IOException("Empty response")
-                val mime = response.header("Content-Type").orEmpty()
-                if (mime.startsWith("text/html", true)) throw IOException("HTML is not a file")
-                val total = body.contentLength().takeIf { it >= 0 }
-                var count = 0L
-                var lastBytes = 0L
+                val bodyLength = body.contentLength().takeIf { it >= 0 }
+                val targetHash = ResumeCheckpoint.hash(response.request.url.toString())
+                val etag = ResumeCheckpoint.strongTag(response.header("ETag"))
+                val append = response.code == 206
+                val total: Long?
+                val offset: Long
+                if (append) {
+                    val prior = checkpoint ?: throw IOException("Unrequested partial response")
+                    if (prior.offset <= 0 || targetHash != prior.targetHash || etag != prior.etag)
+                        throw IOException("Changed representation")
+                    val range =
+                        parseRange(response.header("Content-Range"))
+                            ?: throw IOException("Invalid content range")
+                    if (
+                        range.first != prior.offset ||
+                            range.last != prior.total - 1 ||
+                            range.total != prior.total
+                    )
+                        throw IOException("Invalid content range")
+                    if (bodyLength != null && bodyLength != prior.total - prior.offset)
+                        throw IOException("Invalid range length")
+                    offset = prior.offset
+                    total = prior.total
+                } else {
+                    if (response.code != 200 || response.header("Content-Range") != null)
+                        throw IOException("HTTP ${response.code}")
+                    // Range ignored or If-Range changed: replace, never append the full
+                    // representation.
+                    offset = 0
+                    total = bodyLength
+                }
+                val canResume = etag != null && total != null && total > 0
+                var count = offset
+                var lastBytes = offset
                 var last = System.nanoTime()
-                body.byteStream().use { input ->
-                    destination.outputStream().use { output ->
-                        val buffer = ByteArray(64 * 1024)
-                        while (true) {
-                            currentCoroutineContext().ensureActive()
-                            awaitReady()
-                            val n = input.read(buffer)
-                            if (n == -1) break
-                            count += n
-                            output.write(buffer, 0, n)
-                            val now = System.nanoTime()
-                            if (now - last > 250_000_000) {
-                                progress(
-                                    count,
-                                    total,
-                                    ((count - lastBytes).toDouble() * 1_000_000_000 / (now - last))
-                                        .toLong(),
+                var checkpointBytes = offset
+                var checkpointAt = last
+                RandomAccessFile(destination, "rw").use { output ->
+                    output.setLength(offset)
+                    output.seek(offset)
+                    fun persist() {
+                        output.fd.sync()
+                        if (canResume) {
+                            journal.write(
+                                ResumeCheckpoint(sourceHash, targetHash, etag!!, total!!, count)
+                            )
+                            checkpointBytes = count
+                            checkpointAt = System.nanoTime()
+                        }
+                    }
+                    if (canResume) persist() else journal.clear()
+                    progress(count, total, 0)
+                    try {
+                        body.byteStream().use { input ->
+                            val buffer = ByteArray(64 * 1024)
+                            while (true) {
+                                currentCoroutineContext().ensureActive()
+                                if (cancelled.get()) throw IOException("Cancelled")
+                                awaitReady()
+                                currentCoroutineContext().ensureActive()
+                                if (cancelled.get()) throw IOException("Cancelled")
+                                val n = input.read(buffer)
+                                if (n == -1) break
+                                if (total != null && n.toLong() > total - count)
+                                    throw IOException("Transfer exceeds expected length")
+                                output.write(buffer, 0, n)
+                                count += n
+                                val now = System.nanoTime()
+                                if (
+                                    canResume &&
+                                        (count - checkpointBytes >= 4L * 1024 * 1024 ||
+                                            now - checkpointAt >= 2_000_000_000)
                                 )
-                                last = now
-                                lastBytes = count
+                                    persist()
+                                if (now - last > 250_000_000) {
+                                    progress(
+                                        count,
+                                        total,
+                                        ((count - lastBytes).toDouble() * 1_000_000_000 /
+                                                (now - last))
+                                            .toLong(),
+                                    )
+                                    last = now
+                                    lastBytes = count
+                                }
                             }
                         }
-                        output.fd.sync()
+                        if (count == 0L || (total != null && count != total))
+                            throw IOException("Incomplete transfer")
+                        persist()
+                    } catch (error: Exception) {
+                        // Flush partial progress before propagating failures; never advance the
+                        // journal
+                        // before the file. If persistence itself fails, the earlier checkpoint is
+                        // safe.
+                        runCatching { persist() }
+                        throw error
                     }
                 }
-                if (count == 0L || (total != null && count != total))
-                    throw IOException("Incomplete transfer")
+                journal.clear()
                 progress(count, total, 0)
+            } finally {
+                response.close()
+                activeCall = null
             }
         }
+
+    private fun requireIdentity(response: Response) {
+        val encoding = response.header("Content-Encoding")
+        if (!encoding.isNullOrBlank() && !encoding.equals("identity", true))
+            throw IOException("Unsupported content encoding")
+        val mime = response.header("Content-Type").orEmpty().trim()
+        if (mime.startsWith("text/html", true) || mime.startsWith("multipart/byteranges", true))
+            throw IOException("Unexpected response type")
+    }
+
+    private data class ByteRange(val first: Long, val last: Long, val total: Long)
+
+    private fun parseRange(value: String?): ByteRange? {
+        val parts =
+            Regex("bytes ([0-9]+)-([0-9]+)/([0-9]+)").matchEntire(value.orEmpty()) ?: return null
+        val first = parts.groupValues[1].toLongOrNull() ?: return null
+        val last = parts.groupValues[2].toLongOrNull() ?: return null
+        val total = parts.groupValues[3].toLongOrNull() ?: return null
+        return ByteRange(first, last, total).takeIf { first <= last && last < total }
+    }
 
     companion object {
         fun secureClient() =
             OkHttpClient.Builder()
+                // A system HTTP proxy resolves origins itself and would bypass the public DNS
+                // policy.
+                .proxy(Proxy.NO_PROXY)
                 .dns(
                     object : okhttp3.Dns {
                         override fun lookup(hostname: String) = Safety.resolve(hostname)

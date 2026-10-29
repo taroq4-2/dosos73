@@ -17,8 +17,9 @@ import kotlinx.coroutines.flow.first
 class DownloadService : Service() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private var job: Job? = null
-    private val direct = DirectDownloader()
-    private val media by lazy { MediaEngine(this) }
+    @Volatile private var direct = DirectDownloader()
+    @Volatile private var transferNetwork: android.net.Network? = null
+    private val media by lazy { MediaEngine(this) { transferNetwork ?: NetworkSettings.requireNetwork(this) } }
     private var lastNotification = 0L
     private var detail = ""
 
@@ -38,11 +39,13 @@ class DownloadService : Service() {
 
     private val paused = kotlinx.coroutines.flow.MutableStateFlow(false)
     private var cancelled = false
+    private var userCancelled = false
     private var latestStartId = 0
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         latestStartId = startId
         if (intent?.action == "cancel") {
+            userCancelled = true
             cancelTransfer()
             if (job == null) stopSelf()
             return START_NOT_STICKY
@@ -52,13 +55,33 @@ class DownloadService : Service() {
                 Transfers.currentTask?.analysis?.direct == true &&
                     Transfers.state.value.phase in setOf(Phase.DOWNLOADING, Phase.PAUSED)
             ) {
-                paused.value = !paused.value
-                publish(
-                    Transfers.state.value.copy(
-                        phase = if (paused.value) Phase.PAUSED else Phase.DOWNLOADING,
-                        bytesPerSecond = null,
+                val next = !paused.value
+                scope.launch {
+                    try {
+                        Transfers.currentTask?.let {
+                            DownloadQueue.setPaused(this@DownloadService, it.id, next)
+                        }
+                        paused.value = next
+                        publish(
+                            Transfers.state.value.copy(
+                                phase = if (next) Phase.PAUSED else Phase.DOWNLOADING,
+                                bytesPerSecond = null,
+                            )
+                        )
+                    } catch (_: Exception) {
+                        publish(Transfers.state.value.copy(error = R.string.error_storage))
+                    }
+                }
+            } else if (job?.isActive != true) {
+                scope.launch {
+                    DownloadQueue.interrupted(this@DownloadService)?.let {
+                        DownloadQueue.setPaused(this@DownloadService, it.id, false)
+                    }
+                    androidx.core.content.ContextCompat.startForegroundService(
+                        this@DownloadService,
+                        Intent(this@DownloadService, DownloadService::class.java),
                     )
-                )
+                }
             }
             return if (job?.isActive == true) START_REDELIVER_INTENT else START_NOT_STICKY
         }
@@ -69,6 +92,7 @@ class DownloadService : Service() {
         )
         if (job?.isActive == true) return START_REDELIVER_INTENT
         cancelled = false
+        userCancelled = false
         job =
             scope.launch {
                 try {
@@ -110,7 +134,7 @@ class DownloadService : Service() {
                     stopSelfResult(latestStartId)
                     // A newly queued command may have arrived while the last empty take was
                     // returning.
-                    if (!cancelled && DownloadQueue.tasks.value.isNotEmpty())
+                    if (!cancelled && DownloadQueue.hasRunnable())
                         androidx.core.content.ContextCompat.startForegroundService(
                             this@DownloadService,
                             Intent(this@DownloadService, DownloadService::class.java),
@@ -127,14 +151,35 @@ class DownloadService : Service() {
                     task.choice.extension.uppercase(),
                 )
                 .joinToString(" · ")
-        val directory = File(cacheDir, "transfer-${UUID.randomUUID()}")
+        val directory =
+            if (task.analysis.direct) TransferFiles.directory(this@DownloadService, task.id)
+            else File(cacheDir, "transfer-${UUID.randomUUID()}")
         var stage = Stage.TRANSFER
         var terminal = TransferState(Phase.CANCELLED, task.analysis.title)
         var failureCode: FailureCode? = null
+        val store = OutputStore(this@DownloadService)
+        suspend fun trace(stage: Stage, result: TimelineResult, bytes: Long? = null, code: FailureCode? = null) {
+            try { TaskTimeline.record(this@DownloadService, TimelineEvent(task.id, System.currentTimeMillis(), stage, result, bytes, code)) }
+            catch (error: CancellationException) { throw error }
+            catch (_: Exception) { Diagnostics.event(stage, "timeline_unavailable") }
+        }
         try {
+            trace(Stage.TRANSFER, TimelineResult.STARTED)
+            val recovered = withContext(Dispatchers.IO) { store.recover(task) }
+            if (recovered != null) {
+                trace(Stage.PUBLISH, TimelineResult.RECOVERED)
+                terminal =
+                    TransferState(
+                        Phase.COMPLETE,
+                        task.analysis.title,
+                        uri = recovered.first,
+                        mime = recovered.second,
+                    )
+                return@coroutineScope Phase.COMPLETE
+            }
             withContext(Dispatchers.IO) {
-                OutputStore(this@DownloadService).preflight(task.tree)
-                check(directory.mkdirs())
+                store.preflight(task.tree)
+                check(directory.mkdirs() || directory.isDirectory)
                 StoragePolicy.requireAvailable(
                     android.os.StatFs(cacheDir.absolutePath).availableBytes,
                     task.analysis.sizeBytes,
@@ -142,41 +187,44 @@ class DownloadService : Service() {
                 )
             }
             val output =
-                if (task.analysis.direct) {
-                    File(directory, "file.${task.choice.extension}").also { file ->
-                        direct.download(
-                            task.analysis.url,
-                            file,
-                            progress = { bytes, total, speed ->
-                                publish(
-                                    TransferState(
-                                        if (paused.value) Phase.PAUSED else Phase.DOWNLOADING,
-                                        task.analysis.title,
-                                        bytes,
-                                        total,
-                                        Safety.progress(bytes, total),
-                                        speed,
+                withNetworkRecovery(task) {
+                    if (task.analysis.direct) {
+                        File(directory, "file.${task.choice.extension}").also { file ->
+                            direct.download(
+                                task.analysis.url,
+                                file,
+                                connections = if (NetworkSettings.parallelConnections(this@DownloadService)) 2 else 1,
+                                progress = { bytes, total, speed ->
+                                    publish(
+                                        TransferState(
+                                            if (paused.value) Phase.PAUSED else Phase.DOWNLOADING,
+                                            task.analysis.title,
+                                            bytes,
+                                            total,
+                                            Safety.progress(bytes, total),
+                                            speed,
+                                        )
                                     )
-                                )
-                            },
-                            awaitReady = { paused.first { !it } },
-                        )
-                    }
-                } else
-                    media.download(task, directory) { percent, processing ->
-                        publish(
-                            TransferState(
-                                if (processing) Phase.PROCESSING else Phase.DOWNLOADING,
-                                task.analysis.title,
-                                percent = if (processing) null else percent,
+                                },
+                                awaitReady = { paused.first { !it } },
                             )
-                        )
-                    }
+                        }
+                    } else
+                        media.download(task, directory) { percent, processing ->
+                            publish(
+                                TransferState(
+                                    if (processing) Phase.PROCESSING else Phase.DOWNLOADING,
+                                    task.analysis.title,
+                                    percent = if (processing) null else percent,
+                                )
+                            )
+                        }
+                }
             ensureActive()
             stage = Stage.VERIFY
             Diagnostics.event(stage, "started", output.length())
+            trace(stage, TimelineResult.STARTED, output.length())
             publish(TransferState(Phase.PROCESSING, task.analysis.title))
-            val store = OutputStore(this@DownloadService)
             withContext(Dispatchers.IO) {
                 store.validate(
                     output,
@@ -186,8 +234,10 @@ class DownloadService : Service() {
                 )
             }
             Diagnostics.event(stage, "completed", output.length())
+            withContext(NonCancellable) { trace(stage, TimelineResult.COMPLETED, output.length()) }
             stage = Stage.PUBLISH
             Diagnostics.event(stage, "started", output.length())
+            trace(stage, TimelineResult.STARTED, output.length())
             publish(TransferState(Phase.SAVING, task.analysis.title))
             val (uri, mime) =
                 store.save(output, task) { done, total ->
@@ -202,6 +252,7 @@ class DownloadService : Service() {
                     )
                 }
             Diagnostics.event(stage, "completed", output.length())
+            withContext(NonCancellable) { trace(stage, TimelineResult.COMPLETED, output.length()) }
             // Publication is the commit point: do not turn a committed file into a cancellation.
             terminal =
                 TransferState(
@@ -214,32 +265,88 @@ class DownloadService : Service() {
                     mime = mime,
                 )
         } catch (_: CancellationException) {
-            terminal = TransferState(Phase.CANCELLED, task.analysis.title)
+            withContext(NonCancellable) { trace(stage, TimelineResult.INTERRUPTED) }
+            terminal =
+                TransferState(
+                    if (userCancelled) Phase.CANCELLED else Phase.PAUSED,
+                    task.analysis.title,
+                )
         } catch (e: Exception) {
             val failure = FailureClassifier.classify(stage, e)
             failureCode = failure.code
+            withContext(NonCancellable) { trace(failure.stage, TimelineResult.FAILED, code = failure.code) }
             Diagnostics.event(failure.stage, "failed", code = failure.code)
             terminal =
                 TransferState(Phase.FAILED, task.analysis.title, error = failure.messageResource())
         } finally {
-            withContext(NonCancellable + Dispatchers.IO) { directory.deleteRecursively() }
+            val retain = task.analysis.direct && terminal.phase != Phase.COMPLETE && !userCancelled
+            withContext(NonCancellable + Dispatchers.IO) {
+                if (!retain) directory.deleteRecursively()
+            }
+            var acknowledged = terminal.phase == Phase.COMPLETE
             if (terminal.phase in setOf(Phase.FAILED, Phase.CANCELLED)) {
                 withContext(NonCancellable) {
-                    runCatching {
-                        FailureJournal.record(
-                            this@DownloadService,
-                            FailedDownload(task, failureCode, terminal.phase == Phase.CANCELLED),
-                        )
-                    }
+                    acknowledged =
+                        runCatching {
+                                FailureJournal.record(
+                                    this@DownloadService,
+                                    FailedDownload(task, failureCode, userCancelled),
+                                )
+                            }
+                            .isSuccess
                 }
             }
-            // Ownership remains active through cleanup before publishing terminal state.
-            withContext(NonCancellable) { DownloadQueue.finish(this@DownloadService, task.id) }
+            // A system stop retains its lease; failed journal writes must never discard the task.
+            if (acknowledged)
+                withContext(NonCancellable) {
+                    DownloadQueue.finish(this@DownloadService, task.id)
+                    if (terminal.phase == Phase.COMPLETE)
+                        withContext(Dispatchers.IO) { store.forget(task.id) }
+                }
             Transfers.update(terminal.copy(detail = detail))
             if (terminal.phase == Phase.COMPLETE) completionNotification(terminal)
         }
         terminal.phase
     }
+
+    private suspend fun <T> withNetworkRecovery(task: DownloadTask, block: suspend () -> T): T =
+        coroutineScope {
+            var retries = 0
+            while (true) {
+                if (!NetworkSettings.permitted(this@DownloadService)) {
+                    publish(TransferState(Phase.WAITING, task.analysis.title))
+                    NetworkSettings.awaitPermitted(this@DownloadService)
+                }
+                val network = NetworkSettings.requireNetwork(this@DownloadService)
+                transferNetwork = network
+                direct = DirectDownloader(NetworkSettings.client(this@DownloadService, network))
+                var networkLost = false
+                val guard = launch {
+                    NetworkSettings.changes(this@DownloadService).collect { permitted ->
+                        if (!permitted || !NetworkSettings.permitted(this@DownloadService, network)) {
+                            networkLost = true
+                            direct.cancel()
+                            media.cancel()
+                        }
+                    }
+                }
+                try {
+                    return@coroutineScope block()
+                } catch (error: Exception) {
+                    currentCoroutineContext().ensureActive()
+                    // Retry only a connection-policy interruption, not arbitrary server/storage
+                    // failures.
+                    if (!networkLost || retries >= 2 || userCancelled) throw error
+                    retries++
+                    publish(TransferState(Phase.WAITING, task.analysis.title))
+                    delay(1000L shl retries)
+                } finally {
+                    guard.cancelAndJoin()
+                    transferNetwork = null
+                }
+            }
+            @Suppress("UNREACHABLE_CODE") error("Unreachable")
+        }
 
     private fun publish(state: TransferState) {
         Transfers.update(state.copy(detail = detail))
@@ -315,6 +422,7 @@ class DownloadService : Service() {
     }
 
     override fun onDestroy() {
+        cancelled = true
         direct.cancel()
         media.cancel()
         scope.cancel()
@@ -326,6 +434,7 @@ fun phaseText(phase: Phase) =
     when (phase) {
         Phase.IDLE -> R.string.ready
         Phase.PAUSED -> R.string.paused
+        Phase.WAITING -> R.string.waiting_for_network
         Phase.DOWNLOADING -> R.string.downloading
         Phase.PROCESSING -> R.string.processing
         Phase.SAVING -> R.string.saving

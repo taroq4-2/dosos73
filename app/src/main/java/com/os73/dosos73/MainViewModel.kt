@@ -3,6 +3,7 @@ package com.os73.dosos73
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import okhttp3.HttpUrl.Companion.toHttpUrl
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -13,22 +14,102 @@ data class ScreenState(
     val analysis: Analysis? = null,
     val selected: Choice? = null,
     val error: Int? = null,
+    val pendingShared: String? = null,
 )
 
 class MainViewModel(app: Application) : AndroidViewModel(app) {
     private val mutable = MutableStateFlow(ScreenState())
     val state = mutable.asStateFlow()
     private var job: Job? = null
-    private val direct = DirectDownloader()
+    private val batchMutable = MutableStateFlow<List<BatchEntry>>(emptyList())
+    internal val batch = batchMutable.asStateFlow()
+    private val batchRequestedMutable = MutableStateFlow(false)
+    val batchRequested = batchRequestedMutable.asStateFlow()
+    fun batchOpened() { batchRequestedMutable.value = false }
+    private val batchBusyMutable = MutableStateFlow(false)
+    val batchBusy = batchBusyMutable.asStateFlow()
+    private var direct = DirectDownloader()
+
+    private val draft = BatchDraft(app)
+    private val draftWrites = kotlinx.coroutines.channels.Channel<Pair<Long, List<BatchEntry>>>(kotlinx.coroutines.channels.Channel.CONFLATED)
+    private var draftRevision = 0L
+    private val savingMutable = MutableStateFlow(true)
+    val batchSaving = savingMutable.asStateFlow()
+
+    private val draftRetries = kotlinx.coroutines.channels.Channel<Unit>(kotlinx.coroutines.channels.Channel.CONFLATED)
+    private val draftErrorMutable = MutableStateFlow(false)
+    val batchStorageError = draftErrorMutable.asStateFlow()
+
+    init {
+        viewModelScope.launch {
+            while (true) {
+                try {
+                    val restored = withContext(Dispatchers.IO) { draft.read() }
+                    if (draftRevision == 0L) {
+                        batchMutable.value = restored
+                        savingMutable.value = false
+                    }
+                    draftErrorMutable.value = false
+                    break
+                } catch (error: CancellationException) { throw error }
+                catch (_: Exception) { awaitDraftRetry() }
+            }
+            for ((revision, rows) in draftWrites) {
+                while (true) {
+                    try {
+                        withContext(Dispatchers.IO) { draft.write(rows) }
+                        draftErrorMutable.value = false
+                        if (revision == draftRevision) savingMutable.value = false
+                        break
+                    } catch (error: CancellationException) { throw error }
+                    catch (_: Exception) { awaitDraftRetry() }
+                }
+            }
+        }
+    }
+
+    private suspend fun awaitDraftRetry() {
+        // Keep the encrypted file and in-memory review; retry only on explicit user action.
+        draftErrorMutable.value = true
+        savingMutable.value = false
+        draftRetries.receive()
+    }
+
+    fun retryBatchDraft() {
+        if (!draftErrorMutable.value) return
+        savingMutable.value = true
+        draftRetries.trySend(Unit)
+    }
+
+    private fun persistBatch() {
+        draftRevision++
+        savingMutable.value = true
+        if (draftWrites.trySend(draftRevision to batchMutable.value.toList()).isFailure)
+            mutable.value = mutable.value.copy(error = R.string.error_storage)
+    }
+
+    private fun directForNetwork(): DirectDownloader {
+        val app = getApplication<Application>()
+        return DirectDownloader(NetworkSettings.client(app, NetworkSettings.requireNetwork(app)))
+            .also { direct = it }
+    }
+
     private val media = MediaEngine(app)
 
     fun edit(url: String) {
-        if (mutable.value.busy) return
+        if (mutable.value.busy || batchBusyMutable.value) return
         mutable.value = ScreenState(url.take(8192))
     }
 
     fun receive(text: String) {
-        if (mutable.value.busy) return
+        if (mutable.value.busy || batchBusyMutable.value) {
+            mutable.value = mutable.value.copy(pendingShared = text.take(32768))
+            return
+        }
+        if (Regex("https?://", RegexOption.IGNORE_CASE).findAll(text).take(2).count() > 1) {
+            prepareBatch(text)
+            return
+        }
         try {
             edit(Safety.shared(text))
             analyze()
@@ -38,13 +119,126 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun paste(text: String?) {
-        if (mutable.value.busy) return
         if (
             text.isNullOrBlank() ||
                 !Regex("https?://", RegexOption.IGNORE_CASE).containsMatchIn(text)
         ) {
             mutable.value = mutable.value.copy(error = R.string.nothing_to_paste)
         } else receive(text)
+    }
+
+    fun acceptPending() {
+        if (mutable.value.busy || batchBusyMutable.value) return
+        val pending = mutable.value.pendingShared ?: return
+        mutable.value = mutable.value.copy(pendingShared = null)
+        receive(pending)
+    }
+
+    fun prepareBatch(text: String) {
+        if (mutable.value.busy || batchBusyMutable.value || draftErrorMutable.value) return
+        batchMutable.value =
+            BatchInput.parse(text)
+                .map { raw ->
+                    val url = runCatching { Safety.url(raw).toHttpUrl().toString() }.getOrNull()
+                    BatchEntry(
+                        raw,
+                        url,
+                        selected = url != null,
+                        error = if (url == null) R.string.error_url else null,
+                    )
+                }
+                .distinctBy { it.url ?: it.raw }
+        batchRequestedMutable.value = true
+        persistBatch()
+    }
+
+    fun selectBatch(index: Int, selected: Boolean) {
+        if (batchBusyMutable.value || draftErrorMutable.value) return
+        batchMutable.value =
+            batchMutable.value.mapIndexed { i, item ->
+                if (i == index && item.url != null) item.copy(selected = selected) else item
+            }
+        persistBatch()
+    }
+
+    fun chooseBatch(index: Int, choice: Choice) {
+        if (batchBusyMutable.value || draftErrorMutable.value) return
+        batchMutable.value = batchMutable.value.mapIndexed { i, item ->
+            if (i == index && item.analysis?.choices?.contains(choice) == true) item.copy(choice = choice)
+            else item
+        }
+        persistBatch()
+    }
+
+    fun batchDestination(url: String, destination: String?) {
+        if (batchBusyMutable.value) return
+        if (destination != null && android.net.Uri.parse(destination).scheme != "content") return
+        batchMutable.value = batchMutable.value.map { item ->
+            if (item.url == url) item.copy(destination = destination, destinationOverride = true) else item
+        }
+        persistBatch()
+    }
+
+    fun analyzeBatch() {
+        if (batchBusyMutable.value || mutable.value.busy || draftErrorMutable.value) return
+        batchBusyMutable.value = true
+        job =
+            viewModelScope.launch {
+                try {
+                    for (index in batchMutable.value.indices) {
+                        val entry = batchMutable.value[index]
+                        if (!entry.selected || entry.url == null || entry.analysis != null) continue
+                        val result =
+                            try {
+                                val analysis =
+                                    withTimeout(120_000) {
+                                        val downloader = directForNetwork()
+                                        val directResult =
+                                            try {
+                                                downloader.analyze(entry.url)
+                                            } catch (error: java.io.IOException) {
+                                                currentCoroutineContext().ensureActive()
+                                                if (!entry.url.startsWith("https://")) throw error
+                                                null
+                                            }
+                                        directResult ?: media.analyze(entry.url)
+                                    }
+                                entry.copy(analysis = analysis, error = null, choice = analysis.choices.firstOrNull())
+                            } catch (error: TimeoutCancellationException) {
+                                direct.cancel()
+                                media.cancel()
+                                entry.copy(error = R.string.error_timeout)
+                            } catch (error: CancellationException) {
+                                throw error
+                            } catch (error: Exception) {
+                                entry.copy(
+                                    error =
+                                        FailureClassifier.classify(Stage.EXTRACT, error)
+                                            .messageResource()
+                                )
+                            }
+                        batchMutable.value =
+                            batchMutable.value.mapIndexed { i, item ->
+                                if (i == index) result else item
+                            }
+                        persistBatch()
+                    }
+                } finally {
+                    batchBusyMutable.value = false
+                }
+            }
+    }
+
+    internal fun removeBatch(entry: BatchEntry) {
+        batchMutable.value = batchMutable.value.filterNot { it == entry }
+        persistBatch()
+    }
+
+    fun clearBatch() {
+        if (!batchBusyMutable.value) {
+            batchMutable.value = emptyList()
+            persistBatch()
+        }
     }
 
     private var preferred = Kind.VIDEO
@@ -64,7 +258,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun analyze() {
-        if (mutable.value.busy) return
+        if (mutable.value.busy || batchBusyMutable.value) return
         val url =
             try {
                 Safety.url(mutable.value.url)
@@ -79,9 +273,10 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                 try {
                     val analysis =
                         withTimeout(120_000) {
+                            val downloader = directForNetwork()
                             val directResult =
                                 try {
-                                    direct.analyze(url)
+                                    downloader.analyze(url)
                                 } catch (error: java.io.IOException) {
                                     currentCoroutineContext().ensureActive()
                                     if (!url.startsWith("https://")) throw error
@@ -92,6 +287,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                     mutable.value =
                         ScreenState(
                             url,
+                            pendingShared = mutable.value.pendingShared,
                             analysis = analysis,
                             selected =
                                 analysis.choices.firstOrNull { it.kind == preferred }

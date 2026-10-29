@@ -12,6 +12,9 @@ enum class Stage {
 enum class FailureCode {
     AUTHENTICATION_REQUIRED,
     HTTP_403,
+    HTTP_404,
+    HTTP_SERVER,
+    NETWORK_UNAVAILABLE,
     HTTP_429,
     FORMAT_UNAVAILABLE,
     JS_RUNTIME_UNAVAILABLE,
@@ -25,6 +28,7 @@ enum class FailureCode {
     STORAGE_PERMISSION_DENIED,
     STORAGE_FULL,
     OUTPUT_WRITE_FAILED,
+    PUBLICATION_REVIEW_REQUIRED,
     EXTRACTION_FAILED,
     DOWNLOAD_FAILED,
 }
@@ -57,6 +61,12 @@ object FailureClassifier {
                     FailureCode.EJS_COMPONENT_UNAVAILABLE
                 error is java.net.SocketTimeoutException || "timed out" in message ->
                     FailureCode.NETWORK_TIMEOUT
+                error is java.net.UnknownHostException || error is java.net.ConnectException ->
+                    FailureCode.NETWORK_UNAVAILABLE
+                Regex("(?:http(?: error)?|status(?: code)?)[ :]+404\\b").containsMatchIn(message) ->
+                    FailureCode.HTTP_404
+                Regex("(?:http(?: error)?|status(?: code)?)[ :]+5[0-9]{2}\\b")
+                    .containsMatchIn(message) -> FailureCode.HTTP_SERVER
                 stage == Stage.MERGE -> FailureCode.MERGE_FAILED
                 stage == Stage.VERIFY -> FailureCode.OUTPUT_VERIFICATION_FAILED
                 stage == Stage.PUBLISH -> FailureCode.OUTPUT_WRITE_FAILED
@@ -69,9 +79,13 @@ object FailureClassifier {
 
 fun PipelineException.messageResource(): Int =
     when (code) {
+        FailureCode.PUBLICATION_REVIEW_REQUIRED -> R.string.error_publication_review
         FailureCode.STORAGE_FULL -> R.string.error_disk_full
         FailureCode.NETWORK_TLS -> R.string.error_tls
         FailureCode.AUTHENTICATION_REQUIRED -> R.string.error_auth_required
+        FailureCode.HTTP_404 -> R.string.error_http404
+        FailureCode.HTTP_SERVER -> R.string.error_server
+        FailureCode.NETWORK_UNAVAILABLE -> R.string.error_offline
         FailureCode.HTTP_403 -> R.string.error_http403
         FailureCode.HTTP_429 -> R.string.error_http429
         FailureCode.FORMAT_UNAVAILABLE -> R.string.error_format_unavailable

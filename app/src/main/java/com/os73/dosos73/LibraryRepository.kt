@@ -51,27 +51,30 @@ internal object LibraryRepository {
 
     private fun index(context: Context) = AtomicFile(File(context.filesDir, "saved-files.json"))
 
-    private fun read(context: Context): List<SavedFile> =
-        runCatching {
-                val array =
-                    JSONArray(index(context).openRead().bufferedReader().use { it.readText() })
-                (0 until array.length()).map { i ->
-                    array.getJSONObject(i).let {
-                        SavedFile(
-                            it.getString("uri"),
-                            it.getString("name"),
-                            it.getString("mime"),
-                            it.getLong("bytes"),
-                            it.getLong("date"),
-                        )
-                    }
-                }
+    private fun read(context: Context): List<SavedFile> {
+        val text =
+            try {
+                index(context).openRead().bufferedReader().use { it.readText() }
+            } catch (_: java.io.FileNotFoundException) {
+                return emptyList()
             }
-            .getOrDefault(emptyList())
+        val array = JSONArray(text)
+        return (0 until array.length()).map { i ->
+            array.getJSONObject(i).let {
+                SavedFile(
+                    it.getString("uri"),
+                    it.getString("name"),
+                    it.getString("mime"),
+                    it.getLong("bytes"),
+                    it.getLong("date"),
+                )
+            }
+        }
+    }
 
     private fun write(context: Context, files: List<SavedFile>) {
         val array = JSONArray()
-        files.take(2000).forEach {
+        files.forEach {
             array.put(
                 JSONObject()
                     .put("uri", it.uri)
@@ -95,15 +98,8 @@ internal object LibraryRepository {
     suspend fun refresh(context: Context) =
         withContext(Dispatchers.IO) {
             lock.withLock {
-                val saved =
-                    read(context).filter {
-                        runCatching {
-                                context.contentResolver
-                                    .openFileDescriptor(Uri.parse(it.uri), "r")
-                                    ?.use { true } ?: false
-                            }
-                            .getOrDefault(false)
-                    }
+                // A revoked grant or offline provider must not erase the durable SAF index.
+                val saved = read(context)
                 val discovered = mutableListOf<SavedFile>()
                 context.contentResolver
                     .query(
@@ -134,9 +130,9 @@ internal object LibraryRepository {
                             )
                         )
                     }
-                mutable.value =
-                    (discovered + saved).distinctBy { it.uri }.sortedByDescending { it.date }
-                write(context, mutable.value)
+                val next = (discovered + saved).distinctBy { it.uri }.sortedByDescending { it.date }
+                write(context, next)
+                mutable.value = next
             }
         }
 
@@ -148,8 +144,9 @@ internal object LibraryRepository {
                     .query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)
                     ?.use { if (it.moveToFirst()) name = it.getString(0) ?: fallback }
                 val entry = SavedFile(uri.toString(), name, mime, bytes, System.currentTimeMillis())
-                mutable.value = (listOf(entry) + read(context)).distinctBy { it.uri }
-                write(context, mutable.value)
+                val next = (listOf(entry) + read(context)).distinctBy { it.uri }
+                write(context, next)
+                mutable.value = next
             }
         }
 
@@ -184,8 +181,9 @@ internal object LibraryRepository {
                         document.uri
                     }
                 val changed = item.copy(uri = newUri.toString(), name = clean)
-                mutable.value = mutable.value.map { if (it.uri == item.uri) changed else it }
-                write(context, mutable.value)
+                val next = mutable.value.map { if (it.uri == item.uri) changed else it }
+                write(context, next)
+                mutable.value = next
                 cache.remove(item.uri)
             }
         }
@@ -199,11 +197,23 @@ internal object LibraryRepository {
                         context.contentResolver.delete(uri, null, null) > 0
                     else DocumentFile.fromSingleUri(context, uri)?.delete() == true
                 )
-                mutable.value = mutable.value.filterNot { it.uri == item.uri }
-                write(context, mutable.value)
+                val next = mutable.value.filterNot { it.uri == item.uri }
+                write(context, next)
+                mutable.value = next
                 cache.remove(item.uri)
             }
         }
+
+    /** Explicitly remove metadata only after a fresh, confident local-missing result. */
+    suspend fun forgetMissing(context: Context, item: SavedFile) = withContext(Dispatchers.IO) {
+        lock.withLock {
+            check(FileAccess.inspect(context, Uri.parse(item.uri)) == FileAvailability.MISSING)
+            val next = read(context).filterNot { it.uri == item.uri }
+            write(context, next)
+            mutable.value = next
+            cache.remove(item.uri)
+        }
+    }
 
     fun hidden(context: Context): Set<String> =
         context
@@ -223,6 +233,26 @@ internal object LibraryRepository {
             )
         }
 
+    suspend fun clearHistory(context: Context) =
+        withContext(Dispatchers.IO) {
+            lock.withLock {
+                check(
+                    context
+                        .getSharedPreferences("library", Context.MODE_PRIVATE)
+                        .edit()
+                        .putStringSet(
+                            "hidden_history",
+                            hidden(context) + mutable.value.map { it.uri },
+                        )
+                        .commit()
+                )
+            }
+        }
+
+    fun clearThumbnailCache() {
+        cache.evictAll()
+    }
+
     suspend fun thumbnail(context: Context, item: SavedFile): Bitmap? =
         withContext(Dispatchers.IO) {
             cache.get(item.uri)
@@ -233,169 +263,4 @@ internal object LibraryRepository {
                     }
                     .getOrNull()
         }
-}
-
-/** Waiting and in-flight ownership share one atomic journal, avoiding a dequeue/crash gap. */
-internal object DownloadQueue {
-    private val lock = Mutex()
-    private val mutable = MutableStateFlow<List<DownloadTask>>(emptyList())
-    val tasks = mutable.asStateFlow()
-    private var loaded = false
-    private var active: DownloadTask? = null
-
-    private fun file(context: Context) = AtomicFile(File(context.filesDir, "waiting-tasks.json"))
-
-    private fun load(context: Context) {
-        if (loaded) return
-        mutable.value =
-            runCatching {
-                    val text = file(context).openRead().bufferedReader().use { it.readText() }
-                    val array =
-                        if (text.trimStart().startsWith("[")) JSONArray(text)
-                        else {
-                            val journal = JSONObject(text)
-                            active = journal.optJSONObject("active")?.let(::decodeTask)
-                            journal.getJSONArray("waiting")
-                        }
-                    (0 until array.length()).map { decodeTask(array.getJSONObject(it)) }
-                }
-                .getOrDefault(emptyList())
-        loaded = true
-    }
-
-    private fun save(context: Context) {
-        val array = JSONArray()
-        mutable.value.forEach { array.put(encodeTask(it)) }
-        val atomic = file(context)
-        val output = atomic.startWrite()
-        try {
-            output.write(
-                JSONObject()
-                    .put("waiting", array)
-                    .put("active", active?.let(::encodeTask))
-                    .toString()
-                    .toByteArray()
-            )
-            atomic.finishWrite(output)
-        } catch (error: Exception) {
-            atomic.failWrite(output)
-            throw error
-        }
-    }
-
-    suspend fun initialize(context: Context) =
-        withContext(Dispatchers.IO) { lock.withLock { load(context) } }
-
-    suspend fun enqueue(context: Context, task: DownloadTask) =
-        withContext(Dispatchers.IO) {
-            lock.withLock {
-                load(context)
-                require(mutable.value.size < 50)
-                if (active?.id != task.id && mutable.value.none { it.id == task.id }) {
-                    mutable.value = mutable.value + task
-                    save(context)
-                }
-            }
-        }
-
-    suspend fun take(context: Context): DownloadTask? =
-        withContext(Dispatchers.IO) {
-            lock.withLock {
-                load(context)
-                active?.let {
-                    return@withLock it
-                }
-                val task = mutable.value.firstOrNull()
-                if (task != null) {
-                    active = task
-                    mutable.value = mutable.value.drop(1)
-                    save(context)
-                }
-                task
-            }
-        }
-
-    suspend fun rememberActive(context: Context, task: DownloadTask) =
-        withContext(Dispatchers.IO) {
-            lock.withLock {
-                load(context)
-                check(active == null || active?.id == task.id)
-                active = task
-                mutable.value = mutable.value.filterNot { it.id == task.id }
-                save(context)
-            }
-        }
-
-    suspend fun finish(context: Context, id: String) =
-        withContext(Dispatchers.IO) {
-            lock.withLock {
-                load(context)
-                if (active?.id == id) {
-                    active = null
-                    save(context)
-                }
-            }
-        }
-
-    suspend fun interrupted(context: Context): DownloadTask? =
-        withContext(Dispatchers.IO) {
-            lock.withLock {
-                load(context)
-                active
-            }
-        }
-
-    suspend fun remove(context: Context, id: String) =
-        withContext(Dispatchers.IO) {
-            lock.withLock {
-                load(context)
-                mutable.value = mutable.value.filterNot { it.id == id }
-                save(context)
-            }
-        }
-
-    internal fun encodeTask(task: DownloadTask): JSONObject =
-        JSONObject()
-            .put("id", task.id)
-            .put("url", task.analysis.url)
-            .put("title", task.analysis.title)
-            .put("direct", task.analysis.direct)
-            .put("size", task.analysis.sizeBytes)
-            .put("tree", task.tree?.toString())
-            .put(
-                "choice",
-                JSONObject()
-                    .put("id", task.choice.id)
-                    .put("kind", task.choice.kind.name)
-                    .put("ext", task.choice.extension)
-                    .put("quality", task.choice.quality)
-                    .put("height", task.choice.expectedHeight)
-                    .put("audio", task.choice.expectsAudio),
-            )
-
-    internal fun decodeTask(json: JSONObject): DownloadTask {
-        val source = Safety.url(json.getString("url"))
-        val c = json.getJSONObject("choice")
-        val choice =
-            Choice(
-                c.getString("id"),
-                Kind.valueOf(c.getString("kind")),
-                c.getString("ext"),
-                c.getString("quality"),
-                if (c.isNull("height")) null else c.getInt("height"),
-                c.getBoolean("audio"),
-            )
-        return DownloadTask(
-            Analysis(
-                source,
-                json.getString("title"),
-                listOf(choice),
-                json.getBoolean("direct"),
-                if (json.isNull("size")) null else json.getLong("size"),
-            ),
-            choice,
-            if (json.isNull("tree")) null else Uri.parse(json.getString("tree")),
-            json.getString("id"),
-        )
-    }
 }

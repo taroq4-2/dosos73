@@ -13,7 +13,10 @@ import java.util.concurrent.Semaphore
  * HTTPS-only proxy: every tunnel resolves and connects to a checked public IP. TLS remains
  * end-to-end between Python and the origin; certificates are never replaced.
  */
-class PublicProxy : Closeable {
+class PublicProxy(
+    private val resolve: (String) -> List<InetAddress> = Safety::resolve,
+    private val socketFactory: javax.net.SocketFactory = javax.net.SocketFactory.getDefault(),
+) : Closeable {
     private val server = ServerSocket(0, 8, InetAddress.getByName("127.0.0.1"))
     // One acceptor plus two directions per tunnel, with one spare worker.
     private val pool = Executors.newFixedThreadPool(18)
@@ -36,8 +39,9 @@ class PublicProxy : Closeable {
                     continue
                 }
                 sockets.add(client)
-                pool.execute {
+                try { pool.execute {
                     try {
+                        if (server.isClosed) return@execute
                         tunnel(client)
                     } catch (_: Exception) {
                         /* Reported by extractor as network failure. */
@@ -46,6 +50,10 @@ class PublicProxy : Closeable {
                         client.close()
                         slots.release()
                     }
+                } } catch (_: java.util.concurrent.RejectedExecutionException) {
+                    sockets.remove(client)
+                    client.close()
+                    slots.release()
                 }
             }
         }
@@ -75,7 +83,8 @@ class PublicProxy : Closeable {
         val target = java.net.URI("https://${parts[1]}")
         require(target.port == 443 && target.userInfo == null && target.path.isNullOrEmpty())
         // Validate the entire DNS answer before attempting any connection.
-        val addresses = Safety.resolve(target.host)
+        val addresses = resolve(target.host)
+        require(addresses.isNotEmpty() && addresses.all(Safety::publicAddress))
         connectPublic(addresses).use { remote ->
             try {
                 remote.soTimeout = 60_000
@@ -112,9 +121,11 @@ class PublicProxy : Closeable {
             if (server.isClosed) throw java.io.IOException("Proxy closed")
             val remaining = ((deadline - System.nanoTime()) / 1_000_000L).toInt()
             if (remaining <= 0) break
-            val remote = Socket()
+            val remote = socketFactory.createSocket()
             sockets.add(remote)
             try {
+                // close() may have run while socketFactory was creating this socket.
+                if (server.isClosed) throw java.io.IOException("Proxy closed")
                 remote.connect(InetSocketAddress(address, 443), minOf(5000, remaining))
                 return remote
             } catch (error: java.io.IOException) {

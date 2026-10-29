@@ -1,11 +1,27 @@
 # Architecture
 
-One Android application module uses Kotlin, Compose, lifecycle and coroutines. The flow is UI → MainViewModel → direct HTTP probe or MediaEngine → DownloadService → validation → OutputStore publication → content URI.
+One Android application module uses Kotlin, Compose, lifecycle and coroutines. The flow is UI → MainViewModel → direct probe or MediaEngine → DownloadService → validation → OutputStore publication → content URI.
 
-DownloadQueue atomically persists waiting and active task ownership. Transfers exposes process-local UI state. The foreground dataSync service runs for requested downloads and stops at terminal state; START_REDELIVER_INTENT and the active journal allow retry after process death. Opening the app recovers an interrupted active task. There is no periodic watchdog. Recovery starts from byte zero, not a byte-range resume. Force stop prevents automatic restart until opening the app. A crash between publication and journal acknowledgement can cause a duplicate retry; an output transaction journal remains future work.
+## Task ownership and lifecycle
 
-DirectDownloader streams with 64 KiB buffers, checked DNS, bounded redirects and timeouts. There is no fixed media-size ceiling. StoragePolicy retains a 32 MiB bookkeeping reserve and checks known sizes without overflow. MediaEngine lazily initializes pinned yt-dlp/Python/QuickJS/FFmpeg; HTTPS CONNECT tunnels validate public DNS answers, authenticate locally and preserve end-to-end TLS. Metadata has separate size/count guards. No engine download occurs on paste.
+DownloadQueue persists waiting/active ownership through an authenticated encrypted journal. The foreground dataSync service is started for requested work and stops at a terminal state. START_REDELIVER_INTENT and the journal allow recovery after process death; opening the app also checks interrupted work. There is no periodic watchdog. Force-stop requires reopening; no automatic boot restart is promised. One file is active at a time, with explicit queue priorities/pause/retry.
 
-Format choices come from actual source metadata; separate compatible streams merge with FFmpeg. Forced MP3 conversion, playlists and arbitrary command options are not advertised. OutputStore checks duration, audio/video presence and requested displayed height, accounting for rotation. MediaStore remains pending until verification; SAF uses a unique temporary document, then rename. Provider free-space/rename limits and orphan output recovery remain documented.
+DirectDownloader streams through bounded buffers and can retain a durable verified prefix with strong ETag/target/length binding. Incorrect ranges or changed representations never append to existing bytes. Optional two-range transfer has separate per-call cancellation and a checked merge; its parallel parts are not durably resumed. Native extraction may restart after interruption.
 
-The app uses Android's foreground dataSync policy across API 29+. Android 15 time limits still apply. No battery, OEM scheduling, broad extractor compatibility or complete native-isolation guarantee is made. See SECURITY.md and RELEASE_VALIDATION.md.
+## Network and engines
+
+Public-address validation, network-bound DNS/sockets, redirects and timeouts protect direct requests. A locally authenticated HTTPS CONNECT proxy validates native target addresses without terminating TLS. Full helper/protocol isolation and physical network transitions remain verification work. Media metadata has distinct size/count guards; media files have no fixed size ceiling. Storage reserves bookkeeping space and rejects known insufficient space without integer overflow.
+
+MediaEngine initializes bundled pinned yt-dlp/Python/QuickJS/FFmpeg when needed. No runtime fetch happens on paste. Actual metadata supplies formats and language/source bitrate. MP3 conversion uses LAME V0; source bitrate is not presented as an output guarantee. [Compact packaging](COMPACT_ENGINE.md) explains the four-ABI universal delivery.
+
+## Publication and library
+
+OutputStore checks content, duration, tracks and requested dimensions. An encrypted plan is saved before destination creation; known temporary/final names and verification receipts support interrupted publication and SAF rename URI changes. Recovery hashes candidates and preserves ambiguous/verified content. Provider-specific limitations remain in [PUBLICATION_RECOVERY.md](PUBLICATION_RECOVERY.md).
+
+Saved-file metadata is indexed separately from user bytes. Bounded access checks distinguish proven local absence from denied/unavailable storage. Missing-record removal is explicit, reconfirms absence and removes metadata only. Collections are metadata labels; deleting a collection does not delete media.
+
+## Privacy and diagnostics
+
+Queue, failure, batch, receipt and timeline journals are private/encrypted. TaskTimeline records allowlisted stage/result/code fields, at most 32 tasks × 24 events, with no URL/title/native stderr inputs. Its selected-day retention prunes on read/write, without a periodic worker. Completed-library visibility and failed-task retention have separate limits; full metadata retention cleanup remains open.
+
+Android's foreground execution/time limits apply, including API35 restrictions. [Verification](VERIFICATION.md) and [remaining work](REMAINING_REQUIREMENTS.md) separate measured outcomes from unimplemented scope.

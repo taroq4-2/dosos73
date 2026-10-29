@@ -10,6 +10,43 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class OutputSafetyTest {
     @Test
+    fun audioChoicesConvertToMp3WithoutInventingOutputSize() {
+        val json = org.json.JSONObject("""{"formats":[
+          {"format_id":"a1","ext":"m4a","abr":96,"filesize":1234,"language":"en","vcodec":"none","acodec":"aac","protocol":"https","url":"https://example.com/a1"},
+          {"format_id":"a2","ext":"m4a","abr":160,"filesize":2345,"language":"ar","vcodec":"none","acodec":"aac","protocol":"https","url":"https://example.com/a2"}
+        ]}""")
+        val choices = MediaEngine.mapFormats(json)
+        assertEquals(2, choices.size)
+        assertNull(choices.first().bitrateKbps)
+        assertTrue(choices.all { it.extension == "mp3" })
+        assertEquals("ar", choices.first().language)
+        assertNull(choices.first().estimatedBytes)
+        assertTrue(choices.map { it.quality }.distinct().size == 2)
+    }
+
+    @Test
+    fun recoversPublicationWithoutCreatingSecondOutput() = kotlinx.coroutines.runBlocking {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val source = File(context.cacheDir, "receipt-test.bin")
+        val choice = Choice("direct", Kind.FILE, "bin", "Original")
+        val task = DownloadTask(Analysis("https://example.com/file", "receipt-test", listOf(choice), true), choice, null)
+        val store = OutputStore(context)
+        var uri: android.net.Uri? = null
+        try {
+            source.writeText("durable publication")
+            uri = store.save(source, task).first
+            val recovered = store.recover(task)
+            assertEquals(uri, recovered!!.first)
+            store.forget(task.id)
+            assertNull(store.recover(task))
+        } finally {
+            uri?.let { context.contentResolver.delete(it, null, null) }
+            store.forget(task.id)
+            source.delete()
+        }
+    }
+
+    @Test
     fun bestAudioDoesNotDependOnSourceOrder() {
         for (order in listOf(listOf(160, 96), listOf(96, 160))) {
             val formats =

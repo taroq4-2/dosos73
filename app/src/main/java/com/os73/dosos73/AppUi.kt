@@ -18,9 +18,9 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -322,9 +322,7 @@ internal fun HomeScreen(
                         ?.let { if (it == "Original") stringResource(R.string.original) else it }
                         .orEmpty(),
                 ) { close ->
-                    analysis.choices
-                        .filter { it.kind == screen.selected?.kind }
-                        .distinctBy { it.quality }
+                    qualityChoices(analysis.choices, screen.selected)
                         .forEach { choice ->
                             DropdownMenuItem(
                                 {
@@ -363,8 +361,9 @@ internal fun HomeScreen(
                 Text(
                     stringResource(
                         R.string.file_size_value,
-                        analysis.sizeBytes?.let { bytesLabel(it, locale) }
-                            ?: stringResource(R.string.unknown_size),
+                        (screen.selected?.estimatedBytes ?: analysis.sizeBytes)?.let {
+                            bytesLabel(it, locale)
+                        } ?: stringResource(R.string.unknown_size),
                     ),
                     color = Neon.Secondary,
                     style = MaterialTheme.typography.bodySmall,

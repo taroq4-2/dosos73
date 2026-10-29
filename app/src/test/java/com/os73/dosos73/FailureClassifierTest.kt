@@ -4,6 +4,13 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class FailureClassifierTest {
+    @Test fun distinguishesOfflineMissingAndServerErrors() {
+        assertEquals(FailureCode.NETWORK_UNAVAILABLE, FailureClassifier.classify(Stage.TRANSFER, java.net.UnknownHostException()).code)
+        assertEquals(FailureCode.HTTP_404, FailureClassifier.classify(Stage.TRANSFER, java.io.IOException("HTTP 404")).code)
+        assertEquals(FailureCode.HTTP_SERVER, FailureClassifier.classify(Stage.TRANSFER, java.io.IOException("HTTP 503")).code)
+        assertEquals(FailureCode.DOWNLOAD_FAILED, FailureClassifier.classify(Stage.TRANSFER, java.io.IOException("file 503 missing")).code)
+    }
+
     @Test
     fun classifiesDiskAndTlsWithoutHidingAuthentication() {
         assertEquals(

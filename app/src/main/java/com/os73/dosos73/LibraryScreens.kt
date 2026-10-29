@@ -1,5 +1,6 @@
 package com.os73.dosos73
 
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -50,18 +51,38 @@ internal fun SavedFileRow(
     item: SavedFile,
     onAction: (SavedFile, String) -> Unit,
     history: Boolean = false,
+    refreshToken: Int = 0,
 ) {
     var menu by remember { mutableStateOf(false) }
     val context = LocalContext.current
     val locale = LocalConfiguration.current.locales[0]
     var bitmap by remember(item.uri, item.date) { mutableStateOf<android.graphics.Bitmap?>(null) }
-    LaunchedEffect(item.uri, item.date) { bitmap = LibraryRepository.thumbnail(context, item) }
+    var availability by remember(item.uri) { mutableStateOf<FileAvailability?>(null) }
+    val lifecycle = androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
+    LaunchedEffect(item.uri, item.date, refreshToken, lifecycle) {
+        lifecycle.repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.STARTED) {
+            val access = FileAccess.inspect(context, android.net.Uri.parse(item.uri))
+            val image = if (access == FileAvailability.AVAILABLE) LibraryRepository.thumbnail(context, item) else null
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main.immediate) {
+                androidx.compose.runtime.snapshots.Snapshot.withMutableSnapshot {
+                    availability = access
+                    bitmap = image
+                }
+            }
+        }
+    }
+    fun previewAction() = when (availability) {
+        FileAvailability.MISSING -> "missing"
+        FileAvailability.PERMISSION_REQUIRED -> "permission"
+        FileAvailability.UNAVAILABLE -> "unavailable"
+        else -> "open"
+    }
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
         Row(
             Modifier.fillMaxWidth()
                 .clip(RoundedCornerShape(15.dp))
                 .background(Neon.Surface)
-                .clickable { onAction(item, "open") }
+                .clickable { onAction(item, previewAction()) }
                 .padding(11.dp)
                 .testTag("file_row"),
             verticalAlignment = Alignment.CenterVertically,
@@ -107,6 +128,14 @@ internal fun SavedFileRow(
                     style = MaterialTheme.typography.labelSmall,
                     color = Neon.Secondary,
                 )
+                val accessMessage = when(availability) {
+                    FileAvailability.MISSING -> R.string.file_missing
+                    FileAvailability.PERMISSION_REQUIRED -> R.string.file_permission_required
+                    FileAvailability.UNAVAILABLE -> R.string.file_storage_unavailable
+                    else -> null
+                }
+                accessMessage?.let { Text(stringResource(it), color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall, maxLines = 2, overflow = TextOverflow.Ellipsis) }
                 if (item.extension.isNotEmpty())
                     Text(
                         item.extension,
@@ -123,7 +152,9 @@ internal fun SavedFileRow(
                 IconAction(Glyph.MORE, stringResource(R.string.file_actions), { menu = true })
                 DropdownMenu(menu, { menu = false }) {
                     listOf(
-                            "open" to R.string.open,
+                            "open" to R.string.preview,
+                            "external" to R.string.open_external,
+                            "collection" to R.string.collection,
                             "share" to R.string.share,
                             "info" to R.string.details,
                         )
@@ -132,7 +163,7 @@ internal fun SavedFileRow(
                                 { Text(stringResource(label)) },
                                 {
                                     menu = false
-                                    onAction(item, key)
+                                    onAction(item, if (key == "open") previewAction() else key)
                                 },
                             )
                         }
@@ -165,6 +196,12 @@ internal fun SavedFileRow(
                             },
                         )
                     }
+                    if (availability == FileAvailability.MISSING) {
+                        DropdownMenuItem({ Text(stringResource(R.string.forget_missing)) }, {
+                            menu = false
+                            onAction(item, "forget")
+                        })
+                    }
                 }
             }
         }
@@ -178,16 +215,30 @@ internal fun FileLibraryScreen(
     onAction: (SavedFile, String) -> Unit,
     onRefresh: () -> Unit,
 ) {
+    var accessGeneration by remember { mutableIntStateOf(0) }
     var category by rememberSaveable { mutableIntStateOf(0) }
     var sort by rememberSaveable { mutableIntStateOf(0) }
     var ascending by rememberSaveable { mutableStateOf(false) }
+    val context = LocalContext.current
+    var selectedCollection by rememberSaveable { mutableStateOf("") }
+    var largeOnly by rememberSaveable { mutableStateOf(false) }
+    val collections =
+        files
+            .map { LibraryPreferences.collection(context, it.uri) }
+            .filter { it.isNotBlank() }
+            .distinct()
+            .sorted()
     val filtered =
-        remember(files, query, category, sort, ascending) {
+        remember(files, query, category, sort, ascending, selectedCollection, largeOnly) {
             val rows =
                 files.filter {
                     (category == 0 ||
                         (category == 1 && it.kind == Kind.VIDEO) ||
-                        (category == 2 && it.kind == Kind.AUDIO)) && it.name.contains(query, true)
+                        (category == 2 && it.kind == Kind.AUDIO)) &&
+                        (it.name.contains(query, true) || it.mime.contains(query, true)) &&
+                        (!largeOnly || it.bytes >= 100L * 1024 * 1024) &&
+                        (selectedCollection.isEmpty() ||
+                            LibraryPreferences.collection(context, it.uri) == selectedCollection)
                 }
             val comparator =
                 when (sort) {
@@ -258,7 +309,26 @@ internal fun FileLibraryScreen(
                 stringResource(if (ascending) R.string.ascending else R.string.descending),
                 { ascending = !ascending },
             )
-            IconAction(Glyph.CLOCK, stringResource(R.string.refresh), onRefresh)
+            IconAction(Glyph.CLOCK, stringResource(R.string.refresh), { accessGeneration++; onRefresh() })
+        }
+        Row(Modifier.horizontalScroll(rememberScrollState())) {
+            FilterChip(
+                largeOnly,
+                { largeOnly = !largeOnly },
+                label = { Text(stringResource(R.string.large_files)) },
+            )
+            FilterChip(
+                selectedCollection.isEmpty(),
+                { selectedCollection = "" },
+                label = { Text(stringResource(R.string.all_collections)) },
+            )
+            collections.forEach { group ->
+                FilterChip(
+                    selectedCollection == group,
+                    { selectedCollection = group },
+                    label = { Text(group) },
+                )
+            }
         }
         if (filtered.isEmpty())
             EmptyState(
@@ -272,7 +342,7 @@ internal fun FileLibraryScreen(
                 verticalArrangement = Arrangement.spacedBy(5.dp),
                 contentPadding = PaddingValues(bottom = 16.dp, top = 8.dp),
             ) {
-                items(filtered, key = { it.uri }) { SavedFileRow(it, onAction) }
+                items(filtered, key = { it.uri }) { SavedFileRow(it, onAction, refreshToken = accessGeneration) }
             }
     }
 }
@@ -379,6 +449,7 @@ internal fun DownloadsScreen(
                                 Text(stringResource(R.string.remove_history))
                             }
                         }
+                        DiagnosticActions(failed.code)
                     }
                 }
                 if (waiting.isNotEmpty())
@@ -427,7 +498,10 @@ internal fun DownloadsScreen(
                                     style = MaterialTheme.typography.titleSmall,
                                 )
                                 Text(
-                                    stringResource(R.string.waiting_to_start),
+                                    stringResource(
+                                        if (task.userPaused) R.string.paused
+                                        else R.string.waiting_to_start
+                                    ),
                                     color = Neon.Muted,
                                     style = MaterialTheme.typography.bodySmall,
                                 )
@@ -438,6 +512,7 @@ internal fun DownloadsScreen(
                                 { onRemove(task) },
                             )
                         }
+                        QueueControls(task)
                     }
                 }
             }

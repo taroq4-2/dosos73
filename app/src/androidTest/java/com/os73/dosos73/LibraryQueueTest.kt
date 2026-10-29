@@ -20,7 +20,8 @@ class LibraryQueueTest {
             DownloadQueue.enqueue(context, task)
             assertEquals(task, DownloadQueue.take(context))
             assertEquals(task, DownloadQueue.interrupted(context))
-            val disk = org.json.JSONObject(File(context.filesDir, "waiting-tasks.json").readText())
+            val disk =
+                org.json.JSONObject(PrivateJournal(context, "waiting-tasks.json").readOrNull()!!)
             assertEquals(task, DownloadQueue.decodeTask(disk.getJSONObject("active")))
             assertFalse(DownloadQueue.tasks.value.any { it.id == task.id })
             // A new service delivery must recover the leased job, not skip to the next one.
@@ -29,7 +30,7 @@ class LibraryQueueTest {
             assertNull(DownloadQueue.interrupted(context))
             assertTrue(
                 org.json
-                    .JSONObject(File(context.filesDir, "waiting-tasks.json").readText())
+                    .JSONObject(PrivateJournal(context, "waiting-tasks.json").readOrNull()!!)
                     .isNull("active")
             )
         } finally {
@@ -89,6 +90,81 @@ class LibraryQueueTest {
             DownloadQueue.remove(context, first.id)
             DownloadQueue.remove(context, second.id)
         }
+    }
+
+    @Test
+    fun priorityPauseAndReorderSurviveDurableCodec() = runBlocking {
+        val choice = Choice("direct", Kind.FILE, "bin", "Original")
+        val normal =
+            DownloadTask(
+                Analysis("https://example.com/a", "Normal", listOf(choice), true),
+                choice,
+                null,
+            )
+        val high =
+            normal.copy(id = java.util.UUID.randomUUID().toString(), priority = TaskPriority.HIGH)
+        val other = normal.copy(id = java.util.UUID.randomUUID().toString())
+        try {
+            DownloadQueue.enqueue(context, normal)
+            DownloadQueue.enqueue(context, high)
+            DownloadQueue.enqueue(context, other)
+            DownloadQueue.setPaused(context, high.id, true)
+            DownloadQueue.move(context, other.id, -1)
+            DownloadQueue.move(context, other.id, -1)
+            assertEquals(other.id, DownloadQueue.take(context)?.id)
+            DownloadQueue.finish(context, other.id)
+            DownloadQueue.setPaused(context, high.id, false)
+            assertEquals(high.id, DownloadQueue.take(context)?.id)
+            DownloadQueue.setPaused(context, high.id, true)
+            assertNull(DownloadQueue.take(context))
+            assertFalse("Paused lease must not trigger a service restart loop", DownloadQueue.hasRunnable())
+            val disk =
+                org.json.JSONObject(PrivateJournal(context, "waiting-tasks.json").readOrNull()!!)
+            assertTrue(DownloadQueue.decodeTask(disk.getJSONObject("active")).userPaused)
+            DownloadQueue.finish(context, high.id)
+            assertEquals(normal.id, DownloadQueue.take(context)?.id)
+        } finally {
+            for (task in listOf(normal, high, other)) {
+                DownloadQueue.finish(context, task.id)
+                DownloadQueue.remove(context, task.id)
+            }
+        }
+    }
+
+    @Test
+    fun failedQueueWriteDoesNotPublishPhantomTask() = runBlocking {
+        DownloadQueue.initialize(context)
+        val blocker = File(context.cacheDir, "journal-write-block-${java.util.UUID.randomUUID()}")
+        blocker.writeText("not a directory")
+        val failing =
+            object : android.content.ContextWrapper(context) {
+                override fun getFilesDir(): File = blocker
+            }
+        val choice = Choice("direct", Kind.FILE, "bin", "Original")
+        val task =
+            DownloadTask(
+                Analysis("https://example.com/disk-full", "Write failure", listOf(choice), true),
+                choice,
+                null,
+            )
+        val before = DownloadQueue.tasks.value
+        try {
+            assertTrue(runCatching { DownloadQueue.enqueue(failing, task) }.isFailure)
+            assertEquals(before, DownloadQueue.tasks.value)
+            assertFalse(DownloadQueue.tasks.value.any { it.id == task.id })
+        } finally {
+            blocker.delete()
+        }
+    }
+
+    @Test
+    fun retainedTransferPathsRejectTraversal() {
+        assertTrue(runCatching { TransferFiles.directory(context, "../../outside") }.isFailure)
+        val id = java.util.UUID.randomUUID().toString()
+        assertEquals(
+            java.io.File(context.noBackupFilesDir, "transfers/$id").canonicalPath,
+            TransferFiles.directory(context, id).canonicalPath,
+        )
     }
 
     @Test

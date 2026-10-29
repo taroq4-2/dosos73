@@ -62,6 +62,10 @@ class LiveDownloadTest {
         val result = Transfers.state.value
         assertEquals("Download must commit a verified file", Phase.COMPLETE, result.phase)
         assertNotNull(result.uri)
+        val events = TaskTimeline.read(context).filter { it.taskId == task.id }
+        assertTrue(events.any { it.stage == Stage.TRANSFER && it.result == TimelineResult.STARTED })
+        assertTrue(events.any { it.stage == Stage.VERIFY && it.result == TimelineResult.COMPLETED })
+        assertTrue(events.any { it.stage == Stage.PUBLISH && it.result == TimelineResult.COMPLETED })
         context.contentResolver.openFileDescriptor(result.uri!!, "r")!!.use {
             assertTrue(it.statSize > 0)
         }

@@ -1,107 +1,92 @@
 <div align="center">
-<img src="branding/neon-reference.png" width="160" alt="dosos73 logo" />
+<img src="branding/repository-banner.svg" width="100%" alt="dosos73 — Download open-source OS73" />
 
 # dosos73
 **Download open-source OS73**
 
-An open-source Android media downloader with an Arabic-first, bilingual interface.
-
-[العربية](README-ar.md) · [Download ARM64 APK](https://github.com/taroq4-2/dosos73/releases/download/v1.1.2/dosos73-1.1.2-arm64-v8a.apk) · [All releases](https://github.com/taroq4-2/dosos73/releases) · [Website](https://os73.com)
-
 [![Android verification](https://github.com/taroq4-2/dosos73/actions/workflows/android.yml/badge.svg)](https://github.com/taroq4-2/dosos73/actions/workflows/android.yml)
+
+An open-source Android media downloader with an Arabic-first interface and English support.
+
+[Download universal APK](https://github.com/taroq4-2/dosos73/releases/download/v1.2.0-rc.4/dosos73-1.2.0-rc.4-universal.apk) · [Releases](https://github.com/taroq4-2/dosos73/releases) · [العربية](README-ar.md)
 </div>
 
-## Download and install
+## Download and compatibility
 
-**Version 1.1.2 · Android 10+ · no ads or accounts.**
+**1.2.0-rc.4** is a release candidate delivered as **one APK for Android 10+**, containing ARM32, ARM64, x86 and x86_64. No phone-specific package selection is required. Published checksums identify the exact artifact.
 
-| Package | Device |
+Official updates retain the existing signing certificate. Allow installation from your chosen browser/file manager when Android requests it. Pasting a link does not download additional runtime libraries.
+
+| Package | Details |
 |---|---|
-| [ARM64 APK](https://github.com/taroq4-2/dosos73/releases/download/v1.1.2/dosos73-1.1.2-arm64-v8a.apk) | Modern ARM64 phones, including Samsung S23 Ultra |
-| [x86_64 APK](https://github.com/taroq4-2/dosos73/releases/download/v1.1.2/dosos73-1.1.2-x86_64.apk) | Compatible Intel/AMD devices and emulators |
-| [Checksums](https://github.com/taroq4-2/dosos73/releases/download/v1.1.2/SHA256SUMS.txt) | SHA-256 identities of published APKs |
+| Current download | **1.2.0-rc.4** · release candidate |
+| APK size | **72.76 MB** (69.39 MiB) |
+| Supported Android | **10+** (API 29+) |
+| Architectures | ARM32 · ARM64 · x86 · x86_64, in one file |
+| Audio output | **MP3 V0** |
 
-Open the APK and allow installation from your selected browser/file manager when Android asks. Production updates use the same signing certificate and can install over previous official releases without clearing data. Older debug-signed previews cannot update in place. Choose the correct architecture; 32-bit devices are not supported. No runtime-library download is required when pasting a link.
+[SHA-256 checksums](https://github.com/taroq4-2/dosos73/releases/download/v1.2.0-rc.4/SHA256SUMS.txt) · [Verification](docs/VERIFICATION.md) · [Report a bug](https://github.com/taroq4-2/dosos73/issues/new/choose)
 
 ## Features
 
-- Paste or share one public URL; analyze actual available formats and qualities.
-- Download supported video, audio and direct files; merge compatible video/audio streams.
-- Sequential queue, saved failed tasks and retry; real progress, speed and file size when available.
-- Pause direct downloads within the current session; cancel/restart native downloads.
-- Durable active-task recovery after process death, without a permanent monitoring service.
-- App file library with search, filters, sorting, thumbnails, open, share, rename and confirmed deletion.
-- MediaStore Downloads or a user-authorized folder; storage checks and verification before success.
-- Arabic RTL and English LTR, dark navy interface, Tajawal typography and local language settings.
-- No fixed media-size cap; storage capacity, timeouts and source restrictions still apply.
-
-## Screenshots
-
-Authentic captures from the running app. The release validation report identifies the build and environment; older release evidence is labeled as such.
-
-<img src="screenshots/current-home-ar.png" width="230" alt="Arabic home" /> <img src="screenshots/current-downloads-ar.png" width="230" alt="Downloads" /> <img src="screenshots/current-files-ar.png" width="230" alt="Files" />
-
-<img src="screenshots/current-settings-ar.png" width="230" alt="Settings" /> <img src="screenshots/current-home-en.png" width="230" alt="English home" />
+- Paste or share a public link and select actual available formats and qualities.
+- Video downloads, **MP3 V0** audio extraction and compatible stream merging.
+- Direct files without a fixed size cap; available storage and source restrictions apply.
+- Validator-bound direct resume, a durable queue, priorities and retry.
+- Review up to 20 links with per-link format/folder choices and encrypted draft recovery.
+- Hash-verified publication and recovery across supported destination-creation/rename interruptions.
+- Search, filter and preview saved files; distinguish confirmed local absence, denied access and unavailable storage.
+- A bounded encrypted task timeline without source URLs, filenames or credentials.
+- Arabic RTL, English, Tajawal typography and a dark interface, without ads or analytics.
 
 ## Use
 
-1. Paste a URL or share it to dosos73.
-2. Wait for analysis, then select media type, quality and format.
-3. Start the download; monitor it in Downloads.
-4. Open the verified saved file from its notification or the file library.
+1. Paste a public URL or share it to dosos73.
+2. After analysis, select the media type, quality, format and destination.
+3. Start the download and follow its real progress in Downloads/the notification.
+4. Open the verified saved file from the library.
 
-Recovery retries from the beginning, not the last byte. Android Settings → Force stop prevents automatic restart until reopening the app. Failed jobs stop the queue for user review. Removing history is distinct from deleting a file. Download only content you are authorized to save.
+If publication needs recovery, reconnect storage and retry **the same task**. Recovery checks existing output before transferring again. Native extraction may restart after interruption; byte-range resume applies only to direct sources whose representation can be validated.
 
-## Technical details
+## Authentic screenshots
 
-| Setting | Value |
-|---|---|
-| Application ID | `com.os73.dosos73` |
-| Version / code | `1.1.2` / `8` |
-| Minimum / target / compile SDK | `29` / `35` / `35` |
-| UI | Kotlin 2.0.21, Jetpack Compose, Material 3 |
-| Network | OkHttp 4.12.0; public-address validation |
-| Media engine | yt-dlp 2026.10.21 + EJS 0.8.0, wrapper 0.18.1 |
-| Processing | Bundled Python, QuickJS and FFmpeg |
-| Distribution | Signed ARM64 and x86_64 APKs |
+<img src="screenshots/home-ar.png" width="230" alt="Arabic Home" /> <img src="screenshots/downloads-ar.png" width="230" alt="Downloads" /> <img src="screenshots/media-library-ar.png" width="230" alt="Files" />
 
-## Build and test
+<img src="screenshots/charter-task-timeline-ar.png" width="230" alt="Actual task timeline with a successful transfer and controlled failure cases" />
 
-Use JDK 17/21, Android SDK platform/build-tools 35 and the included wrapper. Set your SDK path locally; never commit `local.properties`.
+Home, Downloads, Files and Settings were captured from the signed RC4 APK on an Android 15 emulator. Timeline/batch/privacy captures come from the corresponding instrumentation build; see [image provenance](screenshots/README.md).
+
+<img src="screenshots/home-en.png" width="230" alt="English Home" /> <img src="screenshots/settings-ar.png" width="230" alt="Arabic Settings" />
+
+## Release status
+
+RC4 is a candidate. OS-backed scheduling, multiple active files, subtitle selection and the complete physical-device/provider matrix remain open. Emulator checks do not certify every device, codec or website.
+
+[Remaining requirements](docs/REMAINING_REQUIREMENTS.md) · [Publication recovery](docs/PUBLICATION_RECOVERY.md) · [Task timeline](docs/TASK_TIMELINE.md) · [File availability](docs/FILE_AVAILABILITY.md)
+
+## Questions
+
+**Why four architectures?** Android runs on different processor families. One universal APK includes the native engines for each, and Android uses the matching set. It is not a separate edition for a phone model.
+
+**Why is the file about 73 MB?** Offline extraction and MP3 conversion require bundled native engines. The compact FFmpeg build reduces their size; libraries are ready when you paste a link. No first-use engine download is required.
+
+**Can every video be downloaded?** Availability depends on the source. Login, private content, DRM and regional/source restrictions are not bypassed. A source error is shown without marking an incomplete file successful.
+
+## Build and contribute
+
+Use JDK 17/21, Android SDK 35 and a local SDK path that is not committed.
 
 ```sh
 ./gradlew testDebugUnitTest lintDebug lintRelease assembleDebug assembleRelease
 ./gradlew connectedDebugAndroidTest
-./gradlew assembleRelease -PtargetAbi=arm64-v8a
-./gradlew assembleRelease -PtargetAbi=x86_64
 ```
 
-Windows: use `gradlew.bat`. Set `DOSOS73_KEYSTORE` and `DOSOS73_STORE_PASSWORD` only in the authorized signing environment. Without these, the release build is unsigned and must not be published as a production APK. Required CI covers APIs 29, 33, 35 and 36. Live-network tests are separate opt-in checks, not implied by unit-test success. Always smoke-test the exact minified release artifact.
+Windows uses `gradlew.bat`. Ordinary Gradle builds produce the base APK. The [pinned compact-engine workflow](.github/workflows/compact-engine.yml) and `tools/` scripts build all four native targets and assemble the universal delivery. Align, sign and verify the assembled APK before publication. Signing keys/password files are excluded from the repository and source archive.
 
-[Validation and limitations](docs/RELEASE_VALIDATION.md) · [Architecture](docs/ARCHITECTURE.md) · [Cleanup manifest](docs/CLEANUP_MANIFEST.csv) · [Changelog](CHANGELOG.md)
+## Privacy and license
 
-## Privacy, permissions and limitations
+No in-app accounts, ads or analytics. Clipboard access occurs on Paste. Private task journals are encrypted on-device and backup is disabled. Downloads and library metadata follow the user's selected storage. External sources see network requests and IP addresses.
 
-No analytics, advertising, accounts, cookies or automatic message sending. Clipboard access occurs only on Paste. Queue/history URLs and destination metadata are stored privately on the device; backup is disabled. Source websites see network requests and IP addresses. Permissions cover internet, foreground data transfer and optional notifications; no all-files, accessibility or overlay access. Public HTTP files are supported, so do not use sensitive HTTP links.
+First-party code is **GPL-3.0-or-later**. Dependencies, fonts and artwork retain their own terms. Download only content you are allowed to save.
 
-Website restrictions may prevent downloads. No promise of universal platform support, DRM bypass, playlists, forced MP3 conversion or persistent byte-range resume. No real Samsung-device or complete native supply-chain/16 KB certification is claimed. [Privacy](PRIVACY.md) · [Security](SECURITY.md) · [Known hardening work](docs/SECURITY.md).
-
-## Contribute and license
-
-[Contribution guide](CONTRIBUTING.md) · [Issues](https://github.com/taroq4-2/dosos73/issues) · [Source](https://github.com/taroq4-2/dosos73)
-
-First-party code: **GPL-3.0-or-later**, see [LICENSE](LICENSE). Dependencies, fonts and supplied artwork retain their own terms; see [third-party notices](THIRD_PARTY_NOTICES.md). Complete native license/source correspondence remains under review.
-
-### About dosos73
-
-**Easier downloads. More control. Open source.**
-
-dosos73 is an open-source download manager for Android, designed to provide a simple, practical experience for downloading video and audio and managing files in one place.
-
-We are developing an app that combines ease of use with good performance, while caring about privacy and transparency and giving the community room to contribute to its development.
-
-An open project, evolving through everyone's contributions.
-
-**Project developer:** Tariq
-
-**Official website:** [os73.com](https://os73.com)
+[License](LICENSE) · [Third-party notices](THIRD_PARTY_NOTICES.md) · [Privacy](PRIVACY.md) · [Contributing](CONTRIBUTING.md)

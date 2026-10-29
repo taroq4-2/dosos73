@@ -86,10 +86,16 @@ class MainActivity : ComponentActivity() {
 
     @Composable
     private fun AppScreen() {
+        val focus = androidx.compose.ui.platform.LocalFocusManager.current
+        val keyboard = androidx.compose.ui.platform.LocalSoftwareKeyboardController.current
         val screen by model.state.collectAsStateWithLifecycle()
         val transfer by Transfers.state.collectAsStateWithLifecycle()
         val files by LibraryRepository.files.collectAsStateWithLifecycle()
         val queue by DownloadQueue.tasks.collectAsStateWithLifecycle()
+        val batch by model.batch.collectAsStateWithLifecycle()
+        val batchBusy by model.batchBusy.collectAsStateWithLifecycle()
+        val batchSaving by model.batchSaving.collectAsStateWithLifecycle()
+        val batchStorageError by model.batchStorageError.collectAsStateWithLifecycle()
         val scope = rememberCoroutineScope()
         val snackbar = remember { SnackbarHostState() }
         var page by rememberSaveable { mutableStateOf("home") }
@@ -108,6 +114,15 @@ class MainActivity : ComponentActivity() {
         var source by remember { mutableStateOf<String?>(null) }
         var fileAction by remember { mutableStateOf<Pair<SavedFile, String>?>(null) }
         var renamed by remember { mutableStateOf("") }
+        var preview by remember { mutableStateOf<SavedFile?>(null) }
+        var libraryRevision by remember { mutableIntStateOf(0) }
+        val batchRequested by model.batchRequested.collectAsStateWithLifecycle()
+        LaunchedEffect(batchRequested) {
+            if (batchRequested) {
+                page = "batch"
+                model.batchOpened()
+            }
+        }
         var hidden by remember { mutableStateOf(LibraryRepository.hidden(this)) }
         val savedPages = rememberSaveableStateHolder()
         val preferences = remember { getSharedPreferences("destination", MODE_PRIVATE) }
@@ -124,23 +139,33 @@ class MainActivity : ComponentActivity() {
             }
         }
         LaunchedEffect(Unit) {
-            withContext(Dispatchers.IO) {
-                DownloadQueue.initialize(this@MainActivity)
-                FailureJournal.initialize(this@MainActivity)
+            try {
+                withContext(Dispatchers.IO) {
+                    DownloadQueue.initialize(this@MainActivity)
+                    FailureJournal.initialize(this@MainActivity)
+                }
+                val interrupted = DownloadQueue.interrupted(this@MainActivity)
+                if (!Transfers.state.value.active && interrupted != null) {
+                    if (interrupted.userPaused) {
+                        if (Transfers.reserve(interrupted)) {
+                            Transfers.take()
+                            Transfers.update(
+                                TransferState(Phase.PAUSED, interrupted.analysis.title)
+                            )
+                        }
+                    } else
+                        runCatching {
+                                ContextCompat.startForegroundService(
+                                    this@MainActivity,
+                                    Intent(this@MainActivity, DownloadService::class.java),
+                                )
+                            }
+                            .onFailure { message(R.string.error_start) }
+                }
+                refresh()
+            } catch (_: Exception) {
+                message(R.string.error_storage)
             }
-            if (
-                !Transfers.state.value.active &&
-                    DownloadQueue.interrupted(this@MainActivity) != null
-            ) {
-                runCatching {
-                        ContextCompat.startForegroundService(
-                            this@MainActivity,
-                            Intent(this@MainActivity, DownloadService::class.java),
-                        )
-                    }
-                    .onFailure { message(R.string.error_start) }
-            }
-            refresh()
         }
         LaunchedEffect(transfer.phase) {
             if (transfer.phase == Phase.COMPLETE) refresh()
@@ -152,15 +177,8 @@ class MainActivity : ComponentActivity() {
             query = ""
         }
         fun releaseTree() {
-            tree?.let {
-                runCatching {
-                    contentResolver.releasePersistableUriPermission(
-                        it,
-                        Intent.FLAG_GRANT_READ_URI_PERMISSION or
-                            Intent.FLAG_GRANT_WRITE_URI_PERMISSION,
-                    )
-                }
-            }
+            // Existing queued jobs and saved SAF documents retain their original grant.
+            // Changing the default destination must never invalidate those references.
         }
         val picker =
             rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
@@ -178,6 +196,18 @@ class MainActivity : ComponentActivity() {
                         message(R.string.error_storage)
                     }
             }
+        var pendingBatchDestination by rememberSaveable { mutableStateOf<String?>(null) }
+        val batchPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
+            val url = pendingBatchDestination
+            pendingBatchDestination = null
+            if (uri != null && url != null) {
+                try {
+                    contentResolver.takePersistableUriPermission(uri,
+                        Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+                    model.batchDestination(url, uri.toString())
+                } catch (_: SecurityException) { message(R.string.error_storage) }
+            }
+        }
         fun runQueue() {
             try {
                 ContextCompat.startForegroundService(
@@ -194,7 +224,9 @@ class MainActivity : ComponentActivity() {
             scope.launch {
                 try {
                     DownloadQueue.enqueue(this@MainActivity, task)
-                    retryOf?.let { FailureJournal.remove(this@MainActivity, it) }
+                    retryOf?.let {
+                        FailureJournal.remove(this@MainActivity, it, discardPartial = false)
+                    }
                     page = "downloads"
                     query = ""
                     runQueue()
@@ -235,7 +267,11 @@ class MainActivity : ComponentActivity() {
         }
         fun action(item: SavedFile, type: String) {
             when (type) {
-                "open" -> open(Uri.parse(item.uri), item.mime)
+                "missing" -> message(R.string.file_missing)
+                "permission" -> message(R.string.file_permission_required)
+                "unavailable" -> message(R.string.file_storage_unavailable)
+                "open" -> preview = item
+                "external" -> open(Uri.parse(item.uri), item.mime)
                 "share" ->
                     try {
                         val uri = Uri.parse(item.uri)
@@ -263,7 +299,9 @@ class MainActivity : ComponentActivity() {
                             .onFailure { message(R.string.error_storage) }
                     }
                 else -> {
-                    renamed = item.name
+                    renamed =
+                        if (type == "collection") LibraryPreferences.collection(this, item.uri)
+                        else item.name
                     fileAction = item to type
                 }
             }
@@ -290,6 +328,8 @@ class MainActivity : ComponentActivity() {
                                 NavigationBarItem(
                                     selected = page == key,
                                     onClick = {
+                                        focus.clearFocus()
+                                        keyboard?.hide()
                                         page = key
                                         query = ""
                                         searching = false
@@ -399,41 +439,106 @@ class MainActivity : ComponentActivity() {
                             DownloadsScreen(
                                 transfer,
                                 queue,
-                                files.filterNot { it.uri in hidden },
+                                files
+                                    .filterNot { it.uri in hidden }
+                                    .filter { LibraryPreferences.visibleHistory(this@MainActivity, it) },
                                 query,
                                 { command("cancel") },
                                 { command("pause") },
                                 {
                                     Transfers.currentTask?.let {
-                                        enqueue(
-                                            it.copy(id = java.util.UUID.randomUUID().toString())
-                                        )
+                                        enqueue(it.copy(userPaused = false))
                                     }
                                 },
                                 { transfer.uri?.let { open(it, transfer.mime) } },
                                 { details = true },
                                 { task ->
                                     scope.launch {
-                                        DownloadQueue.remove(this@MainActivity, task.id)
+                                        runCatching {
+                                                DownloadQueue.remove(this@MainActivity, task.id)
+                                            }
+                                            .onFailure { message(R.string.error_storage) }
                                     }
                                 },
                                 { runQueue() },
                                 ::action,
                                 { failed ->
-                                    enqueue(
-                                        failed.task.copy(
-                                            id = java.util.UUID.randomUUID().toString()
-                                        ),
-                                        failed.task.id,
-                                    )
+                                    enqueue(failed.task.copy(userPaused = false), failed.task.id)
                                 },
                                 { failed ->
                                     scope.launch {
-                                        FailureJournal.remove(this@MainActivity, failed.task.id)
+                                        runCatching {
+                                                FailureJournal.remove(
+                                                    this@MainActivity,
+                                                    failed.task.id,
+                                                )
+                                            }
+                                            .onFailure { message(R.string.error_storage) }
                                     }
                                 },
                             )
-                        "files" -> FileLibraryScreen(files, query, ::action, ::refresh)
+                        "files" ->
+                            key(libraryRevision) {
+                                FileLibraryScreen(files, query, ::action, ::refresh)
+                            }
+                        "privacy" ->
+                            PrivacyScreen {
+                                hidden = LibraryRepository.hidden(this@MainActivity)
+                                libraryRevision++
+                            }
+                        "batch" ->
+                            BatchScreen(
+                                batch,
+                                batchBusy,
+                                model::prepareBatch,
+                                model::selectBatch,
+                                model::analyzeBatch,
+                                model::cancelAnalysis,
+                                model::chooseBatch,
+                                { index, useDownloads ->
+                                    batch.getOrNull(index)?.url?.let { url ->
+                                        if (useDownloads) model.batchDestination(url, null)
+                                        else {
+                                            pendingBatchDestination = url
+                                            batchPicker.launch(batch[index].destination?.let(Uri::parse) ?: tree)
+                                        }
+                                    }
+                                },
+                                saving = batchSaving,
+                                storageError = batchStorageError,
+                                onRetryStorage = model::retryBatchDraft,
+                                onQueue = {
+                                    if (!submitting && !batchSaving && !batchStorageError) {
+                                        submitting = true
+                                        scope.launch {
+                                            try {
+                                                val ready =
+                                                    batch.filter { it.selected && it.analysis != null }
+                                                require(queue.size + ready.size <= 50)
+                                                ready.forEach { entry ->
+                                                    val analysis = entry.analysis!!
+                                                    DownloadQueue.enqueue(
+                                                        this@MainActivity,
+                                                        DownloadTask(
+                                                            analysis,
+                                                            entry.choice?.takeIf { it in analysis.choices } ?: analysis.choices.first(),
+                                                            if (entry.destinationOverride) entry.destination?.let(Uri::parse) else tree,
+                                                        ),
+                                                    )
+                                                    model.removeBatch(entry)
+                                                }
+                                                // Failed and unselected entries remain available for retry.
+                                                page = "downloads"
+                                                runQueue()
+                                            } catch (_: Exception) {
+                                                message(R.string.error_start)
+                                            } finally {
+                                                submitting = false
+                                            }
+                                        }
+                                    }
+                                },
+                            )
                         "about" -> AboutScreen({ page = "more" }, { page = "contact" })
                         "contact" -> ContactScreen { page = "about" }
                         "settings" ->
@@ -484,6 +589,13 @@ class MainActivity : ComponentActivity() {
                                             Text(stringResource(R.string.default_folder))
                                         }
                                 }
+                                NetworkControls()
+                                OutlinedButton({ page = "privacy" }, Modifier.fillMaxWidth()) {
+                                    Text(stringResource(R.string.privacy_title))
+                                }
+                                OutlinedButton({ page = "batch" }, Modifier.fillMaxWidth()) {
+                                    Text(stringResource(R.string.batch_title))
+                                }
                                 Panel {
                                     Text(
                                         stringResource(R.string.download_behavior),
@@ -513,6 +625,8 @@ class MainActivity : ComponentActivity() {
                                 )
                                 listOf(
                                         Triple("settings", R.string.settings, Glyph.SETTINGS),
+                                        Triple("batch", R.string.batch_title, Glyph.LINK),
+                                        Triple("privacy", R.string.privacy_title, Glyph.INFO),
                                         Triple("about", R.string.about, Glyph.INFO),
                                         Triple("contact", R.string.contact, Glyph.SHARE),
                                     )
@@ -539,6 +653,25 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+        preview?.let { item ->
+            OfflinePreview(
+                item,
+                { preview = null },
+                {
+                    preview = null
+                    open(Uri.parse(item.uri), item.mime)
+                },
+            )
+        }
+        if (screen.pendingShared != null && !screen.busy && !batchBusy)
+            AlertDialog(
+                onDismissRequest = {},
+                title = { Text(stringResource(R.string.pending_link)) },
+                text = { Text(stringResource(R.string.pending_link_hint)) },
+                confirmButton = {
+                    TextButton(model::acceptPending) { Text(stringResource(R.string.batch_review)) }
+                },
+            )
         if (source != null)
             AlertDialog(
                 onDismissRequest = { source = null },
@@ -572,7 +705,9 @@ class MainActivity : ComponentActivity() {
                         stringResource(
                             when (type) {
                                 "rename" -> R.string.rename
+                                "collection" -> R.string.collection
                                 "delete" -> R.string.delete_file
+                                "forget" -> R.string.forget_missing
                                 else -> R.string.details
                             }
                         )
@@ -580,15 +715,24 @@ class MainActivity : ComponentActivity() {
                 },
                 text = {
                     when (type) {
-                        "rename" ->
+                        "rename",
+                        "collection" ->
                             OutlinedTextField(
                                 renamed,
                                 { renamed = it.take(180) },
-                                label = { Text(stringResource(R.string.filename)) },
+                                label = {
+                                    Text(
+                                        stringResource(
+                                            if (type == "collection") R.string.collection
+                                            else R.string.filename
+                                        )
+                                    )
+                                },
                                 singleLine = true,
                                 modifier = Modifier.testTag("rename_input"),
                             )
                         "delete" -> Text(stringResource(R.string.delete_confirmation, item.name))
+                        "forget" -> Text(stringResource(R.string.forget_missing_confirm))
                         else ->
                             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                                 Text(item.name)
@@ -611,7 +755,16 @@ class MainActivity : ComponentActivity() {
                                                 item,
                                                 renamed,
                                             )
-                                        else LibraryRepository.delete(this@MainActivity, item)
+                                        else if (type == "collection") {
+                                            LibraryPreferences.setCollection(
+                                                this@MainActivity,
+                                                item.uri,
+                                                renamed,
+                                            )
+                                            libraryRevision++
+                                        } else if (type == "forget") {
+                                            LibraryRepository.forgetMissing(this@MainActivity, item)
+                                        } else LibraryRepository.delete(this@MainActivity, item)
                                         fileAction = null
                                         message(R.string.action_done)
                                     } catch (_: Exception) {

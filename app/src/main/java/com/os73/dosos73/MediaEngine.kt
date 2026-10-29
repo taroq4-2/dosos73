@@ -10,7 +10,21 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runInterruptible
 import org.json.JSONObject
 
-class MediaEngine(private val context: Context) {
+class MediaEngine(
+    private val context: Context,
+    private val networkProvider: () -> android.net.Network = { NetworkSettings.requireNetwork(context) },
+) {
+    private fun publicProxy(): PublicProxy {
+        val network = networkProvider()
+        return PublicProxy(
+            resolve = { host ->
+                if (!NetworkSettings.permitted(context, network)) throw java.io.IOException("Network policy unavailable")
+                network.getAllByName(host).toList()
+            },
+            socketFactory = network.socketFactory,
+        )
+    }
+
     private val id = UUID.randomUUID().toString()
     @Volatile private var proxy: PublicProxy? = null
 
@@ -57,7 +71,7 @@ class MediaEngine(private val context: Context) {
             initialize()
             val dir = File(context.cacheDir, "analysis-$id").apply { mkdirs() }
             try {
-                PublicProxy().use { p ->
+                publicProxy().use { p ->
                     proxy = p
                     val request =
                         request(url, p).apply {
@@ -100,7 +114,7 @@ class MediaEngine(private val context: Context) {
     ): File =
         runInterruptible(Dispatchers.IO) {
             initialize()
-            PublicProxy().use { p ->
+            publicProxy().use { p ->
                 proxy = p
                 try {
                     val request =
@@ -111,6 +125,11 @@ class MediaEngine(private val context: Context) {
                             addOption("--no-continue")
                             addOption("--newline")
                             addOption("--progress-delta", 1)
+                            if (task.choice.kind == Kind.AUDIO && task.choice.extension == "mp3") {
+                                addOption("--extract-audio")
+                                addOption("--audio-format", "mp3")
+                                addOption("--audio-quality", "0")
+                            }
                             if (task.choice.id.contains('+'))
                                 addOption("--merge-output-format", task.choice.extension)
                         }
@@ -162,6 +181,8 @@ class MediaEngine(private val context: Context) {
                 val abr: Double,
                 val tbr: Double,
                 val fps: Double,
+                val bytes: Long?,
+                val language: String?,
             )
             val sources =
                 (0 until formats.length()).mapNotNull { i ->
@@ -188,6 +209,8 @@ class MediaEngine(private val context: Context) {
                             f.optDouble("abr", 0.0).takeIf { it.isFinite() } ?: 0.0,
                             f.optDouble("tbr", 0.0).takeIf { it.isFinite() } ?: 0.0,
                             f.optDouble("fps", 0.0).takeIf { it.isFinite() } ?: 0.0,
+                            f.optLong("filesize").takeIf { it > 0 } ?: f.optLong("filesize_approx").takeIf { it > 0 },
+                            f.optString("language").takeIf { it.matches(Regex("[a-zA-Z0-9_-]{1,35}")) },
                         )
                 }
             val audio = sources.filter { it.audio && !it.video }
@@ -204,10 +227,19 @@ class MediaEngine(private val context: Context) {
                             Choice(
                                 f.id,
                                 if (f.ext in setOf("mp4", "webm")) Kind.VIDEO else Kind.AUDIO,
-                                f.ext,
+                                if (f.ext in setOf("mp4", "webm")) f.ext else "mp3",
                                 "Original",
+                                estimatedBytes = f.bytes,
+                                language = f.language,
                             )
-                        f.audio && !f.video -> Choice(f.id, Kind.AUDIO, f.ext, f.ext.uppercase())
+                        f.audio && !f.video -> Choice(
+                            f.id, Kind.AUDIO, "mp3",
+                            listOfNotNull("MP3 V0", f.abr.toInt().takeIf { it > 0 }?.let { "source $it kbps" }, f.language).joinToString(" · "),
+                            // Conversion changes size and bitrate; do not advertise source values as output.
+                            estimatedBytes = null,
+                            bitrateKbps = null,
+                            language = f.language,
+                        )
                         f.video && f.audio ->
                             Choice(
                                 f.id,
@@ -216,6 +248,8 @@ class MediaEngine(private val context: Context) {
                                 if (f.height > 0) "${f.height}p" else "Original",
                                 f.height.takeIf { it > 0 },
                                 true,
+                                estimatedBytes = f.bytes,
+                                language = f.language,
                             )
                         f.video -> {
                             val a =
@@ -233,13 +267,15 @@ class MediaEngine(private val context: Context) {
                                     "${f.height}p",
                                     f.height.takeIf { it > 0 },
                                     true,
+                                    estimatedBytes = if (f.bytes != null && it.bytes != null && f.bytes <= Long.MAX_VALUE - it.bytes) f.bytes + it.bytes else null,
+                                    language = it.language,
                                 )
                             }
                         }
                         else -> null
                     }
                 }
-                .distinctBy { Triple(it.kind, it.extension, it.quality) }
+                .distinctBy { listOf(it.kind, it.extension, it.quality, it.language) }
         }
     }
 }

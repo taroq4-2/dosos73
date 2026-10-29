@@ -26,14 +26,56 @@ class UiFlowTest {
     }
 
     @Test
+    fun restoredBatchDoesNotOverrideManualHomeNavigation() {
+        val model = androidx.lifecycle.ViewModelProvider(compose.activity)[MainViewModel::class.java]
+        compose.runOnIdle { model.prepareBatch("https://example.com/a https://example.net/b") }
+        compose.waitUntil(5000) { !model.batchSaving.value && !model.batchRequested.value && model.batch.value.size == 2 }
+        compose.onNodeWithTag("nav_home").performClick()
+        compose.activityRule.scenario.recreate()
+        compose.onNodeWithTag("url").assertExists()
+        compose.onNodeWithTag("nav_more").performClick()
+        compose.onNodeWithTag("batch").performScrollTo().performClick()
+        compose.onNodeWithTag("batch_rows").performScrollToNode(hasText("example.com"))
+        compose.onNodeWithText("example.com").assertExists()
+        compose.onNodeWithTag("batch_rows").performScrollToNode(hasText("example.net"))
+        compose.onNodeWithText("example.net").assertExists()
+    }
+
+    @Test
+    fun privacyAndBatchPagesAreReachableWithoutStartingDownloads() {
+        compose.onNodeWithTag("nav_more").performClick()
+        compose.onNodeWithTag("privacy").performScrollTo().performClick()
+        compose.onNodeWithText(compose.activity.getString(R.string.clear_history)).assertExists()
+        compose.onNodeWithText(compose.activity.getString(R.string.timeline_title)).performScrollTo().performClick()
+        compose.onNodeWithText(compose.activity.getString(R.string.timeline_privacy)).assertExists()
+        compose.waitUntil(10000) { compose.onAllNodesWithTag("timeline_loading").fetchSemanticsNodes().isEmpty() }
+        android.os.SystemClock.sleep(500) // Wait for the platform dialog window animation.
+        capture("07-task-timeline-ar.png")
+        compose.onNodeWithText(compose.activity.getString(R.string.close)).performClick()
+        compose.onNodeWithTag("nav_more").performClick()
+        compose.onNodeWithTag("batch").performScrollTo().performClick()
+        compose
+            .onNodeWithText(compose.activity.getString(R.string.batch_queue))
+            .assertIsNotEnabled()
+    }
+
+    @Test
     fun closingSearchRestoresUnfilteredLibrary() {
         compose.onNodeWithTag("nav_files").performClick()
-        compose.onNodeWithContentDescription(compose.activity.getString(R.string.search)).performClick()
+        compose
+            .onNodeWithContentDescription(compose.activity.getString(R.string.search))
+            .performClick()
         compose.onNodeWithTag("search").performTextInput("no-matching-fixture")
-        compose.onNodeWithText(compose.activity.getString(R.string.no_search_results)).assertExists()
-        compose.onNodeWithContentDescription(compose.activity.getString(R.string.search)).performClick()
+        compose
+            .onNodeWithText(compose.activity.getString(R.string.no_search_results))
+            .assertExists()
+        compose
+            .onNodeWithContentDescription(compose.activity.getString(R.string.search))
+            .performClick()
         compose.onNodeWithTag("search").assertDoesNotExist()
-        compose.onNodeWithText(compose.activity.getString(R.string.no_search_results)).assertDoesNotExist()
+        compose
+            .onNodeWithText(compose.activity.getString(R.string.no_search_results))
+            .assertDoesNotExist()
     }
 
     @Test
