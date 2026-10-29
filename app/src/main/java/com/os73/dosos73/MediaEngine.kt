@@ -125,6 +125,11 @@ class MediaEngine(
                             addOption("--no-continue")
                             addOption("--newline")
                             addOption("--progress-delta", 1)
+                            if (task.choice.kind == Kind.AUDIO && task.choice.extension == "mp3") {
+                                addOption("--extract-audio")
+                                addOption("--audio-format", "mp3")
+                                addOption("--audio-quality", "0")
+                            }
                             if (task.choice.id.contains('+'))
                                 addOption("--merge-output-format", task.choice.extension)
                         }
@@ -222,16 +227,17 @@ class MediaEngine(
                             Choice(
                                 f.id,
                                 if (f.ext in setOf("mp4", "webm")) Kind.VIDEO else Kind.AUDIO,
-                                f.ext,
+                                if (f.ext in setOf("mp4", "webm")) f.ext else "mp3",
                                 "Original",
                                 estimatedBytes = f.bytes,
                                 language = f.language,
                             )
                         f.audio && !f.video -> Choice(
-                            f.id, Kind.AUDIO, f.ext,
-                            listOfNotNull(f.ext.uppercase(), f.abr.toInt().takeIf { it > 0 }?.let { "$it kbps" }, f.language).joinToString(" · "),
-                            estimatedBytes = f.bytes,
-                            bitrateKbps = f.abr.toInt().takeIf { it > 0 },
+                            f.id, Kind.AUDIO, "mp3",
+                            listOfNotNull("MP3 V0", f.abr.toInt().takeIf { it > 0 }?.let { "source $it kbps" }, f.language).joinToString(" · "),
+                            // Conversion changes size and bitrate; do not advertise source values as output.
+                            estimatedBytes = null,
+                            bitrateKbps = null,
                             language = f.language,
                         )
                         f.video && f.audio ->

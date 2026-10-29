@@ -10,16 +10,17 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class OutputSafetyTest {
     @Test
-    fun audioChoicesPreserveBitrateLanguageAndKnownSize() {
+    fun audioChoicesConvertToMp3WithoutInventingOutputSize() {
         val json = org.json.JSONObject("""{"formats":[
           {"format_id":"a1","ext":"m4a","abr":96,"filesize":1234,"language":"en","vcodec":"none","acodec":"aac","protocol":"https","url":"https://example.com/a1"},
           {"format_id":"a2","ext":"m4a","abr":160,"filesize":2345,"language":"ar","vcodec":"none","acodec":"aac","protocol":"https","url":"https://example.com/a2"}
         ]}""")
         val choices = MediaEngine.mapFormats(json)
         assertEquals(2, choices.size)
-        assertEquals(160, choices.first().bitrateKbps)
+        assertNull(choices.first().bitrateKbps)
+        assertTrue(choices.all { it.extension == "mp3" })
         assertEquals("ar", choices.first().language)
-        assertEquals(2345L, choices.first().estimatedBytes)
+        assertNull(choices.first().estimatedBytes)
         assertTrue(choices.map { it.quality }.distinct().size == 2)
     }
 
