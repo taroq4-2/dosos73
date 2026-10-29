@@ -23,7 +23,7 @@ lame_prefix="$root/native-build/lame-install-$abi"
 if [ ! -f lame-3.100.tar.gz ]; then
   curl --fail --location --retry 3 https://downloads.sourceforge.net/project/lame/lame/3.100/lame-3.100.tar.gz -o lame-3.100.tar.gz
 fi
-echo 'ddfe36cab873794038ae2c1210557ad34857a4b6bdc515785a1da9e175b1da1e3  lame-3.100.tar.gz' | sha256sum --check
+echo 'ddfe36cab873794038ae2c1210557ad34857a4b6bdc515785d1da9e175b1da1e  lame-3.100.tar.gz' | sha256sum --check
 mkdir -p "lame-$abi"
 tar -xzf lame-3.100.tar.gz -C "lame-$abi" --strip-components=1
 cd "lame-$abi"
