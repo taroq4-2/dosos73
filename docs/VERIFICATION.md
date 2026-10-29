@@ -1,8 +1,8 @@
 # RC4 verification / التحقق من RC4
 
-**Date / التاريخ:** 2026-10-29  
-**Artifact / الملف:** `dosos73-1.2.0-rc.4-universal.apk`  
-**Application source / مصدر التطبيق:** `162b2be29abe422b455d3cb9f50f523c29d59d16`  
+**Date / التاريخ:** 2026-10-29
+**Artifact / الملف:** `dosos73-1.2.0-rc.4-universal.apk`
+**Application source / مصدر التطبيق:** `162b2be29abe422b455d3cb9f50f523c29d59d16`
 Documentation and screenshots were refreshed afterward without application-code changes.
 
 | Property | Verified value |
@@ -38,9 +38,10 @@ Documentation and screenshots were refreshed afterward without application-code 
 | YouTube analysis | Public video oexYI9IGKkM analyzed after fresh-profile native initialization; actual choices through 2160p displayed. |
 | YouTube transfer | Selected MP4 720p completed, about 29.39 MiB. Preview reported VP9 1280×720 plus AAC audio and rendered frames. |
 | YouTube MP3 | Completed real MP3 V0 output, about 7.45 MiB; app playback reported audio/mpeg and c2.android.mp3.decoder. Foreground service list was empty after completion. |
+| Public release re-download | Downloaded the APK from the public RC4 release URL; all 72,758,008 bytes and SHA-256 matched. Installed that downloaded file as an update, opened the app and rechecked the preserved trailer hash. |
 | Crash log | No AndroidRuntime crash in the observed release acceptance steps. |
 
-W3C fixture: https://media.w3.org/2010/05/sintel/trailer.mp4  
+W3C fixture: https://media.w3.org/2010/05/sintel/trailer.mp4
 SHA-256: `b670602fa00934ca27c4351bb0efe7ea7a07fae57284e44226025eeed7c51254`.
 
 ## Recovery and safety evidence
