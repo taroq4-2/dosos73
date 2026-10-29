@@ -322,9 +322,7 @@ internal fun HomeScreen(
                         ?.let { if (it == "Original") stringResource(R.string.original) else it }
                         .orEmpty(),
                 ) { close ->
-                    analysis.choices
-                        .filter { it.kind == screen.selected?.kind }
-                        .distinctBy { it.quality }
+                    qualityChoices(analysis.choices, screen.selected)
                         .forEach { choice ->
                             DropdownMenuItem(
                                 {
