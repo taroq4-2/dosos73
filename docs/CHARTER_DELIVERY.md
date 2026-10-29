@@ -1,3 +1,15 @@
+# Current delivery status (2026-10-29)
+
+The current downloadable candidate is v1.2.0-rc.3: one signed universal APK, 72,717,048 bytes, with MP3 V0 extraction. The owner reports that the app and MP3 work correctly on their phone. This is user acceptance on that device, not a complete physical-device matrix. See MP3_ACCEPTANCE.md for emulator/network limits.
+
+New source work after RC3 (not yet included in that APK): encrypted batch-review persistence, storage-error retry UI, and closing sockets created concurrently with proxy shutdown. 62 JVM tests, debug lint and six selected Android tests passed. A real API35 x86_64 process kill (`kill -9` under the app UID) followed by relaunch preserved both reviewed URLs and their [selected, unselected] state without starting downloads. Choice/folder round-trip and tamper preservation passed separate encrypted-journal tests. This does not prove active download resume or reboot recovery.
+
+Open work remains: active-transfer kill/reboot acceptance; native process cancellation-registration race; orphan publication/SAF rename crash recovery; physical network/OEM/battery matrix; resumable adaptive parallel parts; multiple active downloads; OS scheduling; subtitle sidecars; missing-file classifications; full history retention deletion; durable diagnostics; complete native/Python supply-chain correspondence. API29+ and four ABIs are the intended compatibility scope; physical coverage is incomplete.
+
+The sections below preserve the historical RC1 baseline, including its old package sizes and test counts. They are not the current package specification.
+
+---
+
 # 1.2.0 charter delivery status
 
 This branch implements a substantial increment over v1.1.2. It does not claim the entire 30-role charter is complete. Decision: ready for beta testing as 1.2.0-rc.1, not completion of the full charter. v1.1.2 remains the stable release.

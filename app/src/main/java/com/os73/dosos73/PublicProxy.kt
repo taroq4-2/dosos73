@@ -39,8 +39,9 @@ class PublicProxy(
                     continue
                 }
                 sockets.add(client)
-                pool.execute {
+                try { pool.execute {
                     try {
+                        if (server.isClosed) return@execute
                         tunnel(client)
                     } catch (_: Exception) {
                         /* Reported by extractor as network failure. */
@@ -49,6 +50,10 @@ class PublicProxy(
                         client.close()
                         slots.release()
                     }
+                } } catch (_: java.util.concurrent.RejectedExecutionException) {
+                    sockets.remove(client)
+                    client.close()
+                    slots.release()
                 }
             }
         }
@@ -119,6 +124,8 @@ class PublicProxy(
             val remote = socketFactory.createSocket()
             sockets.add(remote)
             try {
+                // close() may have run while socketFactory was creating this socket.
+                if (server.isClosed) throw java.io.IOException("Proxy closed")
                 remote.connect(InetSocketAddress(address, 443), minOf(5000, remaining))
                 return remote
             } catch (error: java.io.IOException) {
