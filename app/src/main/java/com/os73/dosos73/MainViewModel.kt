@@ -105,6 +105,14 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    fun batchDestination(url: String, destination: String?) {
+        if (batchBusyMutable.value) return
+        if (destination != null && android.net.Uri.parse(destination).scheme != "content") return
+        batchMutable.value = batchMutable.value.map { item ->
+            if (item.url == url) item.copy(destination = destination, destinationOverride = true) else item
+        }
+    }
+
     fun analyzeBatch() {
         if (batchBusyMutable.value || mutable.value.busy) return
         batchBusyMutable.value = true

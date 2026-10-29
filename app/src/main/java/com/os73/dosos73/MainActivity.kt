@@ -186,6 +186,18 @@ class MainActivity : ComponentActivity() {
                         message(R.string.error_storage)
                     }
             }
+        var pendingBatchDestination by rememberSaveable { mutableStateOf<String?>(null) }
+        val batchPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
+            val url = pendingBatchDestination
+            pendingBatchDestination = null
+            if (uri != null && url != null) {
+                try {
+                    contentResolver.takePersistableUriPermission(uri,
+                        Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+                    model.batchDestination(url, uri.toString())
+                } catch (_: SecurityException) { message(R.string.error_storage) }
+            }
+        }
         fun runQueue() {
             try {
                 ContextCompat.startForegroundService(
@@ -468,6 +480,15 @@ class MainActivity : ComponentActivity() {
                                 model::analyzeBatch,
                                 model::cancelAnalysis,
                                 model::chooseBatch,
+                                { index, useDownloads ->
+                                    batch.getOrNull(index)?.url?.let { url ->
+                                        if (useDownloads) model.batchDestination(url, null)
+                                        else {
+                                            pendingBatchDestination = url
+                                            batchPicker.launch(batch[index].destination?.let(Uri::parse) ?: tree)
+                                        }
+                                    }
+                                },
                             ) {
                                 if (!submitting) {
                                     submitting = true
@@ -483,7 +504,7 @@ class MainActivity : ComponentActivity() {
                                                     DownloadTask(
                                                         analysis,
                                                         entry.choice?.takeIf { it in analysis.choices } ?: analysis.choices.first(),
-                                                        tree,
+                                                        if (entry.destinationOverride) entry.destination?.let(Uri::parse) else tree,
                                                     ),
                                                 )
                                                 model.removeBatch(entry)

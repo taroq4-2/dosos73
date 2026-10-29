@@ -48,3 +48,9 @@ Read-only scanner inspected608 ELF entries including libraries inside bundled Py
 Each analyzed batch entry now offers its actual format/quality choices, and enqueue uses the selected choice. Selection is validated against that entry's analysis. Successfully enqueued entries are removed individually; failed and unselected entries are retained rather than clearing the entire list. Existing sequential analysis skips successful entries, enabling retry of failed selected entries.
 
 Validation: JVM suite/lint passed; two API35 instrumentation tests passed after repairing a text-encoding issue discovered by the UI test. Tests cover selecting WebM without auto-enqueue, retaining failed/unselected rows when an enqueued row is removed, and rejecting a choice for an unanalyzed row. Per-entry destination, process-death persistence of review state and full enqueue integration under failure remain open. These changes are not yet in the previously measured signed72.4MB candidate.
+
+### Per-link destination increment
+
+Each analyzed batch item can select its own SAF folder or explicitly use Downloads. Unmodified items inherit the app's current default destination. The system folder picker requests persistent read/write permission and applies its result by canonical URL rather than a potentially stale list index. Existing grants remain intact. Per-link settings remain in the ViewModel across configuration changes, but durable restoration after process death is not yet implemented.
+
+Validation:61 JVM tests and lintDebug passed. Three API35 instrumentation tests passed, covering format selection without enqueue, failed/unselected retention and independent destination override including explicit Downloads and rejection of file-scheme destinations. Actual folder-provider save/revocation tests are still required before marking the entire batch specification complete.

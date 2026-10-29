@@ -22,6 +22,7 @@ class BatchChoiceUiTest {
             MaterialTheme {
                 BatchScreen(rows.value, false, {}, { _, _ -> }, {}, {},
                     { index, choice -> rows.value = rows.value.mapIndexed { i, row -> if (i == index) row.copy(choice = choice) else row } },
+                    { _, _ -> },
                     { queued = true })
             }
         }
@@ -31,6 +32,20 @@ class BatchChoiceUiTest {
             assertEquals(webm, rows.value.single().choice)
             assertFalse(queued)
         }
+    }
+
+    @Test fun destinationOverrideIsPerLinkAndDownloadsIsExplicit() {
+        val model = MainViewModel(androidx.test.core.app.ApplicationProvider.getApplicationContext())
+        model.prepareBatch("https://example.com/a https://example.com/b")
+        val first = model.batch.value.first().url!!
+        model.batchDestination(first, "content://com.android.externalstorage.documents/tree/primary%3ADownload")
+        assertTrue(model.batch.value.first().destinationOverride)
+        assertFalse(model.batch.value.last().destinationOverride)
+        model.batchDestination(first, "file:///private")
+        assertTrue(model.batch.value.first().destination!!.startsWith("content://"))
+        model.batchDestination(first, null)
+        assertTrue(model.batch.value.first().destinationOverride)
+        assertNull(model.batch.value.first().destination)
     }
 
     @Test fun removingQueuedEntryPreservesFailedAndUnselectedRows() {

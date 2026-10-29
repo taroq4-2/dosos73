@@ -34,6 +34,8 @@ internal data class BatchEntry(
     val analysis: Analysis? = null,
     val error: Int? = null,
     val choice: Choice? = null,
+    val destination: String? = null,
+    val destinationOverride: Boolean = false,
 )
 
 internal object BatchInput {
@@ -88,6 +90,7 @@ internal fun BatchScreen(
     onAnalyze: () -> Unit,
     onCancel: () -> Unit,
     onChoice: (Int, Choice) -> Unit,
+    onDestination: (Int, Boolean) -> Unit,
     onQueue: () -> Unit,
 ) {
     var input by rememberSaveable { mutableStateOf("") }
@@ -127,6 +130,14 @@ internal fun BatchScreen(
                                 Text(stringResource(it), color = MaterialTheme.colorScheme.error)
                             }
                             if (row.analysis != null) {
+                                Row {
+                                    TextButton({ onDestination(index, false) }, enabled = !busy) {
+                                        Text(stringResource(if (row.destination != null) R.string.custom_folder else R.string.destination))
+                                    }
+                                    TextButton({ onDestination(index, true) }, enabled = !busy) {
+                                        Text(stringResource(R.string.default_folder))
+                                    }
+                                }
                                 Text(stringResource(R.string.batch_ready), color = Neon.Cyan)
                                 val selected = row.choice ?: row.analysis.choices.firstOrNull()
                                 ChoiceMenu(
