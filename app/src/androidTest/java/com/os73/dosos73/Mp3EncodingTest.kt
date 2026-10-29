@@ -12,6 +12,8 @@ import org.junit.Test
 class Mp3EncodingTest {
     @Test fun encodesPlayableMp3FromPcmAudio() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
+        BundledEngine.install(context)
+        com.yausername.youtubedl_android.YoutubeDL.init(context)
         com.yausername.ffmpeg.FFmpeg.getInstance().init(context)
         val folder = File(context.cacheDir, "mp3-test").apply { mkdirs() }
         try {
@@ -25,7 +27,7 @@ class Mp3EncodingTest {
             val log = File(folder, "log.txt")
             fun execute(vararg args: String): String {
                 val process = ProcessBuilder(*args).redirectErrorStream(true).redirectOutput(log).apply {
-                    environment()["LD_LIBRARY_PATH"] = "$base/packages/python/usr/lib:$base/packages/ffmpeg/usr/lib"
+                    environment()["LD_LIBRARY_PATH"] = "$native:$base/packages/python/usr/lib:$base/packages/ffmpeg/usr/lib"
                 }.start()
                 if (!process.waitFor(30, TimeUnit.SECONDS)) { process.destroyForcibly(); fail("Encoder timed out") }
                 val text = log.readText()
