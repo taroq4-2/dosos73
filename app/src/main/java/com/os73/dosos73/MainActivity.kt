@@ -86,6 +86,8 @@ class MainActivity : ComponentActivity() {
 
     @Composable
     private fun AppScreen() {
+        val focus = androidx.compose.ui.platform.LocalFocusManager.current
+        val keyboard = androidx.compose.ui.platform.LocalSoftwareKeyboardController.current
         val screen by model.state.collectAsStateWithLifecycle()
         val transfer by Transfers.state.collectAsStateWithLifecycle()
         val files by LibraryRepository.files.collectAsStateWithLifecycle()
@@ -265,6 +267,9 @@ class MainActivity : ComponentActivity() {
         }
         fun action(item: SavedFile, type: String) {
             when (type) {
+                "missing" -> message(R.string.file_missing)
+                "permission" -> message(R.string.file_permission_required)
+                "unavailable" -> message(R.string.file_storage_unavailable)
                 "open" -> preview = item
                 "external" -> open(Uri.parse(item.uri), item.mime)
                 "share" ->
@@ -323,6 +328,8 @@ class MainActivity : ComponentActivity() {
                                 NavigationBarItem(
                                     selected = page == key,
                                     onClick = {
+                                        focus.clearFocus()
+                                        keyboard?.hide()
                                         page = key
                                         query = ""
                                         searching = false
@@ -700,6 +707,7 @@ class MainActivity : ComponentActivity() {
                                 "rename" -> R.string.rename
                                 "collection" -> R.string.collection
                                 "delete" -> R.string.delete_file
+                                "forget" -> R.string.forget_missing
                                 else -> R.string.details
                             }
                         )
@@ -724,6 +732,7 @@ class MainActivity : ComponentActivity() {
                                 modifier = Modifier.testTag("rename_input"),
                             )
                         "delete" -> Text(stringResource(R.string.delete_confirmation, item.name))
+                        "forget" -> Text(stringResource(R.string.forget_missing_confirm))
                         else ->
                             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                                 Text(item.name)
@@ -753,6 +762,8 @@ class MainActivity : ComponentActivity() {
                                                 renamed,
                                             )
                                             libraryRevision++
+                                        } else if (type == "forget") {
+                                            LibraryRepository.forgetMissing(this@MainActivity, item)
                                         } else LibraryRepository.delete(this@MainActivity, item)
                                         fileAction = null
                                         message(R.string.action_done)

@@ -17,6 +17,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
@@ -123,7 +124,7 @@ internal fun BatchScreen(
             Text(stringResource(R.string.batch_storage_error), color = MaterialTheme.colorScheme.error)
             TextButton(onRetryStorage, enabled = !saving) { Text(stringResource(R.string.retry)) }
         }
-        LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        LazyColumn(Modifier.weight(1f).testTag("batch_rows"), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             itemsIndexed(rows) { index, row ->
                 Panel {
                     Row {
@@ -279,6 +280,7 @@ internal fun PrivacyScreen(onHistoryCleared: () -> Unit) {
     val scope = rememberCoroutineScope()
     var retention by remember { mutableIntStateOf(LibraryPreferences.historyDays(context)) }
     var confirm by remember { mutableStateOf(false) }
+    var timeline by remember { mutableStateOf(false) }
     var status by remember { mutableIntStateOf(0) }
     Page {
         Text(
@@ -312,6 +314,7 @@ internal fun PrivacyScreen(onHistoryCleared: () -> Unit) {
             )
             OutlinedButton({ confirm = true }) { Text(stringResource(R.string.clear_history)) }
         }
+        OutlinedButton({ timeline = true }) { Text(stringResource(R.string.timeline_title)) }
         Panel {
             Text(stringResource(R.string.safe_cleanup_hint))
             OutlinedButton({
@@ -333,6 +336,7 @@ internal fun PrivacyScreen(onHistoryCleared: () -> Unit) {
         }
         if (status != 0) Text(stringResource(status))
     }
+    if (timeline) TaskTimelineDialog { timeline = false }
     if (confirm)
         AlertDialog(
             onDismissRequest = { confirm = false },
@@ -345,6 +349,7 @@ internal fun PrivacyScreen(onHistoryCleared: () -> Unit) {
                         try {
                             LibraryRepository.clearHistory(context)
                             FailureJournal.clear(context)
+                            TaskTimeline.clear(context)
                             onHistoryCleared()
                             status = R.string.action_done
                         } catch (_: Exception) {
@@ -526,4 +531,57 @@ internal fun DiagnosticActions(code: FailureCode?) {
         }
         if (status) Text(stringResource(R.string.action_done))
     }
+}
+
+@Composable
+internal fun TaskTimelineDialog(onDismiss: () -> Unit) {
+    val context = LocalContext.current
+    val locale = androidx.compose.ui.platform.LocalConfiguration.current.locales[0]
+    var events by remember { mutableStateOf<List<TimelineEvent>?>(null) }
+    var failed by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        try { events = TaskTimeline.read(context) }
+        catch (error: kotlinx.coroutines.CancellationException) { throw error }
+        catch (_: Exception) { failed = true }
+    }
+    AlertDialog(onDismissRequest = onDismiss, title = { Text(stringResource(R.string.timeline_title)) },
+        text = {
+            Column {
+                Text(stringResource(R.string.timeline_privacy), style = MaterialTheme.typography.bodySmall)
+                when {
+                    failed -> Text(stringResource(R.string.error_storage))
+                    events == null -> CircularProgressIndicator()
+                    events!!.isEmpty() -> Text(stringResource(R.string.timeline_empty))
+                    else -> LazyColumn(Modifier.heightIn(max = 400.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        events!!.groupBy { it.taskId }.values.sortedByDescending { it.last().at }.forEachIndexed { index, rows ->
+                            item {
+                                Text(stringResource(R.string.timeline_task, index + 1), style = MaterialTheme.typography.titleSmall)
+                                rows.forEach { event ->
+                                    val stage = when(event.stage) {
+                                        Stage.INITIALIZE -> R.string.timeline_initialize
+                                        Stage.EXTRACT -> R.string.analyze
+                                        Stage.TRANSFER -> R.string.timeline_transfer
+                                        Stage.MERGE -> R.string.timeline_merge
+                                        Stage.VERIFY -> R.string.timeline_verify
+                                        Stage.PUBLISH -> R.string.saving
+                                    }
+                                    val result = when(event.result) {
+                                        TimelineResult.STARTED -> R.string.timeline_started
+                                        TimelineResult.COMPLETED -> R.string.timeline_completed
+                                        TimelineResult.RECOVERED -> R.string.timeline_recovered
+                                        TimelineResult.INTERRUPTED -> R.string.timeline_interrupted
+                                        TimelineResult.FAILED -> R.string.failed
+                                    }
+                                    Text(java.text.DateFormat.getDateTimeInstance(java.text.DateFormat.SHORT, java.text.DateFormat.SHORT, locale)
+                                        .format(java.util.Date(event.at)) + " · " + stringResource(stage) + " · " + stringResource(result),
+                                        style = MaterialTheme.typography.bodySmall)
+                                    event.code?.let { Text(stringResource(PipelineException(event.stage, it).messageResource()),
+                                        color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }, confirmButton = { TextButton(onDismiss) { Text(stringResource(R.string.close)) } })
 }

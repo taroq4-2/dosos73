@@ -182,5 +182,22 @@
     <string name="parallel_connections_hint">Optional. Uses two verified byte ranges on compatible servers; otherwise uses one connection. Speed depends on the source and network.</string>
     <string name="batch_storage_error">Could not save or restore the link review. Your existing draft is preserved. Check storage and retry.</string>
     <string name="error_publication_review">A saved file needs recovery. Reconnect its storage and retry this task. The existing file has been preserved; do not start a duplicate download.</string>
+    <string name="timeline_title">Task timeline</string>
+    <string name="timeline_privacy">Up to 32 recent tasks, without links, names or destinations. History retention also removes old timeline entries when the log is used.</string>
+    <string name="timeline_empty">No recorded task events.</string>
+    <string name="timeline_task">Task %1$d</string>
+    <string name="timeline_initialize">Preparation</string>
+    <string name="timeline_verify">File verification</string>
+    <string name="timeline_started">Started</string>
+    <string name="timeline_completed">Completed</string>
+    <string name="timeline_recovered">Recovered saved output</string>
+    <string name="timeline_interrupted">Interrupted</string>
+    <string name="timeline_transfer">Download</string>
+    <string name="timeline_merge">Media processing</string>
+    <string name="file_missing">File not found at its saved location.</string>
+    <string name="file_permission_required">Folder access was denied. Grant access again in Settings, then refresh.</string>
+    <string name="file_storage_unavailable">Storage is unavailable. Reconnect it and refresh; the saved entry is retained.</string>
+    <string name="forget_missing">Remove missing entry</string>
+    <string name="forget_missing_confirm">Remove only this missing file entry from the library? This action does not delete any stored file.</string>
 </resources>
 

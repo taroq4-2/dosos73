@@ -182,5 +182,22 @@
     <string name="parallel_connections_hint">اختياري. يستخدم نطاقين متحققًا منهما على الخوادم المتوافقة، وإلا يعود لاتصال واحد. السرعة تعتمد على المصدر والشبكة.</string>
     <string name="batch_storage_error">تعذّر حفظ قائمة الروابط أو استعادتها. احتُفظ بالمسودة الموجودة. تحقق من التخزين وأعد المحاولة.</string>
     <string name="error_publication_review">يحتاج الملف المحفوظ إلى استرداد. أعد توصيل وحدة التخزين ثم أعد محاولة هذه المهمة. احتُفظ بالملف الموجود؛ تجنب بدء تنزيل مكرر.</string>
+    <string name="timeline_title">سجل مراحل المهام</string>
+    <string name="timeline_privacy">آخر 32 مهمة دون روابط أو أسماء أو أماكن حفظ. تُحذف أحداث السجل القديمة وفق مدة الاحتفاظ عند استخدامه.</string>
+    <string name="timeline_empty">لا توجد أحداث مسجّلة للمهام.</string>
+    <string name="timeline_task">المهمة %1$d</string>
+    <string name="timeline_initialize">التهيئة</string>
+    <string name="timeline_verify">التحقق من الملف</string>
+    <string name="timeline_started">بدء</string>
+    <string name="timeline_completed">اكتمال</string>
+    <string name="timeline_recovered">استرداد الملف المحفوظ</string>
+    <string name="timeline_interrupted">توقف</string>
+    <string name="timeline_transfer">التنزيل</string>
+    <string name="timeline_merge">معالجة الوسائط</string>
+    <string name="file_missing">الملف غير موجود في مكانه المحفوظ.</string>
+    <string name="file_permission_required">رُفض الوصول إلى المجلد. أعد منح الصلاحية من الإعدادات ثم حدّث القائمة.</string>
+    <string name="file_storage_unavailable">التخزين غير متاح. أعد توصيله وحدّث القائمة؛ احتُفظ بسجل الملف.</string>
+    <string name="forget_missing">إزالة السجل المفقود</string>
+    <string name="forget_missing_confirm">إزالة سجل هذا الملف المفقود من المكتبة فقط؟ هذا الإجراء لا يحذف أي ملف مخزّن.</string>
 </resources>
 

@@ -158,9 +158,16 @@ class DownloadService : Service() {
         var terminal = TransferState(Phase.CANCELLED, task.analysis.title)
         var failureCode: FailureCode? = null
         val store = OutputStore(this@DownloadService)
+        suspend fun trace(stage: Stage, result: TimelineResult, bytes: Long? = null, code: FailureCode? = null) {
+            try { TaskTimeline.record(this@DownloadService, TimelineEvent(task.id, System.currentTimeMillis(), stage, result, bytes, code)) }
+            catch (error: CancellationException) { throw error }
+            catch (_: Exception) { Diagnostics.event(stage, "timeline_unavailable") }
+        }
         try {
+            trace(Stage.TRANSFER, TimelineResult.STARTED)
             val recovered = withContext(Dispatchers.IO) { store.recover(task) }
             if (recovered != null) {
+                trace(Stage.PUBLISH, TimelineResult.RECOVERED)
                 terminal =
                     TransferState(
                         Phase.COMPLETE,
@@ -216,6 +223,7 @@ class DownloadService : Service() {
             ensureActive()
             stage = Stage.VERIFY
             Diagnostics.event(stage, "started", output.length())
+            trace(stage, TimelineResult.STARTED, output.length())
             publish(TransferState(Phase.PROCESSING, task.analysis.title))
             withContext(Dispatchers.IO) {
                 store.validate(
@@ -226,8 +234,10 @@ class DownloadService : Service() {
                 )
             }
             Diagnostics.event(stage, "completed", output.length())
+            withContext(NonCancellable) { trace(stage, TimelineResult.COMPLETED, output.length()) }
             stage = Stage.PUBLISH
             Diagnostics.event(stage, "started", output.length())
+            trace(stage, TimelineResult.STARTED, output.length())
             publish(TransferState(Phase.SAVING, task.analysis.title))
             val (uri, mime) =
                 store.save(output, task) { done, total ->
@@ -242,6 +252,7 @@ class DownloadService : Service() {
                     )
                 }
             Diagnostics.event(stage, "completed", output.length())
+            withContext(NonCancellable) { trace(stage, TimelineResult.COMPLETED, output.length()) }
             // Publication is the commit point: do not turn a committed file into a cancellation.
             terminal =
                 TransferState(
@@ -254,6 +265,7 @@ class DownloadService : Service() {
                     mime = mime,
                 )
         } catch (_: CancellationException) {
+            withContext(NonCancellable) { trace(stage, TimelineResult.INTERRUPTED) }
             terminal =
                 TransferState(
                     if (userCancelled) Phase.CANCELLED else Phase.PAUSED,
@@ -262,6 +274,7 @@ class DownloadService : Service() {
         } catch (e: Exception) {
             val failure = FailureClassifier.classify(stage, e)
             failureCode = failure.code
+            withContext(NonCancellable) { trace(failure.stage, TimelineResult.FAILED, code = failure.code) }
             Diagnostics.event(failure.stage, "failed", code = failure.code)
             terminal =
                 TransferState(Phase.FAILED, task.analysis.title, error = failure.messageResource())

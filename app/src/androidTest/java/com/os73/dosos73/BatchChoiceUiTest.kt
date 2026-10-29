@@ -35,8 +35,19 @@ class BatchChoiceUiTest {
         }
     }
 
-    @Test fun destinationOverrideIsPerLinkAndDownloadsIsExplicit() {
-        val model = MainViewModel(androidx.test.core.app.ApplicationProvider.getApplicationContext())
+    private fun withModel(block: (MainViewModel) -> Unit) {
+        val base = androidx.test.core.app.ApplicationProvider.getApplicationContext<android.app.Application>()
+        val folder = java.io.File(base.cacheDir, "batch-model-test-${java.util.UUID.randomUUID()}").apply { mkdirs() }
+        val app = object : android.app.Application() { override fun getFilesDir() = folder }
+        val store = androidx.lifecycle.ViewModelStore()
+        val model = androidx.lifecycle.ViewModelProvider(store, androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory(app))[MainViewModel::class.java]
+        try {
+            compose.runOnIdle { block(model) }
+            compose.waitUntil(5000) { !model.batchSaving.value }
+        } finally { compose.runOnIdle { store.clear() }; folder.deleteRecursively() }
+    }
+
+    @Test fun destinationOverrideIsPerLinkAndDownloadsIsExplicit() = withModel { model ->
         model.prepareBatch("https://example.com/a https://example.com/b")
         val first = model.batch.value.first().url!!
         model.batchDestination(first, "content://com.android.externalstorage.documents/tree/primary%3ADownload")
@@ -49,8 +60,7 @@ class BatchChoiceUiTest {
         assertNull(model.batch.value.first().destination)
     }
 
-    @Test fun removingQueuedEntryPreservesFailedAndUnselectedRows() {
-        val model = MainViewModel(androidx.test.core.app.ApplicationProvider.getApplicationContext())
+    @Test fun removingQueuedEntryPreservesFailedAndUnselectedRows() = withModel { model ->
         model.prepareBatch("https://example.com/a invalid https://example.com/b")
         model.selectBatch(2, false)
         val first = model.batch.value.first()

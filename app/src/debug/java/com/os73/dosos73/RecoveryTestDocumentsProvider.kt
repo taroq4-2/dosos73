@@ -19,11 +19,13 @@ class RecoveryTestDocumentsProvider : DocumentsProvider() {
         var rejectRename = false
         var unknownSize = false
         var denyRead = false
+        var denyQuery = false
+        var emptyQuery = false
         var deletes = 0
         var renames = 0
         fun reset() {
             entries.values.forEach { it.file.delete() }; entries.clear()
-            failAfterRename = false; rejectRename = false; unknownSize = false; denyRead = false; deletes = 0; renames = 0
+            failAfterRename = false; rejectRename = false; unknownSize = false; denyRead = false; denyQuery = false; emptyQuery = false; deletes = 0; renames = 0
         }
     }
     override fun onCreate() = true
@@ -42,8 +44,10 @@ class RecoveryTestDocumentsProvider : DocumentsProvider() {
             else -> null
         } }.toTypedArray())
     }
-    override fun queryDocument(documentId: String, projection: Array<out String>?): Cursor =
-        MatrixCursor(projection ?: columns).also { row(it, documentId) }
+    override fun queryDocument(documentId: String, projection: Array<out String>?): Cursor {
+        if (denyQuery) throw SecurityException("Access revoked")
+        return MatrixCursor(projection ?: columns).also { if (!emptyQuery || documentId == "root") row(it, documentId) }
+    }
     override fun queryChildDocuments(parentDocumentId: String, projection: Array<out String>?, sortOrder: String?): Cursor =
         MatrixCursor(projection ?: columns).also { cursor -> entries.keys.sorted().forEach { row(cursor, it) } }
     override fun isChildDocument(parentDocumentId: String, documentId: String) = parentDocumentId == "root" && entries.containsKey(documentId)

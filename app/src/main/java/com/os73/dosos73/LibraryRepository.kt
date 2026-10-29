@@ -204,6 +204,17 @@ internal object LibraryRepository {
             }
         }
 
+    /** Explicitly remove metadata only after a fresh, confident local-missing result. */
+    suspend fun forgetMissing(context: Context, item: SavedFile) = withContext(Dispatchers.IO) {
+        lock.withLock {
+            check(FileAccess.inspect(context, Uri.parse(item.uri)) == FileAvailability.MISSING)
+            val next = read(context).filterNot { it.uri == item.uri }
+            write(context, next)
+            mutable.value = next
+            cache.remove(item.uri)
+        }
+    }
+
     fun hidden(context: Context): Set<String> =
         context
             .getSharedPreferences("library", Context.MODE_PRIVATE)

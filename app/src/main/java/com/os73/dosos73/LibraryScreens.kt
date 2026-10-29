@@ -50,18 +50,29 @@ internal fun SavedFileRow(
     item: SavedFile,
     onAction: (SavedFile, String) -> Unit,
     history: Boolean = false,
+    refreshToken: Int = 0,
 ) {
     var menu by remember { mutableStateOf(false) }
     val context = LocalContext.current
     val locale = LocalConfiguration.current.locales[0]
     var bitmap by remember(item.uri, item.date) { mutableStateOf<android.graphics.Bitmap?>(null) }
-    LaunchedEffect(item.uri, item.date) { bitmap = LibraryRepository.thumbnail(context, item) }
+    var availability by remember(item.uri) { mutableStateOf<FileAvailability?>(null) }
+    LaunchedEffect(item.uri, item.date, refreshToken) {
+        availability = FileAccess.inspect(context, android.net.Uri.parse(item.uri))
+        bitmap = if (availability == FileAvailability.AVAILABLE) LibraryRepository.thumbnail(context, item) else null
+    }
+    fun previewAction() = when (availability) {
+        FileAvailability.MISSING -> "missing"
+        FileAvailability.PERMISSION_REQUIRED -> "permission"
+        FileAvailability.UNAVAILABLE -> "unavailable"
+        else -> "open"
+    }
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
         Row(
             Modifier.fillMaxWidth()
                 .clip(RoundedCornerShape(15.dp))
                 .background(Neon.Surface)
-                .clickable { onAction(item, "open") }
+                .clickable { onAction(item, previewAction()) }
                 .padding(11.dp)
                 .testTag("file_row"),
             verticalAlignment = Alignment.CenterVertically,
@@ -107,6 +118,14 @@ internal fun SavedFileRow(
                     style = MaterialTheme.typography.labelSmall,
                     color = Neon.Secondary,
                 )
+                val accessMessage = when(availability) {
+                    FileAvailability.MISSING -> R.string.file_missing
+                    FileAvailability.PERMISSION_REQUIRED -> R.string.file_permission_required
+                    FileAvailability.UNAVAILABLE -> R.string.file_storage_unavailable
+                    else -> null
+                }
+                accessMessage?.let { Text(stringResource(it), color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall, maxLines = 2, overflow = TextOverflow.Ellipsis) }
                 if (item.extension.isNotEmpty())
                     Text(
                         item.extension,
@@ -134,7 +153,7 @@ internal fun SavedFileRow(
                                 { Text(stringResource(label)) },
                                 {
                                     menu = false
-                                    onAction(item, key)
+                                    onAction(item, if (key == "open") previewAction() else key)
                                 },
                             )
                         }
@@ -167,6 +186,12 @@ internal fun SavedFileRow(
                             },
                         )
                     }
+                    if (availability == FileAvailability.MISSING) {
+                        DropdownMenuItem({ Text(stringResource(R.string.forget_missing)) }, {
+                            menu = false
+                            onAction(item, "forget")
+                        })
+                    }
                 }
             }
         }
@@ -180,6 +205,7 @@ internal fun FileLibraryScreen(
     onAction: (SavedFile, String) -> Unit,
     onRefresh: () -> Unit,
 ) {
+    var accessGeneration by remember { mutableIntStateOf(0) }
     var category by rememberSaveable { mutableIntStateOf(0) }
     var sort by rememberSaveable { mutableIntStateOf(0) }
     var ascending by rememberSaveable { mutableStateOf(false) }
@@ -273,7 +299,7 @@ internal fun FileLibraryScreen(
                 stringResource(if (ascending) R.string.ascending else R.string.descending),
                 { ascending = !ascending },
             )
-            IconAction(Glyph.CLOCK, stringResource(R.string.refresh), onRefresh)
+            IconAction(Glyph.CLOCK, stringResource(R.string.refresh), { accessGeneration++; onRefresh() })
         }
         Row(Modifier.horizontalScroll(rememberScrollState())) {
             FilterChip(
@@ -306,7 +332,7 @@ internal fun FileLibraryScreen(
                 verticalArrangement = Arrangement.spacedBy(5.dp),
                 contentPadding = PaddingValues(bottom = 16.dp, top = 8.dp),
             ) {
-                items(filtered, key = { it.uri }) { SavedFileRow(it, onAction) }
+                items(filtered, key = { it.uri }) { SavedFileRow(it, onAction, refreshToken = accessGeneration) }
             }
     }
 }

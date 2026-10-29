@@ -63,7 +63,8 @@ internal class PublicationReceipt(private val context: Context, private val id: 
             } ?: review()
         } else {
             val folder = DocumentFile.fromTreeUri(context, tree) ?: review()
-            if (!folder.isDirectory || !folder.canRead()) review()
+            if (!folder.isDirectory) review()
+            // The actual queries enforce read permission, including owner-provided documents on API29.
             val children = android.provider.DocumentsContract.buildChildDocumentsUriUsingTree(
                 tree, android.provider.DocumentsContract.getTreeDocumentId(tree))
             resolver.query(children, arrayOf(android.provider.DocumentsContract.Document.COLUMN_DOCUMENT_ID,
