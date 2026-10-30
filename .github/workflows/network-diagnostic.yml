@@ -25,7 +25,7 @@ jobs:
           api-level: 35
           arch: x86_64
           script: ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.os73.dosos73.LiveDownloadTest#mediaExtractorAndNativeDownload -Pandroid.testInstrumentationRunnerArguments.liveMedia=true --console=plain
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: native-public-fixture-results
