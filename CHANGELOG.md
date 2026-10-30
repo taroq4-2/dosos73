@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.2.0-rc.5 — 2026-10-30
+- Reduce the single four-ABI APK to61,944,601bytes (14.86% smaller), with no first-use runtime download and608 native ELF payloads unchanged from RC4.
+- Share642 identical regular Python files locally with byte/mode reconstruction and interrupted-install verification; retain ABI-specific symlinks.
+- Own native process groups for cancellation; serialize private-journal access across instances with bounded locks.
+- Block public cleartext by default with explicit opt-in, and strengthen DNS/IPv6, filename and representation checks.
+- Split activity/service responsibilities, stream library metadata, draw vector branding and refine controls, colors and short landscape layouts.
+- Pass72 JVM cases and the shared-runtime API29–36 matrix; accept signed Release YouTube2160p (353MB), MP3 and earlier720p/direct playback paths.
+- Publish artifact-bound SBOM, source/license/configuration assets and a [30-item audit](docs/audit/REVIEW_2026-10-30.md) retaining open hardware/performance/license work.
+
 ## 1.2.0-rc.4 — 2026-10-29
 - One signed universal APK, 72,758,008 bytes, Android 10+, four architectures and real MP3 V0 conversion.
 - Recover destination-creation gaps and changed SAF rename URIs using encrypted pre-creation plans and content verification.
