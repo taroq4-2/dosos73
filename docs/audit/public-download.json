@@ -1,0 +1,34 @@
+{
+  "verified_utc": "2026-10-30T05:37:45.747297+00:00",
+  "url": "https://github.com/taroq4-2/dosos73/releases/download/v1.2.0-rc.5/dosos73-1.2.0-rc.5-universal.apk",
+  "download_without_authentication": true,
+  "apk_bytes": 61944601,
+  "apk_sha256": "8d5e740f09d8a60becc74c202738699c27029458184d86680b0016cfb0cc31eb",
+  "signature_certificate_sha256": "bf0bcb1ba4d282b2e38f75be6220ad4b06902f96b47bbe68d67a51bfeb6e0ca9",
+  "apksigner_verification": "passed",
+  "replacement_install": "passed without uninstall/data clearing",
+  "cold_launch_after_update": "passed",
+  "device_scope": "independent Android15/API35 x86_64 emulator, existing test profile",
+  "file_checks": [
+    {
+      "scenario": "retained prior 720p file",
+      "bytes": 30812514,
+      "sha256": "8be0a7bf298a7ac0ee2dea26713a4fca8d8465513779655132ae9d9f974eb4b6",
+      "matched": true
+    },
+    {
+      "scenario": "retained prior MP3",
+      "bytes": 7809318,
+      "sha256": "bba662231ad690482a525892f95916b988a7d218e16ec724b8d221bb31543ddb",
+      "matched": true
+    },
+    {
+      "scenario": "new direct download after public APK update",
+      "bytes": 4372373,
+      "sha256": "b670602fa00934ca27c4351bb0efe7ea7a07fae57284e44226025eeed7c51254",
+      "matched": true
+    }
+  ],
+  "retained_library_entries": 6,
+  "limitations": "No physical-phone certification; source CI and detailed unresolved audit items remain in docs/VERIFICATION.md."
+}
