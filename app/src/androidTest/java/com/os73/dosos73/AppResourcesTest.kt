@@ -12,7 +12,7 @@ class AppResourcesTest {
         val theme = context.resources.newTheme().apply { applyStyle(R.style.AppTheme, true) }
         val value = android.util.TypedValue()
         assertTrue(theme.resolveAttribute(android.R.attr.windowSplashScreenBackground, value, true))
-        assertEquals(android.graphics.Color.rgb(3, 8, 23), value.data)
+        assertEquals(android.graphics.Color.rgb(7, 15, 30), value.data)
     }
     @Test
     fun adaptiveForegroundHasDensityIndependentSize() {

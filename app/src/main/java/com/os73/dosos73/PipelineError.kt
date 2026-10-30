@@ -10,6 +10,7 @@ enum class Stage {
 }
 
 enum class FailureCode {
+    CLEARTEXT_DISABLED,
     AUTHENTICATION_REQUIRED,
     HTTP_403,
     HTTP_404,
@@ -79,6 +80,7 @@ object FailureClassifier {
 
 fun PipelineException.messageResource(): Int =
     when (code) {
+        FailureCode.CLEARTEXT_DISABLED -> R.string.error_cleartext_disabled
         FailureCode.PUBLICATION_REVIEW_REQUIRED -> R.string.error_publication_review
         FailureCode.STORAGE_FULL -> R.string.error_disk_full
         FailureCode.NETWORK_TLS -> R.string.error_tls

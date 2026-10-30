@@ -1,0 +1,1007 @@
+{
+  "commit": "42c911ec47369113b872c896e1656e5579eba113",
+  "scope": "Tracked repository snapshot before audit edits. Kotlin implementation and tests read in full; binary/embedded dependencies require inventory and targeted runtime/source checks, not a claim of full semantic reverse engineering.",
+  "files": [
+    {
+      "path": ".gitattributes",
+      "bytes": 127,
+      "lines": 8,
+      "sha256": "05ff0f9fd6a5698cad34ba42adf5dbdd62e29e75972e924a62eb3b3d67b2e4fc",
+      "kind": "text"
+    },
+    {
+      "path": ".github/ISSUE_TEMPLATE/bug_report.yml",
+      "bytes": 1276,
+      "lines": 35,
+      "sha256": "0382830d19c35562c4575481c605e50d970a5e81034f8556f0c84deeccbb7311",
+      "kind": "text"
+    },
+    {
+      "path": ".github/dependabot.yml",
+      "bytes": 260,
+      "lines": 12,
+      "sha256": "e4135efaa27bccbb3cd49244bd8b7b8db48d46bfa683dc8ba9a3ee3188c62b72",
+      "kind": "text"
+    },
+    {
+      "path": ".github/workflows/android.yml",
+      "bytes": 2271,
+      "lines": 72,
+      "sha256": "3dea97cf37a4f8148a6d6ce08a630210954f0e9673cb612d60d0fed4b9948b0d",
+      "kind": "text"
+    },
+    {
+      "path": ".github/workflows/compact-engine.yml",
+      "bytes": 2707,
+      "lines": 74,
+      "sha256": "407ff6bbcbc9db81ea13388dc0999d45467c19d23678df2f1d106a2d0baac363",
+      "kind": "text"
+    },
+    {
+      "path": ".github/workflows/network-diagnostic.yml",
+      "bytes": 1267,
+      "lines": 34,
+      "sha256": "ac59db59f51539ae71394947ce6cd4188436c669f06c3758c8f784ef75cf4acb",
+      "kind": "text"
+    },
+    {
+      "path": ".gitignore",
+      "bytes": 129,
+      "lines": 14,
+      "sha256": "877e88e5a0596739c0214f0451308c675fbd43bb23026acd9ce3186ab9633c73",
+      "kind": "text"
+    },
+    {
+      "path": "CHANGELOG.md",
+      "bytes": 2366,
+      "lines": 33,
+      "sha256": "dee6b003a4e0d4186a075668ef88f71b81556d26bf38b797c005970017e2cf5c",
+      "kind": "text"
+    },
+    {
+      "path": "CONTRIBUTING.md",
+      "bytes": 886,
+      "lines": 7,
+      "sha256": "0553a9a17afed74166bc2db1664e97d7b04f395145a97cb3dd68288408881549",
+      "kind": "text"
+    },
+    {
+      "path": "LICENSE",
+      "bytes": 35149,
+      "lines": 674,
+      "sha256": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986",
+      "kind": "text"
+    },
+    {
+      "path": "PRIVACY.md",
+      "bytes": 2547,
+      "lines": 17,
+      "sha256": "7c3608a4970aac21740fa0ce6d0d9d45e0e212d4d47e61e6aff33fe1f75d6040",
+      "kind": "text"
+    },
+    {
+      "path": "README-ar.md",
+      "bytes": 8486,
+      "lines": 92,
+      "sha256": "34868dce1ffc6a03c028f020efb65bc0ff59fe72157106728268e540ffecf597",
+      "kind": "text"
+    },
+    {
+      "path": "README.md",
+      "bytes": 6100,
+      "lines": 92,
+      "sha256": "84d4d257714ce6eff8480675a6b1530a42b87fff4041e31498bd2a0c3abfc578",
+      "kind": "text"
+    },
+    {
+      "path": "SECURITY.md",
+      "bytes": 661,
+      "lines": 5,
+      "sha256": "c0b965c97bc5f8daf104c8abafef415999bb61b85c2826e4846446629f68b017",
+      "kind": "text"
+    },
+    {
+      "path": "THIRD_PARTY_NOTICES.md",
+      "bytes": 3428,
+      "lines": 31,
+      "sha256": "df2a81545b69a006272b797fd64c472675b72bdeb90fd00b424848f04ed40965",
+      "kind": "text"
+    },
+    {
+      "path": "app/build.gradle.kts",
+      "bytes": 4632,
+      "lines": 94,
+      "sha256": "6ad127eb9d4acd82bdcdbd58b368389bcc5b1fb5bf630fdc91d0d54854a8356b",
+      "kind": "text"
+    },
+    {
+      "path": "app/proguard-rules.pro",
+      "bytes": 854,
+      "lines": 13,
+      "sha256": "411c10ad7141269b9f30fa5eef8f01433b7cd1b6b9d846c1a02679199bf868df",
+      "kind": "text"
+    },
+    {
+      "path": "app/src/androidTest/java/com/os73/dosos73/AppResourcesTest.kt",
+      "bytes": 1978,
+      "lines": 49,
+      "sha256": "df4b5f3d81158dd64439e2447f4cec454f70115fb6e39a136930cb45549e5c8f",
+      "kind": "text"
+    },
+    {
+      "path": "app/src/androidTest/java/com/os73/dosos73/BatchChoiceUiTest.kt",
+      "bytes": 4693,
+      "lines": 90,
+      "sha256": "ccf5db214cfa5c4d393b612d19a01ec49ba9d599137f80e1d7333b04f8221891",
+      "kind": "text"
+    },
+    {
+      "path": "app/src/androidTest/java/com/os73/dosos73/BatchDraftTest.kt",
+      "bytes": 2323,
+      "lines": 45,
+      "sha256": "75bb446149a32c9816e1d92b2b82231c3143d060991ab6cefb32b17681c3a00d",
+      "kind": "text"
+    },
+    {
+      "path": "app/src/androidTest/java/com/os73/dosos73/ClipboardInputTest.kt",
+      "bytes": 2005,
+      "lines": 49,
+      "sha256": "e5b323bf3a26ae3f2e74ff886409bca5d04ace2db7687f579f2aee22e23464a6",
+      "kind": "text"
+    },
+    {
+      "path": "app/src/androidTest/java/com/os73/dosos73/FileAccessTest.kt",
+      "bytes": 3206,
+      "lines": 51,
+      "sha256": "720fd8bde893dd6062b47d0857f49de7f146e4da37b74bf78c1710732e82cf6a",
+      "kind": "text"
+    },
+    {
+      "path": "app/src/androidTest/java/com/os73/dosos73/FileAccessUiTest.kt",
+      "bytes": 1861,
+      "lines": 33,
+      "sha256": "11acc22033d82ef5b9a12cd1e9d0137571c27ebd879e6da0c812d99e2c76d782",
+      "kind": "text"
+    },
+    {
+      "path": "app/src/androidTest/java/com/os73/dosos73/LibraryQueueTest.kt",
+      "bytes": 9115,
+      "lines": 212,
+      "sha256": "8cdaa29193acc0699311d8fc1f96afd2228ae5a307d8853eccfa597d1308804c",
+      "kind": "text"
+    },
+    {
+      "path": "app/src/androidTest/java/com/os73/dosos73/LiveDownloadTest.kt",
+      "bytes": 6628,
+      "lines": 130,
+      "sha256": "0d53ad922794a534feae53873c4debf253250a5a1b596a63468a585a9f812a4e",
+      "kind": "text"
+    },
+    {
+      "path": "app/src/androidTest/java/com/os73/dosos73/Mp3EncodingTest.kt",
+      "bytes": 2810,
+      "lines": 50,
+      "sha256": "d97d6134202d233ad7d6a9cc7c9f3d4854678e6cb0bc9b7500583d8b3d82035c",
+      "kind": "text"
+    },
+    {
+      "path": "app/src/androidTest/java/com/os73/dosos73/NativeTransportComparisonTest.kt",
+      "bytes": 3208,
+      "lines": 67,
+      "sha256": "524e6e5f9b633a4cde85693c540ce0eebcd41820aa4b232b4148f1e9635035f1",
+      "kind": "text"
+    },
+    {
+      "path": "app/src/androidTest/java/com/os73/dosos73/OutputSafetyTest.kt",
+      "bytes": 8183,
+      "lines": 195,
+      "sha256": "c1e085a4a3b3eef5096592de0ec70deff99549f536f4fd7f7ec0e5841579c414",
+      "kind": "text"
+    },
+    {
+      "path": "app/src/androidTest/java/com/os73/dosos73/PrivateJournalTest.kt",
+      "bytes": 1388,
+      "lines": 32,
+      "sha256": "de50616752de3e0e40437322d5d7f92d3db16248c73bd649b0dc3195fbfa07b1",
+      "kind": "text"
+    },
+    {
+      "path": "app/src/androidTest/java/com/os73/dosos73/ProxyTransportTest.kt",
+      "bytes": 6389,
+      "lines": 140,
+      "sha256": "eabb31464f601535de6d78cf912fabc9e095dbc19e990bdcaa9f936340f70ea4",
+      "kind": "text"
+    },
+    {
+      "path": "app/src/androidTest/java/com/os73/dosos73/PublicationRecoveryTest.kt",
+      "bytes": 8050,
+      "lines": 124,
+      "sha256": "d74bc028971e7ff164e6050ef7f5e1d9a2f8c129a847df55e09719a55905e7cd",
+      "kind": "text"
+    },
+    {
+      "path": "app/src/androidTest/java/com/os73/dosos73/RuntimeInventoryTest.kt",
+      "bytes": 2635,
+      "lines": 49,
+      "sha256": "b7bf9fab2f4cb9b6112eda254caadbaaa3a4045d5a4bcd7c885f6920da3be8ae",
+      "kind": "text"
+    },
+    {
+      "path": "app/src/androidTest/java/com/os73/dosos73/ServiceQueueTest.kt",
+      "bytes": 2598,
+      "lines": 57,
+      "sha256": "7e763406f9211ab8d5ebe474fc5761a46267f28920064856390f8e6dc614b56d",
+      "kind": "text"
+    },
+    {
+      "path": "app/src/androidTest/java/com/os73/dosos73/TaskTimelineTest.kt",
+      "bytes": 4016,
+      "lines": 64,
+      "sha256": "f087a53053f09c1c6a1d76d98f876d005c22e80cf2208c6a4a5dd347fe7b5494",
+      "kind": "text"
+    },
+    {
+      "path": "app/src/androidTest/java/com/os73/dosos73/TlsVersionTest.kt",
+      "bytes": 3451,
+      "lines": 76,
+      "sha256": "35075886bc3df5db27e8b31a33458f156e6ff7fc34b9569f6c59c6ec4db4a04e",
+      "kind": "text"
+    },
+    {
+      "path": "app/src/androidTest/java/com/os73/dosos73/UiFlowTest.kt",
+      "bytes": 7340,
+      "lines": 149,
+      "sha256": "ad20fce1d2dfce5f05738e917a256cf3160c32fe7d1ebe0c7d3cdbdd36a8e830",
+      "kind": "text"
+    },
+    {
+      "path": "app/src/debug/AndroidManifest.xml",
+      "bytes": 374,
+      "lines": 6,
+      "sha256": "ab76bbf84105dc45cb30cd183b332d5b63f8ed61f37623f80636b8f18a1ec215",
+      "kind": "text"
+    },
+    {
+      "path": "app/src/debug/java/com/os73/dosos73/RecoveryTestDocumentsProvider.kt",
+      "bytes": 4644,
+      "lines": 84,
+      "sha256": "210e363374279506b0bc7f7956e4b383ed7485dd650a003ded6dafba30c12cd9",
+      "kind": "text"
+    },
+    {
+      "path": "app/src/main/AndroidManifest.xml",
+      "bytes": 1624,
+      "lines": 26,
+      "sha256": "66fc41ba64dd3b742e597a970faf76ba89463fb48d7d8e3e7ea3f38612132ab6",
+      "kind": "text"
+    },
+    {
+      "path": "app/src/main/java/com/os73/dosos73/AdvancedScreens.kt",
+      "bytes": 26334,
+      "lines": 596,
+      "sha256": "a209de334a8aa53a1e77aab912140c7a982e348aea6b0e884764fb6cfd34c78a",
+      "kind": "text"
+    },
+    {
+      "path": "app/src/main/java/com/os73/dosos73/AppUi.kt",
+      "bytes": 29051,
+      "lines": 716,
+      "sha256": "71f074833a215287dac1c43f8a75057cd56c14a86c478dae6ab7235581a6ceb0",
+      "kind": "text"
+    },
+    {
+      "path": "app/src/main/java/com/os73/dosos73/BatchDraft.kt",
+      "bytes": 3349,
+      "lines": 66,
+      "sha256": "e1b0fefe710ba2bb336a243cce667c9ba34e5777e2fb7322651ff7998a768352",
+      "kind": "text"
+    },
+    {
+      "path": "app/src/main/java/com/os73/dosos73/BundledEngine.kt",
+      "bytes": 1797,
+      "lines": 49,
+      "sha256": "71e7587fd05b3c638e618f2cc6c496fc03997ea59e6bd45b6c134f7105eb4035",
+      "kind": "text"
+    },
+    {
+      "path": "app/src/main/java/com/os73/dosos73/ChoiceSelection.kt",
+      "bytes": 414,
+      "lines": 8,
+      "sha256": "66d5373fa8de0cd6e0ebe61ea9dbe3cbe4cb21f92cb2b4e36d46df70d105d56f",
+      "kind": "text"
+    },
+    {
+      "path": "app/src/main/java/com/os73/dosos73/ContactDraft.kt",
+      "bytes": 736,
+      "lines": 23,
+      "sha256": "b9ed7c63399e0dc92d838825e42418f34a8f4bb24d3e541b2b35630dc4c76281",
+      "kind": "text"
+    },
+    {
+      "path": "app/src/main/java/com/os73/dosos73/DirectDownloader.kt",
+      "bytes": 15353,
+      "lines": 332,
+      "sha256": "20bc6def803357b34aac0927bf12b3fc651509e0ffdfecea293407bf689ad165",
+      "kind": "text"
+    },
+    {
+      "path": "app/src/main/java/com/os73/dosos73/DirectFileName.kt",
+      "bytes": 2093,
+      "lines": 57,
+      "sha256": "467d7f8776e2cee11358eb25596efb7b124c2c4711dd2a096369ca2de56b1855",
+      "kind": "text"
+    },
+    {
+      "path": "app/src/main/java/com/os73/dosos73/DisplayFormat.kt",
+      "bytes": 847,
+      "lines": 23,
+      "sha256": "55d43002bfcb3976827e3c2e767e5ef5197aaed187dfcea2afb5408bd352f45e",
+      "kind": "text"
+    },
+    {
+      "path": "app/src/main/java/com/os73/dosos73/DososApp.kt",
+      "bytes": 745,
+      "lines": 22,
+      "sha256": "2a8654aee9f5e71853cfeab7083ad470669952e920511eb03d9243d1326e46a5",
+      "kind": "text"
+    },
+    {
+      "path": "app/src/main/java/com/os73/dosos73/DownloadQueue.kt",
+      "bytes": 9058,
+      "lines": 236,
+      "sha256": "e5212e08774bc51203d309bca2ca959f25c13bb917bf38679415070aebf9c259",
+      "kind": "text"
+    },
+    {
+      "path": "app/src/main/java/com/os73/dosos73/DownloadService.kt",
+      "bytes": 19561,
+      "lines": 444,
+      "sha256": "4bd0731bd6904b02de5b6fc7622185a476c38ca19ed9abf3e5fc252756d8e282",
+      "kind": "text"
+    },
+    {
+      "path": "app/src/main/java/com/os73/dosos73/FailureJournal.kt",
+      "bytes": 3695,
+      "lines": 101,
+      "sha256": "87cf79d5b354ca2a23631dad9a6ae943d5707e066938de4a6ba4c6d6b4c49fb8",
+      "kind": "text"
+    },
+    {
+      "path": "app/src/main/java/com/os73/dosos73/FileAvailability.kt",
+      "bytes": 2290,
+      "lines": 41,
+      "sha256": "80cc58d60ddfda562dd6f674c78c6fcfd096200f902048042ddfe9539a123447",
+      "kind": "text"
+    },
+    {
+      "path": "app/src/main/java/com/os73/dosos73/InfoScreens.kt",
+      "bytes": 6820,
+      "lines": 171,
+      "sha256": "d9e499dd43be44465aaa3d883a598f78005142ea5c52c87ad2830c9c2e5614d2",
+      "kind": "text"
+    },
+    {
+      "path": "app/src/main/java/com/os73/dosos73/LibraryRepository.kt",
+      "bytes": 10540,
+      "lines": 266,
+      "sha256": "4a96e77c3686d6375f23e9a00d4d0d2bffca147632891f998032629ec6a2b8f1",
+      "kind": "text"
+    },
+    {
+      "path": "app/src/main/java/com/os73/dosos73/LibraryScreens.kt",
+      "bytes": 23170,
+      "lines": 521,
+      "sha256": "53f9f22ae1574e7bae5e772766277124c6afad0f8ab8141458765081cb0a5352",
+      "kind": "text"
+    },
+    {
+      "path": "app/src/main/java/com/os73/dosos73/MainActivity.kt",
+      "bytes": 40445,
+      "lines": 800,
+      "sha256": "42f715acc262814a1bb4ab20c363726afafef23ddb2a435829f1bfa10203ef7a",
+      "kind": "text"
+    },
+    {
+      "path": "app/src/main/java/com/os73/dosos73/MainViewModel.kt",
+      "bytes": 13354,
+      "lines": 327,
+      "sha256": "5c92ef03cfcb5b0a5d7b3e90cda13ab30e1238b9d733f5af67c114e9813845e6",
+      "kind": "text"
+    },
+    {
+      "path": "app/src/main/java/com/os73/dosos73/MediaEngine.kt",
+      "bytes": 13079,
+      "lines": 281,
+      "sha256": "4ce71dbe7fa561f2524b0e39c97fb44ed600363b086e096d1ded1b03f45711cf",
+      "kind": "text"
+    },
+    {
+      "path": "app/src/main/java/com/os73/dosos73/Models.kt",
+      "bytes": 2807,
+      "lines": 115,
+      "sha256": "4fc9b661f473fe631676a45e555129d442112d5ded63854e7febcb06c31289b4",
+      "kind": "text"
+    },
+    {
+      "path": "app/src/main/java/com/os73/dosos73/NeonTheme.kt",
+      "bytes": 11463,
+      "lines": 300,
+      "sha256": "307a23311487f95150afb51074900a700a2d540f0bdd646355b76925d7d1877e",
+      "kind": "text"
+    },
+    {
+      "path": "app/src/main/java/com/os73/dosos73/NetworkSettings.kt",
+      "bytes": 4467,
+      "lines": 99,
+      "sha256": "2e0f4b030607d208d1ff042f5b730ad707b874635284e2e3946e49d71b790a68",
+      "kind": "text"
+    },
+    {
+      "path": "app/src/main/java/com/os73/dosos73/OutputStore.kt",
+      "bytes": 8196,
+      "lines": 172,
+      "sha256": "e9ba1feeec867d26688e319837f6f1255c4239d49758aee9bb8e62dafcdbc39e",
+      "kind": "text"
+    },
+    {
+      "path": "app/src/main/java/com/os73/dosos73/ParallelDownloader.kt",
+      "bytes": 9910,
+      "lines": 199,
+      "sha256": "21b548e5b498ba340cb52547bdf8e9aa50f79defd9a4685edfd7c3346fbb38ba",
+      "kind": "text"
+    },
+    {
+      "path": "app/src/main/java/com/os73/dosos73/PipelineError.kt",
+      "bytes": 5531,
+      "lines": 127,
+      "sha256": "f26c4b8ac0b7a223433e726d43585131ee7d7191b2335116e644bb6b08aa6aaa",
+      "kind": "text"
+    },
+    {
+      "path": "app/src/main/java/com/os73/dosos73/PrivateJournal.kt",
+      "bytes": 3315,
+      "lines": 85,
+      "sha256": "afec5ed81875202418a81ef16b977038f511275c262ffbc10a6ec6cb882cb17f",
+      "kind": "text"
+    },
+    {
+      "path": "app/src/main/java/com/os73/dosos73/PublicProxy.kt",
+      "bytes": 6483,
+      "lines": 157,
+      "sha256": "651ba0c59a390e5e3f1823cc1ec9d7e68cb29ed105571d0869f06e8bc0f6cdcf",
+      "kind": "text"
+    },
+    {
+      "path": "app/src/main/java/com/os73/dosos73/PublicationReceipt.kt",
+      "bytes": 8904,
+      "lines": 164,
+      "sha256": "fbdcfd50e6ea82c4c99c1ee2e9151e016c93e73c1b1440ee3457e5a35cd28e77",
+      "kind": "text"
+    },
+    {
+      "path": "app/src/main/java/com/os73/dosos73/ResumeJournal.kt",
+      "bytes": 3353,
+      "lines": 91,
+      "sha256": "ae4585d90b9a7b4de0a6f547306522bebf142fb5697eb2f8a34cb9fd52b39c5f",
+      "kind": "text"
+    },
+    {
+      "path": "app/src/main/java/com/os73/dosos73/Safety.kt",
+      "bytes": 3158,
+      "lines": 77,
+      "sha256": "a38a7369b34efb493ac411edcc5da5da33973bd92c90877a38f6272a924d7437",
+      "kind": "text"
+    },
+    {
+      "path": "app/src/main/java/com/os73/dosos73/StoragePolicy.kt",
+      "bytes": 576,
+      "lines": 12,
+      "sha256": "78bb4cea938021ac2405828f2f94b3e216481be2cf2d838d96f5fd11b5eaa3d1",
+      "kind": "text"
+    },
+    {
+      "path": "app/src/main/java/com/os73/dosos73/StreamIntegrity.kt",
+      "bytes": 1131,
+      "lines": 32,
+      "sha256": "ec131d9ddd633eb21a4a750a82b5e5ca1cdf53b4290ce4581ef32075710d80ed",
+      "kind": "text"
+    },
+    {
+      "path": "app/src/main/java/com/os73/dosos73/TaskTimeline.kt",
+      "bytes": 3500,
+      "lines": 66,
+      "sha256": "89dad0e45e1e1a2a823aecad1ec8a5125dc416ef7167d08b40a78205c518a3c2",
+      "kind": "text"
+    },
+    {
+      "path": "app/src/main/res/drawable-nodpi/brand_neon.png",
+      "bytes": 1450377,
+      "lines": null,
+      "sha256": "135bb24ecb046d0732d3a9397472f102c069e821e3e81959f50f5e6a76d961e9",
+      "kind": "binary"
+    },
+    {
+      "path": "app/src/main/res/drawable/ic_brand_neon.xml",
+      "bytes": 1655,
+      "lines": 10,
+      "sha256": "6fd9304d63f985b124760051fb753ed2d73d1db2126abe39d496f26efd6beb8e",
+      "kind": "text"
+    },
+    {
+      "path": "app/src/main/res/drawable/ic_download.xml",
+      "bytes": 300,
+      "lines": 3,
+      "sha256": "f8f81a398739a8ff9bfc50fcd785d1ccd3236aa702d53d64e692ec86a74babd0",
+      "kind": "text"
+    },
+    {
+      "path": "app/src/main/res/font/tajawal_bold.ttf",
+      "bytes": 59988,
+      "lines": null,
+      "sha256": "0342ab6b74b6bd1b4b5bf7beda45a9734a2b3147a31e8a3a45b6a3417a52d9d7",
+      "kind": "binary"
+    },
+    {
+      "path": "app/src/main/res/font/tajawal_medium.ttf",
+      "bytes": 62280,
+      "lines": null,
+      "sha256": "1ff8bd943a261c9dd7906bdb1993cab87b6d925a7fb5f848cdb51ed301531090",
+      "kind": "binary"
+    },
+    {
+      "path": "app/src/main/res/font/tajawal_regular.ttf",
+      "bytes": 60364,
+      "lines": null,
+      "sha256": "6882892da3e03527d5db2bbab3b48bde6ef2e878a43f522d1a4eebda90010a19",
+      "kind": "binary"
+    },
+    {
+      "path": "app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml",
+      "bytes": 212,
+      "lines": 5,
+      "sha256": "764719fb2160250367cef72e5e0d3dae48393dc9982fa708895e3cbb4d15e8be",
+      "kind": "text"
+    },
+    {
+      "path": "app/src/main/res/raw/keep.xml",
+      "bytes": 96,
+      "lines": 1,
+      "sha256": "5e4f67c4ca144e9b98c9d82efbdc5fb3d7a06166cf86c8e1b03d4ce024c479c1",
+      "kind": "text"
+    },
+    {
+      "path": "app/src/main/res/raw/tajawal_license.txt",
+      "bytes": 4464,
+      "lines": 93,
+      "sha256": "9b584984f9db0ee30347391a76eff9c0a6b03dc450c3c6afe3757a2cb3a4db87",
+      "kind": "text"
+    },
+    {
+      "path": "app/src/main/res/raw/ytdlp",
+      "bytes": 3074818,
+      "lines": null,
+      "sha256": "b7af77f686e95f7845ce8d09d21957718febb8b48b30555adb9dd2292ad7bf14",
+      "kind": "binary"
+    },
+    {
+      "path": "app/src/main/res/values-ar/strings.xml",
+      "bytes": 19898,
+      "lines": 203,
+      "sha256": "24eaa415fb28e2ac46b68552077ab7a603b1c1d284f89579a7f15562a6b397e2",
+      "kind": "text"
+    },
+    {
+      "path": "app/src/main/res/values-v31/styles.xml",
+      "bytes": 335,
+      "lines": 7,
+      "sha256": "35de38566bec5c3c490be21486abbf70bb3a14a1211ca47d22e9b94dbab80730",
+      "kind": "text"
+    },
+    {
+      "path": "app/src/main/res/values/colors.xml",
+      "bytes": 65,
+      "lines": 1,
+      "sha256": "a9cfde4a272f76e7ef6183095ad7dc6483b8c257c89a82b1ebe14206b3f47c34",
+      "kind": "text"
+    },
+    {
+      "path": "app/src/main/res/values/strings.xml",
+      "bytes": 15723,
+      "lines": 203,
+      "sha256": "9adff4fef9bde30c728acb94a2c642d96d2a3ffd573ddb2353761ef8b4061efa",
+      "kind": "text"
+    },
+    {
+      "path": "app/src/main/res/values/styles.xml",
+      "bytes": 654,
+      "lines": 13,
+      "sha256": "a0a24551ce5ba3da8f03e4adc665ae3ed71bdee8741c6b6fd2804efe7b967f20",
+      "kind": "text"
+    },
+    {
+      "path": "app/src/main/res/xml/data_extraction_rules.xml",
+      "bytes": 591,
+      "lines": 16,
+      "sha256": "f2f358d89c06fa712f6887b9bac1d9859b8843ec79f614084d32029efb76db5c",
+      "kind": "text"
+    },
+    {
+      "path": "app/src/main/res/xml/locales_config.xml",
+      "bytes": 198,
+      "lines": 5,
+      "sha256": "60ac69142b4bed2bd04c3eae32b7e977fe29ef88cf58084e3adba5a607f30537",
+      "kind": "text"
+    },
+    {
+      "path": "app/src/test/java/com/os73/dosos73/BatchInputTest.kt",
+      "bytes": 893,
+      "lines": 30,
+      "sha256": "b34881ad92e35caf0d896cad99ed50413b16e735644ef6ebc928af72c3263bcf",
+      "kind": "text"
+    },
+    {
+      "path": "app/src/test/java/com/os73/dosos73/ChoiceSelectionTest.kt",
+      "bytes": 835,
+      "lines": 19,
+      "sha256": "e929e726363cc40ed0ee48c351b66c23e4795b1bff5e71e196e19d6d8c6de0f9",
+      "kind": "text"
+    },
+    {
+      "path": "app/src/test/java/com/os73/dosos73/ContactDraftTest.kt",
+      "bytes": 911,
+      "lines": 24,
+      "sha256": "e7cb72ea52ce047fd54b0db9010617cf53e42e285b9dc986faba3a6c464525a8",
+      "kind": "text"
+    },
+    {
+      "path": "app/src/test/java/com/os73/dosos73/DesignContrastTest.kt",
+      "bytes": 767,
+      "lines": 22,
+      "sha256": "7c796ce6b33d556b12cebec6ee3b90dbd33fa88af30e020282dc4ddf6b7e8e65",
+      "kind": "text"
+    },
+    {
+      "path": "app/src/test/java/com/os73/dosos73/DirectDownloaderTest.kt",
+      "bytes": 17438,
+      "lines": 437,
+      "sha256": "445c3eec0f4a59d6936212a73d029a2a8173191f11fb85621c6d83f6f23d6c03",
+      "kind": "text"
+    },
+    {
+      "path": "app/src/test/java/com/os73/dosos73/DirectFileNameTest.kt",
+      "bytes": 1248,
+      "lines": 47,
+      "sha256": "508d692f7e1c97919ddaac297a6358ea31f22bf7c5aad0835891d2df662d1aeb",
+      "kind": "text"
+    },
+    {
+      "path": "app/src/test/java/com/os73/dosos73/DisplayFormatTest.kt",
+      "bytes": 841,
+      "lines": 24,
+      "sha256": "110d08cb2b75c448e8a66205f687928d3125c16c95d2a2a41804de6f0793b9ca",
+      "kind": "text"
+    },
+    {
+      "path": "app/src/test/java/com/os73/dosos73/FailureClassifierTest.kt",
+      "bytes": 4038,
+      "lines": 109,
+      "sha256": "275775e60d0699006121d25cc0325026c4cffedbcc386e41b08ef40aaabed5f0",
+      "kind": "text"
+    },
+    {
+      "path": "app/src/test/java/com/os73/dosos73/ParallelDownloaderTest.kt",
+      "bytes": 7221,
+      "lines": 154,
+      "sha256": "c0367fe85f7f154a54804f4ca2a8e8c0f2b1383a6d7f657c352054b7a423dd86",
+      "kind": "text"
+    },
+    {
+      "path": "app/src/test/java/com/os73/dosos73/PublicProxyTest.kt",
+      "bytes": 3987,
+      "lines": 87,
+      "sha256": "ee568b92357919a012576d270b3ecffd2d44e240961e1a2479e571b77db9595f",
+      "kind": "text"
+    },
+    {
+      "path": "app/src/test/java/com/os73/dosos73/ResumeJournalTest.kt",
+      "bytes": 1560,
+      "lines": 49,
+      "sha256": "c3d7555c1c6366ae1f23ecbaa4a187b4d5f21fed5df46bfcc154e2391f347091",
+      "kind": "text"
+    },
+    {
+      "path": "app/src/test/java/com/os73/dosos73/SafetyTest.kt",
+      "bytes": 3062,
+      "lines": 91,
+      "sha256": "3f9923bc507f0b0ef0a715c1adbe2d92d852eb426a599fdac7ddd7977426a8ff",
+      "kind": "text"
+    },
+    {
+      "path": "app/src/test/java/com/os73/dosos73/StoragePolicyTest.kt",
+      "bytes": 801,
+      "lines": 28,
+      "sha256": "e9eec1bf3b7de1b07c4c5ccb63acb1bfbf1abb1a1caeb3104557c4eaf5ca3bcb",
+      "kind": "text"
+    },
+    {
+      "path": "app/src/test/java/com/os73/dosos73/StreamIntegrityTest.kt",
+      "bytes": 615,
+      "lines": 16,
+      "sha256": "e47226bbf18364a469bfdea4db8887dcaa607c1a4f0039f33a31bcdb38065ff2",
+      "kind": "text"
+    },
+    {
+      "path": "branding/neon-reference.png",
+      "bytes": 1450377,
+      "lines": null,
+      "sha256": "135bb24ecb046d0732d3a9397472f102c069e821e3e81959f50f5e6a76d961e9",
+      "kind": "binary"
+    },
+    {
+      "path": "branding/repository-banner.svg",
+      "bytes": 1916,
+      "lines": 1,
+      "sha256": "27affb5a8818a16eb9a795b707085be5584ed8511bf3cab4839de104f6b9e8ac",
+      "kind": "text"
+    },
+    {
+      "path": "build.gradle.kts",
+      "bytes": 217,
+      "lines": 5,
+      "sha256": "00293c926d667c25287a928efc58fede0a921b8bfb5a1d5d03d3be266bf53072",
+      "kind": "text"
+    },
+    {
+      "path": "docs/ARCHITECTURE.md",
+      "bytes": 3404,
+      "lines": 27,
+      "sha256": "98a43ec83032f25e4488d0a4c69a551faeb88713e1d50ed8cd87785aeb50196d",
+      "kind": "text"
+    },
+    {
+      "path": "docs/COMPACT_ENGINE.md",
+      "bytes": 2418,
+      "lines": 28,
+      "sha256": "2c07e58bd556f985f60a355005efd133cb46c4c42c27feb20728f530c928f526",
+      "kind": "text"
+    },
+    {
+      "path": "docs/DEPENDENCY_DECISIONS.md",
+      "bytes": 2963,
+      "lines": 22,
+      "sha256": "cf38231f7fd1e772fdca6c62bc6bac1d90b052ad628f21aece64935097bb2fbc",
+      "kind": "text"
+    },
+    {
+      "path": "docs/FILE_AVAILABILITY.md",
+      "bytes": 1980,
+      "lines": 11,
+      "sha256": "e1aa24b95bebe2ddbd8ce8bcb4441e97e1c34192b1220b0c2f2b98c0c794644b",
+      "kind": "text"
+    },
+    {
+      "path": "docs/MP3_ACCEPTANCE.md",
+      "bytes": 2469,
+      "lines": 18,
+      "sha256": "aafe6e4f1c028c690cf96d1ba43791ae6e75a4480737ea76bcb6c845fb85a821",
+      "kind": "text"
+    },
+    {
+      "path": "docs/NETWORK_CHARTER_REVIEW.md",
+      "bytes": 2982,
+      "lines": 26,
+      "sha256": "ace345329ac4167068884d81ffe96c59141f3d59cfe25735cad8cad631ee40d0",
+      "kind": "text"
+    },
+    {
+      "path": "docs/PUBLICATION_RECOVERY.md",
+      "bytes": 2960,
+      "lines": 16,
+      "sha256": "02b2c8a332d63c3517bd654610919b55e1dbf88e89b70a5349c0a1e2d8b941b4",
+      "kind": "text"
+    },
+    {
+      "path": "docs/REMAINING_REQUIREMENTS.md",
+      "bytes": 8622,
+      "lines": 35,
+      "sha256": "00ca0b6dddab968d5c30f6c8e23f3e73ebcb1f7c6ecece6bf55e946a1634d6cd",
+      "kind": "text"
+    },
+    {
+      "path": "docs/REPOSITORY_CLEANUP.md",
+      "bytes": 1172,
+      "lines": 24,
+      "sha256": "92b8518428d9b67e4e40dd4a3db1a3d9a97c1ed4fc3d37df0a2c740acf049f29",
+      "kind": "text"
+    },
+    {
+      "path": "docs/SECURITY.md",
+      "bytes": 2443,
+      "lines": 18,
+      "sha256": "b5468c0d521ff7767ea5cd4b854bb206475cbf500165e1921efa6351aab2f0de",
+      "kind": "text"
+    },
+    {
+      "path": "docs/TASK_TIMELINE.md",
+      "bytes": 2862,
+      "lines": 17,
+      "sha256": "e9310688da1954574205d3b542491135fc6f39f3c1740b8d4f211880193ed32e",
+      "kind": "text"
+    },
+    {
+      "path": "docs/VERIFICATION.md",
+      "bytes": 5420,
+      "lines": 59,
+      "sha256": "96eab10a452c11f0fd0933c7bdd1a8743244329a3fd173961900b5acf99cd459",
+      "kind": "text"
+    },
+    {
+      "path": "docs/licenses/LAME-3.100.txt",
+      "bytes": 25765,
+      "lines": 490,
+      "sha256": "782a593869b3589bf63103745e10526b239fc5214fe444cfaf86dfd9bd805277",
+      "kind": "text"
+    },
+    {
+      "path": "docs/licenses/Tajawal-OFL.txt",
+      "bytes": 4464,
+      "lines": 93,
+      "sha256": "9b584984f9db0ee30347391a76eff9c0a6b03dc450c3c6afe3757a2cb3a4db87",
+      "kind": "text"
+    },
+    {
+      "path": "docs/licenses/ejs-0.8.0.txt",
+      "bytes": 1212,
+      "lines": 24,
+      "sha256": "b5065838cbac452dfc855ba6e6e031481ad2c68406f70d21ead9321374653e6c",
+      "kind": "text"
+    },
+    {
+      "path": "docs/licenses/yt-dlp-2026.10.21.txt",
+      "bytes": 243550,
+      "lines": 4702,
+      "sha256": "472aefe951c7db35e1657c1d13fd337140511ed6f2b329205105ad441c5a02b7",
+      "kind": "text"
+    },
+    {
+      "path": "gradle.properties",
+      "bytes": 182,
+      "lines": 5,
+      "sha256": "2ffe1e85bffadcee0ec67828a6dacb996355619090874e0f454a6ffb99efe3d2",
+      "kind": "text"
+    },
+    {
+      "path": "gradle/wrapper/gradle-wrapper.jar",
+      "bytes": 43504,
+      "lines": null,
+      "sha256": "498495120a03b9a6ab5d155f5de3c8f0d986a449153702fb80fc80e134484f17",
+      "kind": "binary"
+    },
+    {
+      "path": "gradle/wrapper/gradle-wrapper.properties",
+      "bytes": 293,
+      "lines": 6,
+      "sha256": "d3513be1cc22bdbcc83c753bc494f40e3d32b89b4784798446def7c3341d3ef8",
+      "kind": "text"
+    },
+    {
+      "path": "gradlew",
+      "bytes": 8784,
+      "lines": 252,
+      "sha256": "9cbbb4d68ff7fb5211c4d58f598ac9d8664c05fdcd1e5f59b7f2c3ac1ee00af0",
+      "kind": "text"
+    },
+    {
+      "path": "gradlew.bat",
+      "bytes": 2894,
+      "lines": 94,
+      "sha256": "0f3ed8f03b50934cb8c48b15a470d5c20a30a5385825e48b55bcc8ea3d8f8e18",
+      "kind": "text"
+    },
+    {
+      "path": "screenshots/README.md",
+      "bytes": 871,
+      "lines": 9,
+      "sha256": "2cc501573abf755123339b482a086259e0d6926194201c85a9a9e28729207559",
+      "kind": "text"
+    },
+    {
+      "path": "screenshots/charter-batch-ar.png",
+      "bytes": 78958,
+      "lines": null,
+      "sha256": "6080c1eb5e1e86f495432810d6cf339595a5193e36818ef1823164d8c7383766",
+      "kind": "binary"
+    },
+    {
+      "path": "screenshots/charter-privacy-ar.png",
+      "bytes": 185052,
+      "lines": null,
+      "sha256": "6ba468bbcf20ab46e298d0cfd9604278b120496bb10177fc74bf46ba226d2a0b",
+      "kind": "binary"
+    },
+    {
+      "path": "screenshots/charter-task-timeline-ar.png",
+      "bytes": 204535,
+      "lines": null,
+      "sha256": "e9175101c741a81eb22c8b238f4df49505a7c47525553dec8d0b75fef7fd5eb9",
+      "kind": "binary"
+    },
+    {
+      "path": "screenshots/downloads-ar.png",
+      "bytes": 172141,
+      "lines": null,
+      "sha256": "52712dcfb73fbae913db2c8575ac2098e91e36984d2f3bdd991a5a18159ca8f5",
+      "kind": "binary"
+    },
+    {
+      "path": "screenshots/files-ar.png",
+      "bytes": 197203,
+      "lines": null,
+      "sha256": "622c5dbc6a13468c85516c35e3adc6926227be2fffa7f0b4d368bbcb780f2793",
+      "kind": "binary"
+    },
+    {
+      "path": "screenshots/home-ar.png",
+      "bytes": 474803,
+      "lines": null,
+      "sha256": "28edf588f507eda3909c62c0d844735ce3791e2d03d2d225d9a732dc71db6cf5",
+      "kind": "binary"
+    },
+    {
+      "path": "screenshots/home-en.png",
+      "bytes": 478471,
+      "lines": null,
+      "sha256": "8feb550edc507ba5082f609c5297c2b6077d81e232dd0f55c8a5f0adcafe85de",
+      "kind": "binary"
+    },
+    {
+      "path": "screenshots/media-library-ar.png",
+      "bytes": 193139,
+      "lines": null,
+      "sha256": "309b342e4f384d89da06a08769ac8485f774cf077d815b1690d5718131dba8c2",
+      "kind": "binary"
+    },
+    {
+      "path": "screenshots/settings-ar.png",
+      "bytes": 189131,
+      "lines": null,
+      "sha256": "7d40659b1ce217c6c02f4a7d3fa4fbcdf9fff70af98e2a9168b3b5ca088aa03d",
+      "kind": "binary"
+    },
+    {
+      "path": "settings.gradle.kts",
+      "bytes": 276,
+      "lines": 7,
+      "sha256": "22dedf29f1508aa723c68c560f8ad3e0ae3bab8cfd7ae5e7617284d0c8f7ebf5",
+      "kind": "text"
+    },
+    {
+      "path": "tools/assemble_compact_experiment.py",
+      "bytes": 2537,
+      "lines": 56,
+      "sha256": "87c08b64641353502a1f2c4ba4c7dee0849fba9ecf5f6a39154544089ba352f7",
+      "kind": "text"
+    },
+    {
+      "path": "tools/audit_elf_alignment.py",
+      "bytes": 2249,
+      "lines": 43,
+      "sha256": "75687c31b0e67ba6d488ac7ced5d75d607eaa891c9809e8936b8261bf9b7de22",
+      "kind": "text"
+    },
+    {
+      "path": "tools/build_compact_ffmpeg.sh",
+      "bytes": 3561,
+      "lines": 63,
+      "sha256": "85181a54e0f09a56d06d88fc65f121d67111c2f70b0b673fc56bf9b9768fff47",
+      "kind": "text"
+    },
+    {
+      "path": "tools/trim_universal_apk.py",
+      "bytes": 3161,
+      "lines": 66,
+      "sha256": "da29cc3b0ad05fcc10d2175aa77fbf7cd8ed8f7f3be9ecf357071743430d827b",
+      "kind": "text"
+    }
+  ]
+}

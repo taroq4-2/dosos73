@@ -1,0 +1,23 @@
+Verifies
+Verified using v1 scheme (JAR signing): false
+Verified using v2 scheme (APK Signature Scheme v2): false
+Verified using v3 scheme (APK Signature Scheme v3): true
+Verified using v3.1 scheme (APK Signature Scheme v3.1): false
+Verified using v4 scheme (APK Signature Scheme v4): false
+Verified for SourceStamp: false
+Number of signers: 1
+Signer #1 certificate DN: CN=dosos73, O=OS73
+Signer #1 certificate SHA-256 digest: bf0bcb1ba4d282b2e38f75be6220ad4b06902f96b47bbe68d67a51bfeb6e0ca9
+Signer #1 certificate SHA-1 digest: 574422a493bd8fe16e660b8e3fafd27b982b732b
+Signer #1 certificate MD5 digest: a4111d78967fa0ac1678509855b95e06
+Signer #1 key algorithm: RSA
+Signer #1 key size (bits): 3072
+Signer #1 public key SHA-256 digest: 991e32e2d2727bb6d08f78869e359f0a3941b231a04f8423a36dcba385ee60d3
+Signer #1 public key SHA-1 digest: 188cb9968b85f65e0eab1d45cc771a068d52ef21
+Signer #1 public key MD5 digest: eed91ffa1b40be69b29f2c1aeda3e47d
+
+Name                               Length
+----                               ------
+dosos73-1.2.0-rc.5-universal.apk 61944601
+                                        1
+

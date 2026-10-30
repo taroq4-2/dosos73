@@ -8,6 +8,7 @@ import android.graphics.ImageDecoder
 import android.net.Uri
 import android.os.Build
 import android.widget.VideoView
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
@@ -68,6 +69,19 @@ internal object LibraryPreferences {
 
     fun setCollection(context: Context, uri: String, value: String) {
         prefs(context).edit().putString("collection:$uri", value.trim().take(40)).apply()
+    }
+
+    fun collections(context: Context): Map<String, String> = prefs(context).all.entries
+        .mapNotNull { (key, value) ->
+            if (key.startsWith("collection:") && value is String && value.isNotBlank()) key.removePrefix("collection:") to value else null
+        }.toMap()
+
+    fun migrateUri(context: Context, previous: String, next: String) {
+        if (previous == next) return
+        val value = collection(context, previous)
+        check(prefs(context).edit().remove("collection:$previous").apply {
+            if (value.isNotEmpty()) putString("collection:$next", value)
+        }.commit())
     }
 
     fun historyDays(context: Context) = prefs(context).getInt("history_days", 0)
@@ -387,6 +401,7 @@ internal fun shareDiagnostics(context: Context, code: FailureCode?) {
 internal fun NetworkControls() {
     val context = LocalContext.current
     var parallel by remember { mutableStateOf(NetworkSettings.parallelConnections(context)) }
+    var cleartext by remember { mutableStateOf(NetworkSettings.allowCleartext(context)) }
     var wifi by remember { mutableStateOf(NetworkSettings.wifiOnly(context)) }
     var unmetered by remember { mutableStateOf(NetworkSettings.unmeteredOnly(context)) }
     val scope = rememberCoroutineScope()
@@ -396,61 +411,41 @@ internal fun NetworkControls() {
             stringResource(R.string.network_controls),
             style = MaterialTheme.typography.titleMedium,
         )
-        Row {
-            Switch(
-                wifi,
-                { value ->
-                    scope.launch {
-                        try {
-                            withContext(Dispatchers.IO) {
-                                NetworkSettings.setWifiOnly(context, value)
-                            }
-                            wifi = value
-                        } catch (_: Exception) {
-                            error = true
-                        }
-                    }
-                },
-            )
-            Text(stringResource(R.string.wifi_only))
+        NetworkToggle(wifi, R.string.wifi_only) { value ->
+            scope.launch { try { withContext(Dispatchers.IO) { NetworkSettings.setWifiOnly(context, value) }; wifi = value }
+                catch (_: Exception) { error = true } }
         }
-        Row {
-            Switch(
-                unmetered,
-                { value ->
-                    scope.launch {
-                        try {
-                            withContext(Dispatchers.IO) {
-                                NetworkSettings.setUnmeteredOnly(context, value)
-                            }
-                            unmetered = value
-                        } catch (_: Exception) {
-                            error = true
-                        }
-                    }
-                },
-            )
-            Text(stringResource(R.string.unmetered_only))
+        NetworkToggle(unmetered, R.string.unmetered_only) { value ->
+            scope.launch { try { withContext(Dispatchers.IO) { NetworkSettings.setUnmeteredOnly(context, value) }; unmetered = value }
+                catch (_: Exception) { error = true } }
         }
-        Text(
-            stringResource(R.string.network_policy_hint),
-            style = MaterialTheme.typography.bodySmall,
-        )
-        Row {
-            Switch(parallel, { value ->
-                scope.launch {
-                    try {
-                        withContext(Dispatchers.IO) { NetworkSettings.setParallelConnections(context, value) }
-                        parallel = value
-                    } catch (_: Exception) { error = true }
-                }
-            })
-            Text(stringResource(R.string.parallel_connections))
+        Text(stringResource(R.string.network_policy_hint), style = MaterialTheme.typography.bodySmall, color = Neon.Secondary)
+        NetworkToggle(parallel, R.string.parallel_connections) { value ->
+            scope.launch { try { withContext(Dispatchers.IO) { NetworkSettings.setParallelConnections(context, value) }; parallel = value }
+                catch (_: Exception) { error = true } }
         }
-        Text(stringResource(R.string.parallel_connections_hint), style = MaterialTheme.typography.bodySmall)
+        Text(stringResource(R.string.parallel_connections_hint), style = MaterialTheme.typography.bodySmall, color = Neon.Secondary)
+        NetworkToggle(cleartext, R.string.allow_cleartext) { value ->
+            scope.launch { try { withContext(Dispatchers.IO) { NetworkSettings.setAllowCleartext(context, value) }; cleartext = value }
+                catch (_: Exception) { error = true } }
+        }
+        Text(stringResource(R.string.allow_cleartext_hint), style = MaterialTheme.typography.bodySmall, color = Neon.Secondary)
         if (error) Text(stringResource(R.string.error_storage))
     }
 }
+
+@Composable
+private fun NetworkToggle(checked: Boolean, label: Int, onChange: (Boolean) -> Unit) {
+    Row(Modifier.fillMaxWidth().heightIn(min = 56.dp)
+        .androidxToggleable(checked, onChange), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Column(Modifier.weight(1f)) { Text(stringResource(label), style = MaterialTheme.typography.bodyMedium) }
+        Switch(checked, onCheckedChange = null)
+    }
+}
+
+private fun Modifier.androidxToggleable(value: Boolean, onChange: (Boolean) -> Unit): Modifier =
+    this.then(Modifier.toggleable(value, role = androidx.compose.ui.semantics.Role.Switch, onValueChange = onChange))
 
 @Composable
 internal fun QueueControls(task: DownloadTask) {

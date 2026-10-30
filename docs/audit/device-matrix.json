@@ -1,0 +1,55 @@
+{
+  "run": "https://github.com/taroq4-2/dosos73/actions/runs/41006565578",
+  "application_commit": "fe09629",
+  "scope": "x86_64 emulators, shared Python packaging, upstream FFmpeg in CI; separately tested compact signed Release on API35",
+  "results": [
+    {
+      "api": 29,
+      "passed": 58,
+      "skipped": 6,
+      "failures": 0
+    },
+    {
+      "api": 30,
+      "passed": 58,
+      "skipped": 6,
+      "failures": 0
+    },
+    {
+      "api": 31,
+      "passed": 59,
+      "skipped": 5,
+      "failures": 0
+    },
+    {
+      "api": 32,
+      "passed": 59,
+      "skipped": 5,
+      "failures": 0
+    },
+    {
+      "api": 33,
+      "passed": 59,
+      "skipped": 5,
+      "failures": 0
+    },
+    {
+      "api": 34,
+      "passed": 59,
+      "skipped": 5,
+      "failures": 0
+    },
+    {
+      "api": 35,
+      "passed": 59,
+      "skipped": 5,
+      "failures": 0
+    },
+    {
+      "api": 36,
+      "passed": 59,
+      "skipped": 5,
+      "failures": 0
+    }
+  ]
+}

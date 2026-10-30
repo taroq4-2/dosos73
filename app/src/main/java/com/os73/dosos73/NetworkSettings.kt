@@ -17,6 +17,15 @@ internal object NetworkSettings {
         check(prefs(context).edit().putBoolean("parallel_connections", value).commit())
     }
 
+    fun allowCleartext(context: Context) = prefs(context).getBoolean("allow_cleartext", false)
+    fun setAllowCleartext(context: Context, value: Boolean) {
+        check(prefs(context).edit().putBoolean("allow_cleartext", value).commit())
+    }
+    fun requireSource(context: Context, url: String) {
+        if (!url.startsWith("https:", true) && !allowCleartext(context))
+            throw PipelineException(Stage.TRANSFER, FailureCode.CLEARTEXT_DISABLED)
+    }
+
     fun wifiOnly(context: Context) = prefs(context).getBoolean("wifi_only", false)
 
     fun unmeteredOnly(context: Context) = prefs(context).getBoolean("unmetered_only", false)
@@ -45,14 +54,12 @@ internal object NetworkSettings {
     }
 
     fun client(context: Context, network: Network): okhttp3.OkHttpClient =
-        DirectDownloader.secureClient().newBuilder()
+        DirectDownloader.secureClient { allowCleartext(context) }.newBuilder()
             .socketFactory(network.socketFactory)
             .dns(object : okhttp3.Dns {
                 override fun lookup(hostname: String): List<java.net.InetAddress> {
                 if (!permitted(context, network)) throw java.net.UnknownHostException("Network policy unavailable")
-                return network.getAllByName(hostname).toList().also {
-                    require(it.isNotEmpty() && it.all(Safety::publicAddress)) { "Non-public network address" }
-                }
+                return Safety.checkedAddresses(network.getAllByName(hostname).toList())
                 }
             })
             .addInterceptor { chain ->

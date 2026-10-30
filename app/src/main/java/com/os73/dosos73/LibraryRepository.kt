@@ -17,8 +17,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
-import org.json.JSONArray
-import org.json.JSONObject
 
 /** Only app-owned MediaStore rows and explicitly published document URIs are indexed. */
 data class SavedFile(
@@ -52,47 +50,46 @@ internal object LibraryRepository {
     private fun index(context: Context) = AtomicFile(File(context.filesDir, "saved-files.json"))
 
     private fun read(context: Context): List<SavedFile> {
-        val text =
-            try {
-                index(context).openRead().bufferedReader().use { it.readText() }
-            } catch (_: java.io.FileNotFoundException) {
-                return emptyList()
+        val input = try { index(context).openRead() }
+            catch (_: java.io.FileNotFoundException) { return emptyList() }
+        return android.util.JsonReader(input.reader(Charsets.UTF_8)).use { reader ->
+            val files = ArrayList<SavedFile>()
+            reader.beginArray()
+            while (reader.hasNext()) {
+                var uri: String? = null; var name: String? = null; var mime: String? = null
+                var bytes: Long? = null; var date: Long? = null
+                reader.beginObject()
+                while (reader.hasNext()) when (reader.nextName()) {
+                    "uri" -> uri = reader.nextString()
+                    "name" -> name = reader.nextString()
+                    "mime" -> mime = reader.nextString()
+                    "bytes" -> bytes = reader.nextLong()
+                    "date" -> date = reader.nextLong()
+                    else -> reader.skipValue()
+                }
+                reader.endObject()
+                files.add(SavedFile(requireNotNull(uri), requireNotNull(name), requireNotNull(mime),
+                    requireNotNull(bytes), requireNotNull(date)))
             }
-        val array = JSONArray(text)
-        return (0 until array.length()).map { i ->
-            array.getJSONObject(i).let {
-                SavedFile(
-                    it.getString("uri"),
-                    it.getString("name"),
-                    it.getString("mime"),
-                    it.getLong("bytes"),
-                    it.getLong("date"),
-                )
-            }
+            reader.endArray()
+            require(reader.peek() == android.util.JsonToken.END_DOCUMENT)
+            files
         }
     }
 
     private fun write(context: Context, files: List<SavedFile>) {
-        val array = JSONArray()
-        files.forEach {
-            array.put(
-                JSONObject()
-                    .put("uri", it.uri)
-                    .put("name", it.name)
-                    .put("mime", it.mime)
-                    .put("bytes", it.bytes)
-                    .put("date", it.date)
-            )
-        }
         val atomic = index(context)
         val output = atomic.startWrite()
         try {
-            output.write(array.toString().toByteArray())
+            val writer = android.util.JsonWriter(output.writer(Charsets.UTF_8))
+            writer.beginArray()
+            files.forEach {
+                writer.beginObject().name("uri").value(it.uri).name("name").value(it.name)
+                    .name("mime").value(it.mime).name("bytes").value(it.bytes).name("date").value(it.date).endObject()
+            }
+            writer.endArray(); writer.flush()
             atomic.finishWrite(output)
-        } catch (error: Exception) {
-            atomic.failWrite(output)
-            throw error
-        }
+        } catch (error: Exception) { atomic.failWrite(output); throw error }
     }
 
     suspend fun refresh(context: Context) =
@@ -131,7 +128,7 @@ internal object LibraryRepository {
                         )
                     }
                 val next = (discovered + saved).distinctBy { it.uri }.sortedByDescending { it.date }
-                write(context, next)
+                if (next != saved) write(context, next)
                 mutable.value = next
             }
         }
@@ -153,12 +150,7 @@ internal object LibraryRepository {
     suspend fun rename(context: Context, item: SavedFile, title: String) =
         withContext(Dispatchers.IO) {
             lock.withLock {
-                val clean = title.trim()
-                require(
-                    clean.isNotEmpty() &&
-                        clean.length <= 180 &&
-                        clean.none { it == '/' || it == '\\' || it.isISOControl() }
-                )
+                val clean = Safety.requireFilename(title)
                 val uri = Uri.parse(item.uri)
                 val newUri =
                     if (uri.authority == MediaStore.AUTHORITY) {
@@ -174,13 +166,13 @@ internal object LibraryRepository {
                         )
                         uri
                     } else {
-                        val document =
-                            DocumentFile.fromSingleUri(context, uri)
-                                ?: error("Document unavailable")
-                        check(document.renameTo(clean))
-                        document.uri
+                        android.provider.DocumentsContract.renameDocument(context.contentResolver, uri, clean)
+                            ?: error("Document rename unavailable")
                     }
-                val changed = item.copy(uri = newUri.toString(), name = clean)
+                val actualName = context.contentResolver.query(newUri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)
+                    ?.use { if (it.moveToFirst()) it.getString(0) else null } ?: clean
+                val changed = item.copy(uri = newUri.toString(), name = actualName)
+                LibraryPreferences.migrateUri(context, item.uri, newUri.toString())
                 val next = mutable.value.map { if (it.uri == item.uri) changed else it }
                 write(context, next)
                 mutable.value = next

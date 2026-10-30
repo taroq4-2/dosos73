@@ -4,6 +4,8 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <!-- Cleartext is needed for the authenticated loopback CONNECT proxy and explicit HTTP
+         file opt-in. NetworkSettings/secureClient reject public HTTP by default. -->
     <application android:name=".DososApp" android:allowBackup="false" android:dataExtractionRules="@xml/data_extraction_rules"
         android:label="@string/brand_name" android:icon="@mipmap/ic_launcher"
         android:roundIcon="@mipmap/ic_launcher" android:localeConfig="@xml/locales_config"

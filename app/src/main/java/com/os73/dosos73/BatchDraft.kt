@@ -48,11 +48,10 @@ internal class BatchDraft(context: Context) {
             var header: JSONObject? = null
             row.analysis?.let { analysis ->
                 require(analysis.choices.size <= 1000)
-                analysis.choices.forEach { choice ->
-                    val task = DownloadQueue.encodeTask(DownloadTask(analysis, choice, null))
-                    formats.put(task.getJSONObject("choice"))
-                    if (header == null) { task.remove("choice"); header = task }
+                analysis.choices.firstOrNull()?.let { first ->
+                    header = DownloadQueue.encodeTask(DownloadTask(analysis, first, null)).apply { remove("choice") }
                 }
+                analysis.choices.forEach { formats.put(DownloadQueue.encodeChoice(it)) }
             }
             array.put(JSONObject().put("raw", row.raw).put("url", row.url)
                 .put("selected", row.selected).put("formats", formats).put("analysis", header)

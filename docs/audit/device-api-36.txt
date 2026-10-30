@@ -1,0 +1,35 @@
+
+com.os73.dosos73.AppResourcesTest:...
+com.os73.dosos73.BatchChoiceUiTest:....
+com.os73.dosos73.BatchDraftTest:..
+com.os73.dosos73.ClipboardInputTest:....
+com.os73.dosos73.ConcurrentJournalTest:.
+com.os73.dosos73.FileAccessTest:..
+com.os73.dosos73.FileAccessUiTest:.
+com.os73.dosos73.LibraryQueueTest:.......
+com.os73.dosos73.LibraryStreamingTest:..
+com.os73.dosos73.LiveDownloadTest:
+com.os73.dosos73.LiveDownloadTest:
+com.os73.dosos73.Mp3EncodingTest:.
+com.os73.dosos73.NativeCancellationTest:.
+com.os73.dosos73.NativeTransportComparisonTest:
+com.os73.dosos73.NativeTransportComparisonTest:
+com.os73.dosos73.OutputSafetyTest:..........
+com.os73.dosos73.PrivateJournalTest:.
+com.os73.dosos73.ProxyTransportTest:
+com.os73.dosos73.ProxyTransportTest:
+com.os73.dosos73.PublicationRecoveryTest:.......
+com.os73.dosos73.RotationStateTest:.
+com.os73.dosos73.RuntimeInventoryTest:.
+com.os73.dosos73.ServiceQueueTest:.
+com.os73.dosos73.SharedRuntimeTest:.
+com.os73.dosos73.TaskTimelineTest:...
+com.os73.dosos73.TlsVersionTest:
+com.os73.dosos73.TlsVersionTest:
+com.os73.dosos73.UiFlowTest:......
+
+Time: 38.919
+
+OK (64 tests)
+
+

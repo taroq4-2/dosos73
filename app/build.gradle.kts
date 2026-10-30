@@ -1,3 +1,5 @@
+import java.security.MessageDigest
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -10,8 +12,8 @@ android {
         applicationId = "com.os73.dosos73"
         minSdk = 29
         targetSdk = 35
-        versionCode = 10
-        versionName = "1.2.0-rc.4"
+        versionCode = 11
+        versionName = "1.2.0-rc.5"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         val supportedAbis = listOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
         val selectedAbi = providers.gradleProperty("targetAbi").orNull
@@ -92,3 +94,27 @@ val verifyTranslations by tasks.registering {
     }
 }
 tasks.named("preBuild") { dependsOn(verifyTranslations) }
+
+
+// Build evidence only; this inventory is never packaged in the APK.
+tasks.register("exportRuntimeInventory") {
+    val runtime = configurations.named("releaseRuntimeClasspath")
+    val report = layout.buildDirectory.file("reports/audit/runtime-components.json")
+    outputs.file(report)
+    inputs.files(runtime)
+    doLast {
+        val components = runtime.get().resolvedConfiguration.resolvedArtifacts.map { artifact ->
+            val digest = MessageDigest.getInstance("SHA-256")
+            artifact.file.inputStream().use { input ->
+                val buffer = ByteArray(65536)
+                while (true) { val count = input.read(buffer); if (count < 0) break; digest.update(buffer, 0, count) }
+            }
+            mapOf("group" to artifact.moduleVersion.id.group, "name" to artifact.name,
+                "version" to artifact.moduleVersion.id.version, "type" to artifact.extension,
+                "file" to artifact.file.name, "sha256" to digest.digest().joinToString("") { "%02x".format(it) })
+        }.sortedBy { "${it["group"]}:${it["name"]}:${it["version"]}" }
+        val destination = report.get().asFile
+        destination.parentFile.mkdirs()
+        destination.writeText(groovy.json.JsonOutput.prettyPrint(groovy.json.JsonOutput.toJson(components)) + "\n")
+    }
+}

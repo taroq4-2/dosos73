@@ -56,6 +56,7 @@ internal fun SavedFileRow(
     var menu by remember { mutableStateOf(false) }
     val context = LocalContext.current
     val locale = LocalConfiguration.current.locales[0]
+    val dateFormat = remember(locale) { DateFormat.getDateInstance(DateFormat.SHORT, locale) }
     var bitmap by remember(item.uri, item.date) { mutableStateOf<android.graphics.Bitmap?>(null) }
     var availability by remember(item.uri) { mutableStateOf<FileAvailability?>(null) }
     val lifecycle = androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
@@ -123,8 +124,7 @@ internal fun SavedFileRow(
                 Text(
                     bytesLabel(item.bytes, locale) +
                         "  •  " +
-                        DateFormat.getDateInstance(DateFormat.SHORT, locale)
-                            .format(Date(item.date)),
+                        dateFormat.format(Date(item.date)),
                     style = MaterialTheme.typography.labelSmall,
                     color = Neon.Secondary,
                 )
@@ -222,14 +222,10 @@ internal fun FileLibraryScreen(
     val context = LocalContext.current
     var selectedCollection by rememberSaveable { mutableStateOf("") }
     var largeOnly by rememberSaveable { mutableStateOf(false) }
-    val collections =
-        files
-            .map { LibraryPreferences.collection(context, it.uri) }
-            .filter { it.isNotBlank() }
-            .distinct()
-            .sorted()
+    val memberships = remember(files) { LibraryPreferences.collections(context) }
+    val collections = remember(memberships) { memberships.values.distinct().sorted() }
     val filtered =
-        remember(files, query, category, sort, ascending, selectedCollection, largeOnly) {
+        remember(files, query, category, sort, ascending, selectedCollection, largeOnly, memberships) {
             val rows =
                 files.filter {
                     (category == 0 ||
@@ -238,7 +234,7 @@ internal fun FileLibraryScreen(
                         (it.name.contains(query, true) || it.mime.contains(query, true)) &&
                         (!largeOnly || it.bytes >= 100L * 1024 * 1024) &&
                         (selectedCollection.isEmpty() ||
-                            LibraryPreferences.collection(context, it.uri) == selectedCollection)
+                            memberships[it.uri] == selectedCollection)
                 }
             val comparator =
                 when (sort) {

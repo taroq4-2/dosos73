@@ -96,6 +96,19 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     private val media = MediaEngine(app)
 
+    private suspend fun analyzeSource(url: String): Analysis = withTimeout(120_000) {
+        val app = getApplication<Application>()
+        NetworkSettings.requireSource(app, url)
+        val downloader = directForNetwork()
+        val candidate = try { downloader.analyze(url) }
+        catch (error: java.io.IOException) {
+            currentCoroutineContext().ensureActive()
+            if (!url.startsWith("https://")) throw error
+            null
+        }
+        candidate ?: media.analyze(url)
+    }
+
     fun edit(url: String) {
         if (mutable.value.busy || batchBusyMutable.value) return
         mutable.value = ScreenState(url.take(8192))
@@ -191,18 +204,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                         val result =
                             try {
                                 val analysis =
-                                    withTimeout(120_000) {
-                                        val downloader = directForNetwork()
-                                        val directResult =
-                                            try {
-                                                downloader.analyze(entry.url)
-                                            } catch (error: java.io.IOException) {
-                                                currentCoroutineContext().ensureActive()
-                                                if (!entry.url.startsWith("https://")) throw error
-                                                null
-                                            }
-                                        directResult ?: media.analyze(entry.url)
-                                    }
+                                    analyzeSource(entry.url)
                                 entry.copy(analysis = analysis, error = null, choice = analysis.choices.firstOrNull())
                             } catch (error: TimeoutCancellationException) {
                                 direct.cancel()
@@ -272,18 +274,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             viewModelScope.launch {
                 try {
                     val analysis =
-                        withTimeout(120_000) {
-                            val downloader = directForNetwork()
-                            val directResult =
-                                try {
-                                    downloader.analyze(url)
-                                } catch (error: java.io.IOException) {
-                                    currentCoroutineContext().ensureActive()
-                                    if (!url.startsWith("https://")) throw error
-                                    null
-                                }
-                            directResult ?: media.analyze(url)
-                        }
+                        analyzeSource(url)
                     mutable.value =
                         ScreenState(
                             url,

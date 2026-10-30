@@ -1,7 +1,7 @@
 <resources>
     <style name="AppTheme" parent="BaseAppTheme">
-        <item name="android:windowSplashScreenBackground">#030817</item>
+        <item name="android:windowSplashScreenBackground">#070F1E</item>
         <item name="android:windowSplashScreenAnimatedIcon">@drawable/ic_brand_neon</item>
-        <item name="android:windowSplashScreenIconBackgroundColor">#030817</item>
+        <item name="android:windowSplashScreenIconBackgroundColor">#070F1E</item>
     </style>
 </resources>

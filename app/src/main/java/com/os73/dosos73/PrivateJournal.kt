@@ -17,8 +17,13 @@ import javax.crypto.spec.GCMParameterSpec
 internal class PrivateJournal(context: Context, name: String) {
     private val file = AtomicFile(File(context.filesDir, name))
     private val binding = name.toByteArray(Charsets.UTF_8)
+    // AtomicFile protects commits, not concurrent readers/writers. A bounded stripe
+    // is shared by every instance for this canonical path, with no per-task map growth.
+    private val monitor = FILE_LOCKS[(file.baseFile.canonicalPath.hashCode() and Int.MAX_VALUE) % FILE_LOCKS.size]
 
-    fun readOrNull(): String? {
+    fun readOrNull(): String? = synchronized(monitor) { readLocked() }
+
+    private fun readLocked(): String? {
         val bytes =
             try {
                 file.openRead().use { it.readBytes() }
@@ -42,7 +47,9 @@ internal class PrivateJournal(context: Context, name: String) {
         }
     }
 
-    fun write(text: String) {
+    fun write(text: String) = synchronized(monitor) { writeLocked(text) }
+
+    private fun writeLocked(text: String) {
         val cipher = Cipher.getInstance("AES/GCM/NoPadding")
         cipher.init(Cipher.ENCRYPT_MODE, key())
         cipher.updateAAD(binding)
@@ -58,6 +65,7 @@ internal class PrivateJournal(context: Context, name: String) {
     }
 
     companion object {
+        private val FILE_LOCKS = Array(64) { Any() }
         private val MAGIC = byteArrayOf(68, 55, 51, 1)
         private const val ALIAS = "dosos73.private-journal.v1"
 
