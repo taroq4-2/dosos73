@@ -5,6 +5,9 @@ on:
     tags: ['v*']
   pull_request:
   workflow_dispatch:
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.head.ref || github.ref_name }}
+  cancel-in-progress: true
 permissions:
   contents: read
 jobs:
@@ -73,7 +76,7 @@ jobs:
             adb install -t /tmp/shared-tests.apk
             mkdir -p app/build/reports/shared-device
             adb shell am instrument -w com.os73.dosos73.test/androidx.test.runner.AndroidJUnitRunner | tee app/build/reports/shared-device/instrumentation.txt
-            test "$(tail -n 6 app/build/reports/shared-device/instrumentation.txt | tr -d '\r' | rg '^OK \([0-9]+ tests?\)$')" != ""
+            test "$(tail -n 6 app/build/reports/shared-device/instrumentation.txt | tr -d '\r' | grep -E '^OK \([0-9]+ tests?\)$')" != ""
       - uses: actions/upload-artifact@v4
         if: always()
         with:
