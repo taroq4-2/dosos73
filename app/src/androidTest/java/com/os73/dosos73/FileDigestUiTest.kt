@@ -48,6 +48,9 @@ class FileDigestUiTest {
             do {
                 scenario.onActivity { activity ->
                     val vm = androidx.lifecycle.ViewModelProvider(activity)[MainViewModel::class.java]
+                    // A share arriving during cold draft restoration is intentionally
+                    // retained for explicit acceptance rather than interrupting the draft.
+                    if (!vm.batchSaving.value && !vm.batchStorageError.value) vm.acceptPending()
                     error.set(vm.state.value.error)
                     assertFalse(activity.intent.hasExtra(Intent.EXTRA_TEXT))
                 }
