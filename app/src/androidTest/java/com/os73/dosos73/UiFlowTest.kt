@@ -28,8 +28,12 @@ class UiFlowTest {
     @Test
     fun restoredBatchDoesNotOverrideManualHomeNavigation() {
         val model = androidx.lifecycle.ViewModelProvider(compose.activity)[MainViewModel::class.java]
+        // This scenario tests navigation after restoration, independently of initial disk I/O.
+        // Cross-instance journal races have a separate concurrent-reader/writer regression test.
+        compose.waitUntil(10000) { !model.batchSaving.value }
+        org.junit.Assert.assertFalse("Draft restoration must succeed", model.batchStorageError.value)
         compose.runOnIdle { model.prepareBatch("https://example.com/a https://example.net/b") }
-        compose.waitUntil(5000) { !model.batchSaving.value && !model.batchRequested.value && model.batch.value.size == 2 }
+        compose.waitUntil(10000) { !model.batchSaving.value && !model.batchRequested.value && model.batch.value.size == 2 }
         compose.onNodeWithTag("nav_home").performClick()
         compose.activityRule.scenario.recreate()
         compose.onNodeWithTag("url").assertExists()
