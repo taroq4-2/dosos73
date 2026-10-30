@@ -1,59 +1,46 @@
-# RC4 verification / التحقق من RC4
+# RC5 verification / التحقق من RC5
 
-**Date / التاريخ:** 2026-10-29
-**Artifact / الملف:** `dosos73-1.2.0-rc.4-universal.apk`
-**Application source / مصدر التطبيق:** `162b2be29abe422b455d3cb9f50f523c29d59d16`
-Documentation and screenshots were refreshed afterward without application-code changes.
+Date: **2026-10-30**. Application code: **fe09629**; subsequent commits change documentation and screenshots only.
 
 | Property | Verified value |
 |---|---|
-| Bytes | 72,758,008 (72.76 MB; 69.39 MiB) |
-| SHA-256 | `b4da6a414cd3ec47db66f789a10e3a19b31ac5d1f3bf11a479d6dd7d3a32e7f1` |
-| Signing certificate SHA-256 | `bf0bcb1ba4d282b2e38f75be6220ad4b06902f96b47bbe68d67a51bfeb6e0ca9` |
-| Package | `com.os73.dosos73` |
-| Version | `1.2.0-rc.4` / code `10` |
-| Android | min API29; target API35 |
-| Native architectures | armeabi-v7a, arm64-v8a, x86, x86_64 |
-| Release safety | Minified release; debug fault-injection provider absent |
+| Artifact | `dosos73-1.2.0-rc.5-universal.apk` |
+| Bytes | **61,944,601** (61.94 MB; 59.07 MiB) |
+| SHA-256 | `8d5e740f09d8a60becc74c202738699c27029458184d86680b0016cfb0cc31eb` |
+| Certificate SHA-256 | `bf0bcb1ba4d282b2e38f75be6220ad4b06902f96b47bbe68d67a51bfeb6e0ca9` |
+| Package/version | `com.os73.dosos73`, **1.2.0-rc.5 / 11** |
+| Support | Android10+, min API29, target35; four CPU architectures in one APK |
+| Release properties | R8 minified/resource shrunk; DEBUGGABLE absent; backup disabled; debug fault provider absent; APK v3 signature verified |
 
-## Automated source checks
+## Source and runtime checks
 
-- 62 JVM tests, Android lint and release assembly passed locally.
-- Full local API35 x86_64 instrumentation: OK (58 tests); optional live network tests are separate.
-- GitHub build plus device suites on APIs **29, 33, 35 and 36** all succeeded for the exact application commit: [run 40945911520](https://github.com/taroq4-2/dosos73/actions/runs/40945911520).
-- Compact FFmpeg/LAME native build succeeded for all four ABIs: [run 40928395879](https://github.com/taroq4-2/dosos73/actions/runs/40928395879). Native source/build recipe is unchanged in RC4.
-- ELF scan covered 608 files, including nested native archives: zero 64-bit PT_LOAD 16KB alignment/congruence failures. 286 smaller-aligned 32-bit entries are informational. This is not physical 16KB-device certification.
+- 72 JVM cases passed, zero failures/errors/skips; debug/release lint and builds passed.
+- Local Android15 compact instrumentation: `OK (64 tests)` = **59 executed passes and 5 opt-in network cases skipped**.
+- [CI41006565578](https://github.com/taroq4-2/dosos73/actions/runs/41006565578): build and APIs29,30,31,32,33,34,35,36 passed. APIs29/30:58 passes +6 skips each; APIs31–36:59 passes +5 skips each. The additional old-API skip concerns an Android12 resource.
+- CI uses actual shared Python packaging with upstream FFmpeg. The compact signed Release is accepted separately on API35 x86_64. These are emulator results, not all-device or all-ABI runtime certification.
+- 642 shared regular Python files: all restored bytes/modes verified. Reconstruction of each ABI reproduces its original runtime file set, contents and attributes. Per-ABI symlinks stay in their original ZIPs. Partial-install recovery and idempotence passed.
+- All608 native ELF payloads equal RC4 by SHA-256. Zero64-bit PT_LOAD16KB alignment/congruence failures;286 smaller-aligned32-bit entries remain informational. No physical16KB-page device was tested.
+- CycloneDX1.6 SBOM validates against the official schema, with unique component references and the exact APK hash. Maven coordinate lookup returned zero OSV advisories at query time; native/Python coverage is explicitly outside that lookup.
 
-## Signed release acceptance on API35 x86_64
+## Signed Release acceptance
 
-| Scenario | Observed result |
-|---|---|
-| Official stable setup | Published 1.1.2 x86_64 installed on an independent fresh AVD; signature and published checksum matched. English selected in Settings. |
-| Real file before update | Downloaded the W3C Sintel trailer, 4,372,373 bytes; SHA-256 matched reference below. |
-| Update to RC4 | Signed universal APK installed with replacement, without uninstalling or clearing data. Version code 10 confirmed. |
-| Preservation | English setting, prior library entry and saved file retained; prior file SHA-256 unchanged. |
-| New download after update | New W3C file published and indexed; 4,372,373 bytes and the same reference SHA-256. |
-| Local playback | App preview rendered frames; platform player reported H264 video 854×480 and AAC audio. |
-| Fresh app state | RC4 opened in an independently created Android test profile with no prior app data. This is a fresh-profile check, not a separate APK uninstall/reinstall test. |
-| YouTube analysis | Public video oexYI9IGKkM analyzed after fresh-profile native initialization; actual choices through 2160p displayed. |
-| YouTube transfer | Selected MP4 720p completed, about 29.39 MiB. Preview reported VP9 1280×720 plus AAC audio and rendered frames. |
-| YouTube MP3 | Completed real MP3 V0 output, about 7.45 MiB; app playback reported audio/mpeg and c2.android.mp3.decoder. Foreground service list was empty after completion. |
-| Public release re-download | Downloaded the APK from the public RC4 release URL; all 72,758,008 bytes and SHA-256 matched. Installed that downloaded file as an update, opened the app and rechecked the preserved trailer hash. |
-| Crash log | No AndroidRuntime crash in the observed release acceptance steps. |
+An independent emulator and test profiles were used; existing profiles/data were not cleared.
 
-W3C fixture: https://media.w3.org/2010/05/sintel/trailer.mp4
-SHA-256: `b670602fa00934ca27c4351bb0efe7ea7a07fae57284e44226025eeed7c51254`.
+- A fresh-profile candidate initialized its bundled runtime, analyzed the user's YouTube link, downloaded and played a720p video and genuine MP3. Direct W3C trailer bytes matched their independent reference.
+- The final APK additionally downloaded and saved a **3840×2160 YouTube video,353,323,072bytes**, and an MP3 of7,809,318bytes. This confirms a real large-file path; it is not a universal website guarantee.
+- Final4K SHA-256: `974b52f153dbd510dfabbef2d39febe2a316ccddee0615ace0dc675bb46f3517`.
+- Final MP3 SHA-256: `bba662231ad690482a525892f95916b988a7d218e16ec724b8d221bb31543ddb`.
+- Prior720p SHA-256: `8be0a7bf298a7ac0ee2dea26713a4fca8d8465513779655132ae9d9f974eb4b6` (30,812,514bytes).
+- Direct trailer SHA-256: `b670602fa00934ca27c4351bb0efe7ea7a07fae57284e44226025eeed7c51254` (4,372,373bytes).
+- Screenshot review covered Arabic/English, portrait, landscape and200% text. The short-screen header keeps link controls visible. Font/orientation settings were restored afterward.
+- Same-certificate updates retained the existing profiles, language/library data and saved media. The public redownload receipt is supplied as `PUBLIC-DOWNLOAD-VERIFICATION.json` in the release assets after publication.
 
-## Recovery and safety evidence
+## Evidence and limits / الأدلة والحدود
 
-- Direct-transfer process kill and separate emulator reboot/user relaunch tests produced one final file per task, reference hash preserved and private staging cleared. These earlier source-increment tests did not capture whether the origin answered 206; do not infer byte-range reuse from completion alone.
-- Publication fault injection covers the create-before-URI-record gap, changed SAF rename URI after reported failure, rejected rename, unknown reported size, denied read/query, modified verified output and unverified temporary cleanup. See [publication recovery](PUBLICATION_RECOVERY.md).
-- Timeline encryption, bounded retention, safe field set and tamper preservation tested. A live direct transfer asserted its durable stage events; [details](TASK_TIMELINE.md).
-- Missing local file, denied access and unknown/unavailable provider states tested; metadata-only removal rechecks absence and preserves content; [details](FILE_AVAILABILITY.md).
-- Batch review persistence survives an actual process kill without auto-enqueue; independent choices and retry state have regression coverage.
+[30-item Arabic audit](audit/REVIEW_2026-10-30.md) · [Mind map](REPOSITORY_MAP.md) · [Machine-readable evidence](audit/artifact-static.json) · [Raw device outputs](audit/device-matrix.json).
 
-## Scope / النطاق
+The APK is smaller without removing ABI/native payloads or adding a first-use engine download. Small startup/memory samples do not establish better battery or memory use; PSS/RSS results are mixed and retained in the audit. Physical Samsung/power-saving/network handover/real ENOSPC, exhaustive SAF-provider coverage and full transitive native-source/license correspondence remain open. TalkBack was not certified on a physical device. OS scheduling, multiple active files and subtitle selection remain in [the requirements ledger](REMAINING_REQUIREMENTS.md).
 
-هذه أدلة للملف والمسارات المذكورة، وليست ضمانًا لكل الأجهزة أو المواقع أو الترميزات. RC4 إصدار مرشّح؛ لا تُعد البنود المتبقية مكتملة لمجرد نجاح البناء. راجع [قائمة المتبقي](REMAINING_REQUIREMENTS.md).
+The unavailable `BaW_jenozKc` fixture timed out and was not counted as success. Earlier CI setup/result-gate failures and one transient draft-navigation test failure were corrected and followed by a successful full matrix; details are retained in the audit.
 
-Physical Samsung/OEM power behavior, cellular/Wi-Fi transitions, all ARM runtimes/codecs, 16KB runtime, native process cancellation race, scheduling, multiple active files and subtitle sidecars remain open. No permanent watchdog, cloud extraction engine or first-paste runtime download was added.
+[Historical RC4 evidence](https://github.com/taroq4-2/dosos73/blob/42c911ec47369113b872c896e1656e5579eba113/docs/VERIFICATION.md) remains available in Git history.

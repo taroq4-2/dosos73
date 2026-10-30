@@ -1,0 +1,20 @@
+{
+  "apk_bytes": 61944601,
+  "rc4_bytes": 72758008,
+  "identical_elf_files": 608,
+  "native_compressed_bytes_by_abi": {
+    "armeabi-v7a": 11905393,
+    "arm64-v8a": 13489896,
+    "x86": 13315246,
+    "x86_64": 13631929
+  },
+  "size_scope": "ZIP compressed entry contributions only; ZIP/signature overhead and shared application assets are not included per ABI. Only one universal APK is published.",
+  "jvm": {
+    "tests": 72,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "apk_sha256": "8d5e740f09d8a60becc74c202738699c27029458184d86680b0016cfb0cc31eb",
+  "application_commit": "fe09629"
+}

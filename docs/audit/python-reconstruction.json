@@ -1,0 +1,11 @@
+{
+  "shared_files": 642,
+  "common_sha256": "0935e6b8cf18ad468c575f2f3621343aea9050ae3162d5e08e9c8e8c15e224fb",
+  "common_raw_bytes": 10117385,
+  "reconstruction": {
+    "armeabi-v7a": "all file bytes and POSIX attributes identical",
+    "arm64-v8a": "all file bytes and POSIX attributes identical",
+    "x86": "all file bytes and POSIX attributes identical",
+    "x86_64": "all file bytes and POSIX attributes identical"
+  }
+}

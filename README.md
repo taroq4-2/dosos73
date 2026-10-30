@@ -8,24 +8,24 @@
 
 An open-source Android media downloader with an Arabic-first interface and English support.
 
-[Download universal APK](https://github.com/taroq4-2/dosos73/releases/download/v1.2.0-rc.4/dosos73-1.2.0-rc.4-universal.apk) · [Releases](https://github.com/taroq4-2/dosos73/releases) · [العربية](README-ar.md)
+[Download universal APK](https://github.com/taroq4-2/dosos73/releases/download/v1.2.0-rc.5/dosos73-1.2.0-rc.5-universal.apk) · [Releases](https://github.com/taroq4-2/dosos73/releases) · [العربية](README-ar.md)
 </div>
 
 ## Download and compatibility
 
-**1.2.0-rc.4** is a release candidate delivered as **one APK for Android 10+**, containing ARM32, ARM64, x86 and x86_64. No phone-specific package selection is required. Published checksums identify the exact artifact.
+**1.2.0-rc.5** is a release candidate delivered as **one APK for Android 10+**, containing ARM32, ARM64, x86 and x86_64. No phone-specific package selection is required. Published checksums identify the exact artifact.
 
 Official updates retain the existing signing certificate. Allow installation from your chosen browser/file manager when Android requests it. Pasting a link does not download additional runtime libraries.
 
 | Package | Details |
 |---|---|
-| Current download | **1.2.0-rc.4** · release candidate |
-| APK size | **72.76 MB** (69.39 MiB) |
+| Current download | **1.2.0-rc.5** · release candidate |
+| APK size | **61.94 MB** (59.07 MiB) |
 | Supported Android | **10+** (API 29+) |
 | Architectures | ARM32 · ARM64 · x86 · x86_64, in one file |
 | Audio output | **MP3 V0** |
 
-[SHA-256 checksums](https://github.com/taroq4-2/dosos73/releases/download/v1.2.0-rc.4/SHA256SUMS.txt) · [Verification](docs/VERIFICATION.md) · [Report a bug](https://github.com/taroq4-2/dosos73/issues/new/choose)
+[SHA-256 checksums](https://github.com/taroq4-2/dosos73/releases/download/v1.2.0-rc.5/SHA256SUMS.txt) · [Verification](docs/VERIFICATION.md) · [Report a bug](https://github.com/taroq4-2/dosos73/issues/new/choose)
 
 ## Features
 
@@ -54,13 +54,17 @@ If publication needs recovery, reconnect storage and retry **the same task**. Re
 
 <img src="screenshots/charter-task-timeline-ar.png" width="230" alt="Actual task timeline with a successful transfer and controlled failure cases" />
 
-Home, Downloads, Files and Settings were captured from the signed RC4 APK on an Android 15 emulator. Timeline/batch/privacy captures come from the corresponding instrumentation build; see [image provenance](screenshots/README.md).
+Home, Downloads, Files and Settings are authentic signed RC5 captures on an Android 15 emulator. Timeline/batch/privacy captures retain their documented earlier instrumentation provenance; see [image provenance](screenshots/README.md).
 
 <img src="screenshots/home-en.png" width="230" alt="English Home" /> <img src="screenshots/settings-ar.png" width="230" alt="Arabic Settings" />
 
+## Audit and verification
+
+The [30-item audit](docs/audit/REVIEW_2026-10-30.md) records completed fixes, measurements and unresolved checks. See the [repository mind map](docs/REPOSITORY_MAP.md), [device matrix](docs/audit/device-matrix.json) and release SBOM/source assets. Source checks passed on APIs29–36; physical-device coverage remains separate.
+
 ## Release status
 
-RC4 is a candidate. OS-backed scheduling, multiple active files, subtitle selection and the complete physical-device/provider matrix remain open. Emulator checks do not certify every device, codec or website.
+RC5 is a candidate. OS-backed scheduling, multiple active files, subtitle selection and the complete physical-device/provider matrix remain open. Emulator checks do not certify every device, codec or website.
 
 [Remaining requirements](docs/REMAINING_REQUIREMENTS.md) · [Publication recovery](docs/PUBLICATION_RECOVERY.md) · [Task timeline](docs/TASK_TIMELINE.md) · [File availability](docs/FILE_AVAILABILITY.md)
 
@@ -68,7 +72,7 @@ RC4 is a candidate. OS-backed scheduling, multiple active files, subtitle select
 
 **Why four architectures?** Android runs on different processor families. One universal APK includes the native engines for each, and Android uses the matching set. It is not a separate edition for a phone model.
 
-**Why is the file about 73 MB?** Offline extraction and MP3 conversion require bundled native engines. The compact FFmpeg build reduces their size; libraries are ready when you paste a link. No first-use engine download is required.
+**How did the APK get smaller?** The APK shares 642 identical Python files across its four CPU targets, draws the brand as a vector and removes unnecessary retained code. All 608 native ELF payloads match RC4. Engines remain bundled; no first-use network download is required.
 
 **Can every video be downloaded?** Availability depends on the source. Login, private content, DRM and regional/source restrictions are not bypassed. A source error is shown without marking an incomplete file successful.
 
