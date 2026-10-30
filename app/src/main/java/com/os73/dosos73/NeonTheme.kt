@@ -24,19 +24,19 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 internal object Neon {
-    val Background = Color(0xFF030817)
-    val Surface = Color(0xFF0B1930)
-    val Raised = Color(0xFF102440)
+    val Background = Color(0xFF070F1E)
+    val Surface = Color(0xFF0D1B2E)
+    val Raised = Color(0xFF14263D)
     val Cyan = Color(0xFF19D7F5)
     val Blue = Color(0xFF168BFF)
-    val ActionBlue = Color(0xFF1266DB)
-    val Purple = Color(0xFF812BFF)
+    val ActionBlue = Color(0xFF255CBD)
+    val Purple = Color(0xFF7044D4)
     val Text = Color(0xFFF5F7FF)
     val Secondary = Color(0xFFA7B6D0)
-    val Muted = Color(0xFF7184A5)
-    val Line = Color(0xFF162D49)
-    val Brand = Brush.linearGradient(listOf(Cyan, Blue, Purple))
-    val Radius = RoundedCornerShape(20.dp)
+    val Muted = Color(0xFF8B9DB7)
+    val Line = Color(0xFF263B54)
+    val Brand = Brush.linearGradient(listOf(Cyan, Blue, Color(0xFF812BFF)))
+    val Radius = RoundedCornerShape(18.dp)
 }
 
 @Composable
@@ -59,6 +59,14 @@ internal fun DososTheme(content: @Composable () -> Unit) {
                 onSurfaceVariant = Neon.Secondary,
                 surfaceVariant = Neon.Raised,
                 surfaceContainerHighest = Neon.Raised,
+                surfaceContainer = Neon.Surface,
+                surfaceContainerLow = Neon.Background,
+                surfaceContainerHigh = Neon.Raised,
+                surfaceContainerLowest = Neon.Background,
+                primaryContainer = Neon.Raised,
+                onPrimaryContainer = Neon.Text,
+                secondaryContainer = Neon.Raised,
+                onSecondaryContainer = Neon.Text,
                 outline = Neon.Muted,
                 outlineVariant = Neon.Line,
                 error = Color(0xFFFF647C),
@@ -66,66 +74,48 @@ internal fun DososTheme(content: @Composable () -> Unit) {
         typography =
             Typography(
                 headlineMedium =
-                    TextStyle(fontFamily = family, fontSize = 26.sp, fontWeight = FontWeight.Bold),
+                    TextStyle(fontFamily = family, fontSize = 26.sp, lineHeight = 36.sp, fontWeight = FontWeight.Bold),
                 headlineSmall =
-                    TextStyle(fontFamily = family, fontSize = 22.sp, fontWeight = FontWeight.Bold),
+                    TextStyle(fontFamily = family, fontSize = 22.sp, lineHeight = 32.sp, fontWeight = FontWeight.Bold),
                 labelLarge =
                     TextStyle(
                         fontFamily = family,
-                        fontSize = 14.sp,
+                        fontSize = 14.sp, lineHeight = 22.sp,
                         fontWeight = FontWeight.Medium,
                     ),
                 titleLarge =
-                    TextStyle(fontFamily = family, fontSize = 21.sp, fontWeight = FontWeight.Bold),
+                    TextStyle(fontFamily = family, fontSize = 21.sp, lineHeight = 30.sp, fontWeight = FontWeight.Bold),
                 titleMedium =
                     TextStyle(
                         fontFamily = family,
-                        fontSize = 16.sp,
+                        fontSize = 16.sp, lineHeight = 24.sp,
                         fontWeight = FontWeight.SemiBold,
                     ),
                 titleSmall =
                     TextStyle(
                         fontFamily = family,
-                        fontSize = 14.sp,
+                        fontSize = 14.sp, lineHeight = 22.sp,
                         fontWeight = FontWeight.SemiBold,
                     ),
-                bodyLarge = TextStyle(fontFamily = family, fontSize = 16.sp),
-                bodyMedium = TextStyle(fontFamily = family, fontSize = 14.sp),
-                bodySmall = TextStyle(fontFamily = family, fontSize = 12.sp),
-                labelSmall = TextStyle(fontFamily = family, fontSize = 11.sp),
+                bodyLarge = TextStyle(fontFamily = family, fontSize = 16.sp, lineHeight = 24.sp),
+                bodyMedium = TextStyle(fontFamily = family, fontSize = 14.sp, lineHeight = 22.sp),
+                bodySmall = TextStyle(fontFamily = family, fontSize = 12.sp, lineHeight = 18.sp),
+                labelSmall = TextStyle(fontFamily = family, fontSize = 11.sp, lineHeight = 17.sp),
                 labelMedium =
-                    TextStyle(fontFamily = family, fontSize = 12.sp, fontWeight = FontWeight.Medium),
+                    TextStyle(fontFamily = family, fontSize = 12.sp, lineHeight = 18.sp, fontWeight = FontWeight.Medium),
             ),
         content = content,
     )
 }
 
-/** Share one immutable decoded artwork between headers and the home wordmark. */
-internal object BrandArtwork {
-    @Volatile private var cached: ImageBitmap? = null
-
-    fun get(resources: android.content.res.Resources): ImageBitmap =
-        cached
-            ?: synchronized(this) {
-                cached
-                    ?: ImageBitmap.imageResource(resources, R.drawable.brand_neon).also {
-                        cached = it
-                    }
-            }
-}
-
-/** Render the actual supplied logo asset through a tight source viewport, without redrawing it. */
+/** Uses the same vector geometry as the launcher, with no bitmap allocation. */
 @Composable
 internal fun BrandMark(modifier: Modifier = Modifier) {
-    val art = BrandArtwork.get(androidx.compose.ui.platform.LocalContext.current.resources)
     Canvas(modifier) {
-        drawImage(
-            art,
-            srcOffset = androidx.compose.ui.unit.IntOffset(230, 176),
-            srcSize = androidx.compose.ui.unit.IntSize(708, 487),
-            dstSize = androidx.compose.ui.unit.IntSize(size.width.toInt(), size.height.toInt()),
-            blendMode = BlendMode.Lighten,
-        )
+        scale(size.width / 108f, size.height / 80f, pivot = Offset.Zero) {
+            drawPath(BrandGeometry.body, BrandGeometry.gradient)
+            drawPath(BrandGeometry.details, BrandGeometry.gradient)
+        }
     }
 }
 

@@ -18,6 +18,8 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
@@ -34,13 +36,15 @@ import androidx.compose.ui.unit.sp
 
 @Composable
 internal fun Page(content: @Composable ColumnScope.() -> Unit) {
-    Column(
-        Modifier.fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(horizontal = 20.dp, vertical = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp),
-        content = content,
-    )
+    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
+        Column(
+            Modifier.widthIn(max = 720.dp).fillMaxWidth()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
+            content = content,
+        )
+    }
 }
 
 @Composable
@@ -59,13 +63,13 @@ internal fun Brand(compact: Boolean = false) {
                 Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 8.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                BrandMark(Modifier.size(100.dp, 70.dp))
+                BrandMark(Modifier.size(92.dp, 68.dp))
                 Spacer(Modifier.height(7.dp))
                 Wordmark(36)
                 Spacer(Modifier.height(6.dp))
                 Text(
                     stringResource(R.string.app_name),
-                    fontSize = 10.sp,
+                    fontSize = 10.sp, lineHeight = 15.sp,
                     color = Neon.Secondary,
                     letterSpacing = 0.3.sp,
                 )
@@ -75,16 +79,15 @@ internal fun Brand(compact: Boolean = false) {
 
 @Composable
 private fun Wordmark(size: Int) {
-    val art = BrandArtwork.get(androidx.compose.ui.platform.LocalContext.current.resources)
-    androidx.compose.foundation.Canvas(Modifier.size((size * 4.8f).dp, (size * 1.05f).dp)) {
-        drawImage(
-            art,
-            srcOffset = androidx.compose.ui.unit.IntOffset(207, 710),
-            srcSize = androidx.compose.ui.unit.IntSize(825, 157),
-            dstSize =
-                androidx.compose.ui.unit.IntSize(this.size.width.toInt(), this.size.height.toInt()),
-            blendMode = androidx.compose.ui.graphics.BlendMode.Lighten,
-        )
+    // Brand artwork has a fixed visual size; accessible app text elsewhere still scales normally.
+    val markSize = (size / androidx.compose.ui.platform.LocalDensity.current.fontScale).sp
+    Row(Modifier.clearAndSetSemantics { contentDescription = "dosos73" }) {
+        Text("dosos", modifier = Modifier.alignByBaseline(), color = Neon.Text,
+            fontFamily = androidx.compose.ui.text.font.FontFamily.SansSerif,
+            fontSize = markSize, lineHeight = markSize * 1.2f, fontWeight = FontWeight.ExtraBold, letterSpacing = (-1.2).sp)
+        Text("73", modifier = Modifier.alignByBaseline(),
+            style = TextStyle(brush = Neon.Brand, fontFamily = androidx.compose.ui.text.font.FontFamily.SansSerif,
+                fontSize = markSize, lineHeight = markSize * 1.2f, fontWeight = FontWeight.ExtraBold, letterSpacing = (-1.2).sp))
     }
 }
 
@@ -113,7 +116,7 @@ internal fun GradientButton(
         onClick,
         modifier
             .heightIn(min = 48.dp)
-            .clip(RoundedCornerShape(28.dp))
+            .clip(RoundedCornerShape(18.dp))
             .background(
                 if (enabled) Brush.horizontalGradient(listOf(Neon.ActionBlue, Neon.Purple))
                 else Brush.linearGradient(listOf(Neon.Raised, Neon.Raised))
@@ -389,7 +392,8 @@ internal fun HomeScreen(
                             Modifier.size(49.dp)
                                 .clip(CircleShape)
                                 .background(Neon.Surface)
-                                .clickable { onSource(name) },
+                                .clickable(role = androidx.compose.ui.semantics.Role.Button) { onSource(name) }
+                                .semantics { contentDescription = name },
                             contentAlignment = Alignment.Center,
                         ) {
                             when (name) {
@@ -445,7 +449,7 @@ internal fun HomeScreen(
                             }
                         }
                         Spacer(Modifier.height(7.dp))
-                        Text(name, fontSize = 11.sp)
+                        Text(name, modifier = Modifier.clearAndSetSemantics {}, fontSize = 11.sp, lineHeight = 17.sp)
                     }
                 }
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -455,7 +459,7 @@ internal fun HomeScreen(
                         onSettings,
                         Modifier.background(Neon.Surface, CircleShape),
                     )
-                    Text(stringResource(R.string.more), fontSize = 11.sp)
+                    Text(stringResource(R.string.more), fontSize = 11.sp, lineHeight = 17.sp)
                 }
             }
         }
@@ -554,12 +558,17 @@ internal fun ChoiceMenu(label: String, value: String, items: @Composable (() -> 
     Box {
         OutlinedButton(
             { expanded = true },
-            Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(18.dp),
+            Modifier.fillMaxWidth().heightIn(min = 60.dp),
+            shape = RoundedCornerShape(14.dp),
+            border = androidx.compose.foundation.BorderStroke(1.dp, Neon.Line),
+            colors = ButtonDefaults.outlinedButtonColors(contentColor = Neon.Text),
         ) {
-            Text(label, Modifier.weight(1f))
-            Text(value)
-            Text(stringResource(R.string.dropdown_indicator))
+            Column(Modifier.weight(1f), horizontalAlignment = Alignment.Start,
+                verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(label, style = MaterialTheme.typography.labelSmall, color = Neon.Secondary)
+                Text(value, style = MaterialTheme.typography.bodyMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            }
+            Text(stringResource(R.string.dropdown_indicator), color = Neon.Secondary)
         }
         DropdownMenu(expanded, { expanded = false }) { items { expanded = false } }
     }

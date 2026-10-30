@@ -11,9 +11,7 @@ class RuntimeInventoryTest {
     fun bundledComponentsExecute() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val initializationStart = android.os.SystemClock.elapsedRealtime()
-        BundledEngine.install(context)
-        com.yausername.youtubedl_android.YoutubeDL.init(context)
-        com.yausername.ffmpeg.FFmpeg.getInstance().init(context)
+        EngineRuntime.initialize(context)
         val initializationMs = android.os.SystemClock.elapsedRealtime() - initializationStart
         val native = context.applicationInfo.nativeLibraryDir
         val base = File(context.noBackupFilesDir, "youtubedl-android")

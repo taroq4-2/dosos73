@@ -13,9 +13,7 @@ class NativeTransportComparisonTest {
     fun compareHandlersOnFixedPublicFixture() {
         assumeTrue(InstrumentationRegistry.getArguments().getString("compareTransport") == "true")
         val context = InstrumentationRegistry.getInstrumentation().targetContext
-        BundledEngine.install(context)
-        YoutubeDL.init(context)
-        com.yausername.ffmpeg.FFmpeg.getInstance().init(context)
+        EngineRuntime.initialize(context)
         val report = StringBuilder()
         val dir = File(context.cacheDir, "transport-comparison").apply { mkdirs() }
         try {

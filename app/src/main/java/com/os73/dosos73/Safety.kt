@@ -31,35 +31,46 @@ object Safety {
                 address.isMulticastAddress
         )
             return false
-        val b = address.address.map { it.toInt() and 255 }
-        // RFC 6052 well-known /96 prefix: apply the IPv4 policy to its embedded address.
-        if (b.size == 16 && b.take(12) == listOf(0x00, 0x64, 0xff, 0x9b, 0, 0, 0, 0, 0, 0, 0, 0))
-            return publicAddress(InetAddress.getByAddress(address.address.copyOfRange(12, 16)))
-        return if (b.size == 4) {
-            !(b[0] == 0 ||
-                b[0] == 127 ||
-                b[0] >= 224 ||
-                b[0] == 10 ||
-                (b[0] == 100 && b[1] in 64..127) ||
-                (b[0] == 169 && b[1] == 254) ||
-                (b[0] == 172 && b[1] in 16..31) ||
-                (b[0] == 192 && b[1] == 168) ||
-                (b[0] == 198 && b[1] in 18..19) ||
-                (b[0] == 192 && b[1] == 0) ||
-                (b[0] == 198 && b[1] == 51) ||
-                (b[0] == 203 && b[1] == 0 && b[2] == 113))
-        } else
-            b.size == 16 &&
-                (b[0] and 0xe0) == 0x20 &&
-                !(b[0] == 0x20 && b[1] == 0x01 && b[2] == 0x0d && b[3] == 0xb8) &&
-                !(b[0] == 0x20 && b[1] == 0x02) &&
-                !(b[0] == 0x20 && b[1] == 0x01 && b[2] == 0 && b[3] == 0)
+        val bytes = address.address
+        fun byte(index: Int) = bytes[index].toInt() and 255
+        // RFC6052 translation must apply the IPv4 policy to the embedded destination.
+        if (bytes.size == 16 && NAT64.indices.all { bytes[it] == NAT64[it] })
+            return publicAddress(InetAddress.getByAddress(bytes.copyOfRange(12, 16)))
+        if (bytes.size == 4) {
+            val a = byte(0); val b = byte(1); val c = byte(2); val d = byte(3)
+            return !(a == 0 || a == 127 || a >= 224 || a == 10 ||
+                (a == 100 && b in 64..127) || (a == 169 && b == 254) ||
+                (a == 172 && b in 16..31) || (a == 192 && b == 168) ||
+                (a == 198 && b in 18..19) ||
+                (a == 192 && b == 0 && c == 0 && d !in 9..10) ||
+                (a == 192 && b == 0 && c == 2) ||
+                (a == 198 && b == 51 && c == 100) ||
+                (a == 203 && b == 0 && c == 113))
+        }
+        if (bytes.size != 16 || (byte(0) and 0xe0) != 0x20) return false
+        if (address is java.net.Inet6Address && address.scopeId != 0) return false
+        // IANA special-use/documentation prefixes, plus existing transition exclusions.
+        // https://www.iana.org/assignments/iana-ipv6-special-registry/
+        return !((byte(0) == 0x20 && byte(1) == 0x01 && byte(2) == 0x0d && byte(3) == 0xb8) ||
+            (byte(0) == 0x20 && byte(1) == 0x02) ||
+            (byte(0) == 0x20 && byte(1) == 0x01 && byte(2) == 0 && byte(3) == 0) ||
+            (byte(0) == 0x20 && byte(1) == 0x01 && byte(2) == 0 && byte(3) == 2 && byte(4) == 0 && byte(5) == 0) ||
+            (byte(0) == 0x20 && byte(1) == 0x01 && byte(2) == 0 && (byte(3) and 0xf0) == 0x10) ||
+            (byte(0) == 0x3f && byte(1) == 0xff && (byte(2) and 0xf0) == 0))
     }
 
-    fun resolve(host: String): List<InetAddress> =
-        InetAddress.getAllByName(host).toList().also {
-            require(it.isNotEmpty() && it.all(::publicAddress)) { "Non-public network address" }
-        }
+    private val NAT64 = byteArrayOf(0, 0x64, 0xff.toByte(), 0x9b.toByte(), 0, 0, 0, 0, 0, 0, 0, 0)
+
+    fun checkedAddresses(addresses: List<InetAddress>): List<InetAddress> = addresses.also {
+        require(it.isNotEmpty() && it.all(::publicAddress)) { "Non-public network address" }
+    }
+
+    fun resolve(host: String): List<InetAddress> = checkedAddresses(InetAddress.getAllByName(host).toList())
+
+    fun requireFilename(label: String): String = label.trim().also {
+        require(it.isNotEmpty() && it.length <= 180 && it != "." && it != ".." &&
+            it.none { c -> c == '/' || c == '\\' || c.isISOControl() || Character.getType(c) == Character.FORMAT.toInt() })
+    }
 
     fun filename(title: String, ext: String): String {
         require(ext.matches(Regex("[a-zA-Z0-9]{1,8}")))

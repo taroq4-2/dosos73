@@ -127,7 +127,7 @@
     <string name="language_ar">العربية</string>
     <string name="language_en">English</string>
     <string name="download_behavior">Download behavior</string>
-    <string name="pause_explanation">Direct downloads can pause within the current session. Media-engine downloads can be cancelled and restarted. Interrupted transfers restart from the beginning.</string>
+    <string name="pause_explanation">Direct downloads can pause. After interruption, a verified saved prefix is reused only when the source identity matches; otherwise the file restarts safely. Media-engine downloads restart after interruption.</string>
     <string name="audio_tool_hint">Paste a supported link. Audio formats will be selected when available.</string>
     <string name="source_hint">Paste a public media link in the input above. Available formats depend on the source and may require access that this app does not provide.</string>
     <string name="got_it">Got it</string>
@@ -199,5 +199,8 @@
     <string name="file_storage_unavailable">Storage is unavailable. Reconnect it and refresh; the saved entry is retained.</string>
     <string name="forget_missing">Remove missing entry</string>
     <string name="forget_missing_confirm">Remove only this missing file entry from the library? This action does not delete any stored file.</string>
+    <string name="allow_cleartext">Allow unencrypted HTTP links</string>
+    <string name="allow_cleartext_hint">Off by default. Enable only for public files you trust. HTTP traffic can be read or changed in transit; HTTPS-to-HTTP redirects remain blocked.</string>
+    <string name="error_cleartext_disabled">This link uses unencrypted HTTP. Use HTTPS, or explicitly enable HTTP links in Network policy.</string>
 </resources>
 

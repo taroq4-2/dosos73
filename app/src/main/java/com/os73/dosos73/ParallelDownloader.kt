@@ -43,7 +43,7 @@ internal class ParallelDownloader(
             val tag: String
             val target: String
             probe.use { response ->
-                identity(response)
+                HttpRepresentation.requireIdentity(response)
                 val match =
                     Regex("bytes 0-0/([0-9]+)")
                         .matchEntire(response.header("Content-Range").orEmpty())
@@ -83,7 +83,7 @@ internal class ParallelDownloader(
                                 )
                             workers[index].request(url, resume = checkpoint, rangeEnd = end).use {
                                 response ->
-                                identity(response)
+                                HttpRepresentation.requireIdentity(response)
                                 if (
                                     response.code != 206 ||
                                         response.header("ETag") != tag ||
@@ -188,12 +188,4 @@ internal class ParallelDownloader(
         }
     }
 
-    private fun identity(response: Response) {
-        val encoding = response.header("Content-Encoding")
-        if (!encoding.isNullOrBlank() && !encoding.equals("identity", true))
-            throw IOException("Unsupported parallel encoding")
-        val mime = response.header("Content-Type").orEmpty().trim()
-        if (mime.startsWith("text/html", true) || mime.startsWith("multipart/byteranges", true))
-            throw IOException("Unexpected parallel content")
-    }
 }

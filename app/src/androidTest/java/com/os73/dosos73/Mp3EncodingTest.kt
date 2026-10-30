@@ -12,9 +12,7 @@ import org.junit.Test
 class Mp3EncodingTest {
     @Test fun encodesPlayableMp3FromPcmAudio() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
-        BundledEngine.install(context)
-        com.yausername.youtubedl_android.YoutubeDL.init(context)
-        com.yausername.ffmpeg.FFmpeg.getInstance().init(context)
+        EngineRuntime.initialize(context)
         val folder = File(context.cacheDir, "mp3-test").apply { mkdirs() }
         try {
             val sampleRate = 44100

@@ -127,7 +127,7 @@
     <string name="language_ar">العربية</string>
     <string name="language_en">English</string>
     <string name="download_behavior">سلوك التنزيل</string>
-    <string name="pause_explanation">يمكن إيقاف التنزيل المباشر مؤقتًا خلال الجلسة الحالية. تنزيلات محرك الوسائط تدعم الإلغاء وإعادة البدء. عند انقطاع الجلسة يبدأ النقل من جديد.</string>
+    <string name="pause_explanation">يمكن إيقاف التنزيل المباشر مؤقتًا. بعد الانقطاع يُستأنف الجزء المحفوظ فقط عند إثبات تطابق المصدر، وإلا يبدأ الملف من جديد بأمان. تنزيلات محرك الوسائط تبدأ مجددًا بعد الانقطاع.</string>
     <string name="audio_tool_hint">ألصق رابطًا مدعومًا. تُختار صيغ الصوت عند توفرها.</string>
     <string name="source_hint">ألصق رابط وسائط عامًا في حقل الإدخال. تتوقف الصيغ المتاحة على المصدر، وقد يتطلب بعض المحتوى صلاحيات وصول لا يوفرها التطبيق.</string>
     <string name="got_it">حسنًا</string>
@@ -199,5 +199,8 @@
     <string name="file_storage_unavailable">التخزين غير متاح. أعد توصيله وحدّث القائمة؛ احتُفظ بسجل الملف.</string>
     <string name="forget_missing">إزالة السجل المفقود</string>
     <string name="forget_missing_confirm">إزالة سجل هذا الملف المفقود من المكتبة فقط؟ هذا الإجراء لا يحذف أي ملف مخزّن.</string>
+    <string name="allow_cleartext">السماح بروابط HTTP غير المشفّرة</string>
+    <string name="allow_cleartext_hint">معطّل افتراضيًا. فعّله فقط لملفات عامة تثق بها؛ يمكن قراءة نقل HTTP أو تغييره في الطريق. يبقى تحويل HTTPS إلى HTTP ممنوعًا.</string>
+    <string name="error_cleartext_disabled">يستخدم الرابط HTTP غير المشفّر. استخدم HTTPS أو فعّل السماح بروابط HTTP صراحةً من سياسة الشبكة.</string>
 </resources>
 

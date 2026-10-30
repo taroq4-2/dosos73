@@ -73,8 +73,7 @@ class ProxyTransportTest {
         // A fixed public test URL; production native traffic always retains PublicProxy.
         val reference = fetch(Proxy.NO_PROXY)
         val context = InstrumentationRegistry.getInstrumentation().targetContext
-        BundledEngine.install(context)
-        com.yausername.youtubedl_android.YoutubeDL.init(context)
+        EngineRuntime.initialize(context)
         val base = File(context.noBackupFilesDir, "youtubedl-android")
         val python = File(base, "packages/python/usr")
         PublicProxy().use { tunnel ->

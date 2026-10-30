@@ -11,7 +11,7 @@ class DososApp : Application() {
         Thread {
                 cacheDir
                     .listFiles()
-                    ?.filter { it.name.startsWith("transfer-") || it.name.startsWith("analysis-") }
+                    ?.filter { it.name.startsWith("transfer-") || it.name.startsWith("analysis-") || it.name.startsWith("native-session-") }
                     ?.filter {
                         System.currentTimeMillis() - it.lastModified() > 24 * 60 * 60 * 1000
                     }

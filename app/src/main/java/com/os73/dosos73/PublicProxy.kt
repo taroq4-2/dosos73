@@ -79,12 +79,12 @@ class PublicProxy(
                 )
             return
         }
-        require(parts.size == 3 && parts[0] == "CONNECT")
+        require(parts.size == 3 && parts[0] == "CONNECT" && parts[2] in setOf("HTTP/1.0", "HTTP/1.1"))
         val target = java.net.URI("https://${parts[1]}")
-        require(target.port == 443 && target.userInfo == null && target.path.isNullOrEmpty())
+        require(target.port == 443 && target.userInfo == null && !target.host.isNullOrBlank() &&
+            target.path.isNullOrEmpty() && target.rawQuery == null && target.rawFragment == null)
         // Validate the entire DNS answer before attempting any connection.
-        val addresses = resolve(target.host)
-        require(addresses.isNotEmpty() && addresses.all(Safety::publicAddress))
+        val addresses = Safety.checkedAddresses(resolve(target.host))
         connectPublic(addresses).use { remote ->
             try {
                 remote.soTimeout = 60_000

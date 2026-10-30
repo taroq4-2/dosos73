@@ -1,13 +1,10 @@
 package com.os73.dosos73
 
 import android.content.Context
-import com.yausername.ffmpeg.FFmpeg
-import com.yausername.youtubedl_android.YoutubeDL
 import com.yausername.youtubedl_android.YoutubeDLRequest
 import java.io.File
-import java.util.UUID
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.runInterruptible
+import kotlinx.coroutines.*
 import org.json.JSONObject
 
 class MediaEngine(
@@ -25,33 +22,42 @@ class MediaEngine(
         )
     }
 
-    private val id = UUID.randomUUID().toString()
-    @Volatile private var proxy: PublicProxy? = null
+    @Volatile private var session: NativeProcessSession? = null
 
-    fun cancel() {
-        runCatching { proxy?.close() }
-        cancellationExecutor.execute {
-            runCatching { YoutubeDL.getInstance().destroyProcessById(id) }
-        }
+    fun cancel() { session?.cancel() }
+
+    private suspend fun <T> invocation(block: (NativeProcessSession) -> T): T {
+        val active = NativeProcessSession(context)
+        check(session == null) { "Media engine already active" }
+        session = active
+        return try {
+            coroutineScope {
+                // Suspended while running: cancellation closes the process group even if a pipe
+                // read does not react to Thread.interrupt(). No polling or permanent watcher.
+                val cancellation = launch(start = CoroutineStart.UNDISPATCHED) {
+                    try { awaitCancellation() } finally { active.cancel() }
+                }
+                try { runInterruptible(Dispatchers.IO) { block(active) } }
+                finally { cancellation.cancelAndJoin() }
+            }
+        } finally { active.close(); if (session === active) session = null }
     }
 
     private fun initialize() {
-        synchronized(lock) {
-            try {
-                BundledEngine.install(context)
-                YoutubeDL.getInstance().init(context)
-                FFmpeg.getInstance().init(context)
-            } catch (error: LinkageError) {
-                throw PipelineException(Stage.INITIALIZE, FailureCode.JS_RUNTIME_UNAVAILABLE, error)
-            }
-            Diagnostics.event(Stage.INITIALIZE, "ready")
+        try { EngineRuntime.initialize(context) }
+        catch (error: LinkageError) {
+            throw PipelineException(Stage.INITIALIZE, FailureCode.JS_RUNTIME_UNAVAILABLE, error)
         }
+        Diagnostics.event(Stage.INITIALIZE, "ready")
     }
 
     private fun request(url: String, proxy: PublicProxy): YoutubeDLRequest {
         require(Safety.url(url).startsWith("https://"))
         return YoutubeDLRequest(url).apply {
             addOption("--ignore-config")
+            addOption("--no-colors")
+            addOption("--js-runtimes", "quickjs:${context.applicationInfo.nativeLibraryDir}/libqjs.so")
+            addOption("--ffmpeg-location", "${context.applicationInfo.nativeLibraryDir}/libffmpeg.so")
             addOption("--no-playlist")
             addOption("--no-cache-dir")
             addOption("--socket-timeout", 25)
@@ -67,12 +73,12 @@ class MediaEngine(
     }
 
     suspend fun analyze(url: String): Analysis =
-        runInterruptible(Dispatchers.IO) {
+        invocation { active ->
             initialize()
-            val dir = File(context.cacheDir, "analysis-$id").apply { mkdirs() }
+            val dir = File(context.cacheDir, "analysis-${active.id}").apply { mkdirs() }
             try {
                 publicProxy().use { p ->
-                    proxy = p
+                    active.attachProxy(p)
                     val request =
                         request(url, p).apply {
                             addOption("--skip-download")
@@ -82,7 +88,7 @@ class MediaEngine(
                         }
                     Diagnostics.event(Stage.EXTRACT, "started")
                     try {
-                        YoutubeDL.getInstance().execute(request, id, null)
+                        active.execute(request.buildCommand())
                     } catch (error: Exception) {
                         if (
                             error is InterruptedException ||
@@ -102,7 +108,6 @@ class MediaEngine(
                     Analysis(url, json.optString("title", "download").take(200), choices, false)
                 }
             } finally {
-                proxy = null
                 dir.deleteRecursively()
             }
         }
@@ -112,62 +117,51 @@ class MediaEngine(
         directory: File,
         progress: (Float?, Boolean) -> Unit,
     ): File =
-        runInterruptible(Dispatchers.IO) {
+        invocation { active ->
             initialize()
             publicProxy().use { p ->
-                proxy = p
-                try {
-                    val request =
-                        request(task.analysis.url, p).apply {
-                            addOption("-f", task.choice.id)
-                            addOption("-o", File(directory, "media.%(ext)s").absolutePath)
-                            addOption("--no-part")
-                            addOption("--no-continue")
-                            addOption("--newline")
-                            addOption("--progress-delta", 1)
-                            if (task.choice.kind == Kind.AUDIO && task.choice.extension == "mp3") {
-                                addOption("--extract-audio")
-                                addOption("--audio-format", "mp3")
-                                addOption("--audio-quality", "0")
-                            }
-                            if (task.choice.id.contains('+'))
-                                addOption("--merge-output-format", task.choice.extension)
+                active.attachProxy(p)
+                val request =
+                    request(task.analysis.url, p).apply {
+                        addOption("-f", task.choice.id)
+                        addOption("-o", File(directory, "media.%(ext)s").absolutePath)
+                        addOption("--no-part")
+                        addOption("--no-continue")
+                        addOption("--newline")
+                        addOption("--progress-delta", 1)
+                        if (task.choice.kind == Kind.AUDIO && task.choice.extension == "mp3") {
+                            addOption("--extract-audio")
+                            addOption("--audio-format", "mp3")
+                            addOption("--audio-quality", "0")
                         }
-                    var stage = Stage.TRANSFER
-                    Diagnostics.event(stage, "started")
-                    try {
-                        YoutubeDL.getInstance().execute(request, id) { percent, _, line ->
-                            if (line.contains("[Merger]") || line.contains("[ExtractAudio]"))
-                                stage = Stage.MERGE
-                            progress(
-                                percent.takeIf { it >= 0 && it <= 100 }?.div(100),
-                                stage == Stage.MERGE,
-                            )
-                        }
-                    } catch (error: Exception) {
-                        if (
-                            error is InterruptedException ||
-                                error is kotlinx.coroutines.CancellationException
-                        )
-                            throw error
-                        val failure = FailureClassifier.classify(stage, error)
-                        Diagnostics.event(stage, "failed", code = failure.code)
-                        throw failure
+                        if (task.choice.id.contains('+'))
+                            addOption("--merge-output-format", task.choice.extension)
                     }
-                    Diagnostics.event(stage, "completed")
-                    directory.listFiles()?.singleOrNull {
-                        it.name == "media.${task.choice.extension}" && it.length() > 0
-                    } ?: error("Output missing")
-                } finally {
-                    proxy = null
+                var stage = Stage.TRANSFER
+                Diagnostics.event(stage, "started")
+                try {
+                    active.execute(request.buildCommand()) { percent, processing ->
+                        if (processing) stage = Stage.MERGE
+                        progress(percent, processing)
+                    }
+                } catch (error: Exception) {
+                    if (
+                        error is InterruptedException ||
+                            error is kotlinx.coroutines.CancellationException
+                    )
+                        throw error
+                    val failure = FailureClassifier.classify(stage, error)
+                    Diagnostics.event(stage, "failed", code = failure.code)
+                    throw failure
                 }
+                Diagnostics.event(stage, "completed")
+                directory.listFiles()?.singleOrNull {
+                    it.name == "media.${task.choice.extension}" && it.length() > 0
+                } ?: error("Output missing")
             }
         }
 
     companion object {
-        private val cancellationExecutor = java.util.concurrent.Executors.newSingleThreadExecutor()
-        private val lock = Any()
-
         fun mapFormats(json: JSONObject): List<Choice> {
             val formats = json.optJSONArray("formats") ?: org.json.JSONArray().put(json)
             require(formats.length() <= 1000)

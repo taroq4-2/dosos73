@@ -20,8 +20,9 @@ class DownloadService : Service() {
     @Volatile private var direct = DirectDownloader()
     @Volatile private var transferNetwork: android.net.Network? = null
     private val media by lazy { MediaEngine(this) { transferNetwork ?: NetworkSettings.requireNetwork(this) } }
-    private var lastNotification = 0L
+    private val notificationGate = NotificationGate()
     private var detail = ""
+    private val processor by lazy { TransferProcessor(this, ::publish, ::transferTask, { userCancelled }, ::completionNotification) }
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -105,7 +106,8 @@ class DownloadService : Service() {
                     while (task != null) {
                         DownloadQueue.rememberActive(this@DownloadService, task)
                         paused.value = false
-                        if (processTask(task) == Phase.FAILED) {
+                        detail = listOfNotNull(task.choice.expectedHeight?.let { "${it}p" }, task.choice.extension.uppercase()).joinToString(" · ")
+                        if (processor.run(task, detail) == Phase.FAILED) {
                             cancelled =
                                 true // Keep waiting tasks until the user explicitly retries or
                             // continues.
@@ -144,49 +146,7 @@ class DownloadService : Service() {
         return START_REDELIVER_INTENT
     }
 
-    private suspend fun processTask(task: DownloadTask) = coroutineScope {
-        detail =
-            listOfNotNull(
-                    task.choice.expectedHeight?.let { "${it}p" },
-                    task.choice.extension.uppercase(),
-                )
-                .joinToString(" · ")
-        val directory =
-            if (task.analysis.direct) TransferFiles.directory(this@DownloadService, task.id)
-            else File(cacheDir, "transfer-${UUID.randomUUID()}")
-        var stage = Stage.TRANSFER
-        var terminal = TransferState(Phase.CANCELLED, task.analysis.title)
-        var failureCode: FailureCode? = null
-        val store = OutputStore(this@DownloadService)
-        suspend fun trace(stage: Stage, result: TimelineResult, bytes: Long? = null, code: FailureCode? = null) {
-            try { TaskTimeline.record(this@DownloadService, TimelineEvent(task.id, System.currentTimeMillis(), stage, result, bytes, code)) }
-            catch (error: CancellationException) { throw error }
-            catch (_: Exception) { Diagnostics.event(stage, "timeline_unavailable") }
-        }
-        try {
-            trace(Stage.TRANSFER, TimelineResult.STARTED)
-            val recovered = withContext(Dispatchers.IO) { store.recover(task) }
-            if (recovered != null) {
-                trace(Stage.PUBLISH, TimelineResult.RECOVERED)
-                terminal =
-                    TransferState(
-                        Phase.COMPLETE,
-                        task.analysis.title,
-                        uri = recovered.first,
-                        mime = recovered.second,
-                    )
-                return@coroutineScope Phase.COMPLETE
-            }
-            withContext(Dispatchers.IO) {
-                store.preflight(task.tree)
-                check(directory.mkdirs() || directory.isDirectory)
-                StoragePolicy.requireAvailable(
-                    android.os.StatFs(cacheDir.absolutePath).availableBytes,
-                    task.analysis.sizeBytes,
-                    if (task.tree == null) 2 else 1,
-                )
-            }
-            val output =
+    private suspend fun transferTask(task: DownloadTask, directory: File): File =
                 withNetworkRecovery(task) {
                     if (task.analysis.direct) {
                         File(directory, "file.${task.choice.extension}").also { file ->
@@ -220,99 +180,12 @@ class DownloadService : Service() {
                             )
                         }
                 }
-            ensureActive()
-            stage = Stage.VERIFY
-            Diagnostics.event(stage, "started", output.length())
-            trace(stage, TimelineResult.STARTED, output.length())
-            publish(TransferState(Phase.PROCESSING, task.analysis.title))
-            withContext(Dispatchers.IO) {
-                store.validate(
-                    output,
-                    task.choice.kind,
-                    task.choice.expectedHeight,
-                    task.choice.expectsAudio,
-                )
-            }
-            Diagnostics.event(stage, "completed", output.length())
-            withContext(NonCancellable) { trace(stage, TimelineResult.COMPLETED, output.length()) }
-            stage = Stage.PUBLISH
-            Diagnostics.event(stage, "started", output.length())
-            trace(stage, TimelineResult.STARTED, output.length())
-            publish(TransferState(Phase.SAVING, task.analysis.title))
-            val (uri, mime) =
-                store.save(output, task) { done, total ->
-                    publish(
-                        TransferState(
-                            Phase.SAVING,
-                            task.analysis.title,
-                            done,
-                            total,
-                            Safety.progress(done, total),
-                        )
-                    )
-                }
-            Diagnostics.event(stage, "completed", output.length())
-            withContext(NonCancellable) { trace(stage, TimelineResult.COMPLETED, output.length()) }
-            // Publication is the commit point: do not turn a committed file into a cancellation.
-            terminal =
-                TransferState(
-                    Phase.COMPLETE,
-                    task.analysis.title,
-                    output.length(),
-                    output.length(),
-                    1f,
-                    uri = uri,
-                    mime = mime,
-                )
-        } catch (_: CancellationException) {
-            withContext(NonCancellable) { trace(stage, TimelineResult.INTERRUPTED) }
-            terminal =
-                TransferState(
-                    if (userCancelled) Phase.CANCELLED else Phase.PAUSED,
-                    task.analysis.title,
-                )
-        } catch (e: Exception) {
-            val failure = FailureClassifier.classify(stage, e)
-            failureCode = failure.code
-            withContext(NonCancellable) { trace(failure.stage, TimelineResult.FAILED, code = failure.code) }
-            Diagnostics.event(failure.stage, "failed", code = failure.code)
-            terminal =
-                TransferState(Phase.FAILED, task.analysis.title, error = failure.messageResource())
-        } finally {
-            val retain = task.analysis.direct && terminal.phase != Phase.COMPLETE && !userCancelled
-            withContext(NonCancellable + Dispatchers.IO) {
-                if (!retain) directory.deleteRecursively()
-            }
-            var acknowledged = terminal.phase == Phase.COMPLETE
-            if (terminal.phase in setOf(Phase.FAILED, Phase.CANCELLED)) {
-                withContext(NonCancellable) {
-                    acknowledged =
-                        runCatching {
-                                FailureJournal.record(
-                                    this@DownloadService,
-                                    FailedDownload(task, failureCode, userCancelled),
-                                )
-                            }
-                            .isSuccess
-                }
-            }
-            // A system stop retains its lease; failed journal writes must never discard the task.
-            if (acknowledged)
-                withContext(NonCancellable) {
-                    DownloadQueue.finish(this@DownloadService, task.id)
-                    if (terminal.phase == Phase.COMPLETE)
-                        withContext(Dispatchers.IO) { store.forget(task.id) }
-                }
-            Transfers.update(terminal.copy(detail = detail))
-            if (terminal.phase == Phase.COMPLETE) completionNotification(terminal)
-        }
-        terminal.phase
-    }
 
     private suspend fun <T> withNetworkRecovery(task: DownloadTask, block: suspend () -> T): T =
         coroutineScope {
             var retries = 0
             while (true) {
+                NetworkSettings.requireSource(this@DownloadService, task.analysis.url)
                 if (!NetworkSettings.permitted(this@DownloadService)) {
                     publish(TransferState(Phase.WAITING, task.analysis.title))
                     NetworkSettings.awaitPermitted(this@DownloadService)
@@ -323,7 +196,8 @@ class DownloadService : Service() {
                 var networkLost = false
                 val guard = launch {
                     NetworkSettings.changes(this@DownloadService).collect { permitted ->
-                        if (!permitted || !NetworkSettings.permitted(this@DownloadService, network)) {
+                        if (!permitted || !NetworkSettings.permitted(this@DownloadService, network) ||
+                            runCatching { NetworkSettings.requireSource(this@DownloadService, task.analysis.url) }.isFailure) {
                             networkLost = true
                             direct.cancel()
                             media.cancel()
@@ -350,9 +224,7 @@ class DownloadService : Service() {
 
     private fun publish(state: TransferState) {
         Transfers.update(state.copy(detail = detail))
-        val now = System.currentTimeMillis()
-        if (now - lastNotification > 1000) {
-            lastNotification = now
+        if (notificationGate.accept(state.phase, android.os.SystemClock.elapsedRealtime())) {
             getSystemService(NotificationManager::class.java).notify(73, notification(state))
         }
     }

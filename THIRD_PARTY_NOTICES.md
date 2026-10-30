@@ -8,7 +8,7 @@ First-party Kotlin, resources and build scripts are offered under GPL-3.0-or-lat
 |---|---|---|
 | youtubedl-android library + ffmpeg | 0.18.1 | GPL-3.0, https://github.com/yausername/youtubedl-android/tree/0.18.1 |
 | yt-dlp / EJS pinned by application | 2026.10.21 / 0.8.0, verified on API35 | Unlicense for original projects; ISC/MIT bundled notices in docs/licenses, https://github.com/yt-dlp/yt-dlp |
-| FFmpeg bundled by wrapper | 7.1.1, executed on API35 x86_64 | LGPL/GPL depending on build configuration; https://github.com/yausername/youtubedl-android/blob/0.18.1/BUILD_FFMPEG.md |
+| FFmpeg in universal delivery | 9.0.2, commit 946fcce07b6dcd0331c8cc609192aeff5e1924f8 | LGPL-2.1-or-later configuration, CONFIG_GPL=0 and CONFIG_NONFREE=0; [pinned recipe](tools/build_compact_ffmpeg.sh). Untransformed developer APKs retain wrapper FFmpeg 7.1.1. |
 | Python / QuickJS bundled by wrapper | Python 3.12.11; QuickJS execution verified | Native/transitive license source correspondence remains under review; wrapper source above |
 | AndroidX/Compose | pinned in app/build.gradle.kts | Apache-2.0, https://android.googlesource.com/platform/frameworks/support/ |
 | Kotlin/coroutines | 2.0.21 / 1.9.0 | Apache-2.0, https://github.com/Kotlin/kotlinx.coroutines |
@@ -22,10 +22,14 @@ The full transitive/native source-correspondence audit is not complete. The inve
 
 ## User-supplied branding
 
-The current neon artwork was supplied by the project owner. The source image is retained in branding/neon-reference.png and used by the Android UI. The launcher uses the corresponding vector mark. Artwork is not covered by the code license; no unrestricted third-party reuse or independent trademark clearance is asserted.
+The current neon artwork was supplied by the project owner. The source image is retained in branding/neon-reference.png as a reference. Both the UI and launcher now draw the corresponding vector mark; no full-resolution bitmap is decoded for the in-app logo. Artwork is not covered by the code license; no unrestricted third-party reuse or independent trademark clearance is asserted.
 
 Tajawal (Regular/Medium/Bold), copyright 2018 Boutros International, SIL Open Font License 1.1. Unmodified fonts from https://github.com/google/fonts/tree/main/ofl/tajawal ; full license in docs/licenses/Tajawal-OFL.txt and the APK raw resources.
 
 ## Compact engine candidate with MP3
 
 The compact candidate replaces the wrapper FFmpeg binaries with FFmpeg 9.0.2 (commit 946fcce07b6dcd0331c8cc609192aeff5e1924f8), LGPL-2.1-or-later configuration, and LAME 3.100, LGPL-2.0-or-later. The pinned source URLs, SHA256 and cross-build recipe are in tools/build_compact_ffmpeg.sh. LAME license: docs/licenses/LAME-3.100.txt. Official source: https://downloads.sourceforge.net/project/lame/lame/3.100/lame-3.100.tar.gz . Native build artifacts retain configurations and licenses. This candidate remains subject to the documented acceptance gates.
+
+## Artifact-bound inventory
+
+RC5 release assets include a CycloneDX 1.6 SBOM with resolved Maven build-input hashes and every ELF hash from the actual APK. Unknown/inherited/native license correspondence is explicitly marked. The corresponding FFmpeg and LAME source archive, per-ABI configurations, notices and pinned recipe are supplied separately from the APK. No native codecs, CPU targets or source restrictions are changed by sharing 642 identical regular Python files; per-ABI symlinks and ELF payloads are preserved.

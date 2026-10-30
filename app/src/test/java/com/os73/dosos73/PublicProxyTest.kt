@@ -84,4 +84,32 @@ class PublicProxyTest {
         } finally { release.countDown(); proxy.close(); client.close() }
     }
 
+    @Test fun rebindingIsRejectedAndAValidatedAnswerIsConnectedWithoutResolvingAgain() {
+        val lookups = java.util.concurrent.atomic.AtomicInteger()
+        val connections = java.util.concurrent.CopyOnWriteArrayList<java.net.InetSocketAddress>()
+        val factory = object : javax.net.SocketFactory() {
+            override fun createSocket(): Socket = object : Socket() {
+                override fun connect(endpoint: java.net.SocketAddress, timeout: Int) {
+                    connections.add(endpoint as java.net.InetSocketAddress)
+                    throw java.io.IOException("Test records IP, never contacts the network")
+                }
+            }
+            override fun createSocket(h: String, p: Int): Socket = error("Hostname connection forbidden")
+            override fun createSocket(h: String, p: Int, l: java.net.InetAddress, lp: Int): Socket = error("unused")
+            override fun createSocket(h: java.net.InetAddress, p: Int): Socket = error("unused")
+            override fun createSocket(h: java.net.InetAddress, p: Int, l: java.net.InetAddress, lp: Int): Socket = error("unused")
+        }
+        PublicProxy(resolve = {
+            listOf(java.net.InetAddress.getByName(if (lookups.incrementAndGet() == 1) "8.8.8.8" else "127.0.0.1"))
+        }, socketFactory = factory).use { proxy ->
+            val auth = Base64.getEncoder().encodeToString(URI(proxy.url).userInfo.toByteArray())
+            assertEquals("", request(proxy, auth, "rebind.example:443"))
+            assertEquals("", request(proxy, auth, "rebind.example:443"))
+            assertEquals(2, lookups.get())
+            assertEquals(1, connections.size)
+            assertFalse(connections.single().isUnresolved)
+            assertEquals("8.8.8.8", connections.single().address.hostAddress)
+        }
+    }
+
 }

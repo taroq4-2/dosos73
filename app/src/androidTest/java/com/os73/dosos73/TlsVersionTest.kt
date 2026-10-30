@@ -11,8 +11,7 @@ class TlsVersionTest {
     fun compareVerifiedTlsVersions() {
         assumeTrue(InstrumentationRegistry.getArguments().getString("tlsCompare") == "true")
         val c = InstrumentationRegistry.getInstrumentation().targetContext
-        BundledEngine.install(c)
-        com.yausername.youtubedl_android.YoutubeDL.init(c)
+        EngineRuntime.initialize(c)
         val base = File(c.noBackupFilesDir, "youtubedl-android")
         val python = File(base, "packages/python/usr")
         val output =
@@ -74,3 +73,4 @@ class TlsVersionTest {
         }
     }
 }
+

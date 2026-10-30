@@ -434,4 +434,12 @@ class DirectDownloaderTest {
     fun productionDoesNotDelegateDnsPolicyToSystemProxy() {
         assertEquals(java.net.Proxy.NO_PROXY, DirectDownloader.secureClient().proxy)
     }
+    @Test fun cancellationBeforeStartNeverOpensARequestOrResetsItsToken() = fixture { server, engine, file ->
+        file.writeText("preserve existing bytes")
+        engine.cancel()
+        assertTrue(runCatching { engine.download("https://example.com/file", file) { _, _, _ -> } }.isFailure)
+        assertEquals(0, server.requestCount)
+        assertEquals("preserve existing bytes", file.readText())
+    }
+
 }

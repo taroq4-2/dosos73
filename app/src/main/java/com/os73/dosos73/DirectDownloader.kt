@@ -66,7 +66,6 @@ class DirectDownloader(private val client: OkHttpClient = secureClient()) {
 
     suspend fun analyze(url: String): Analysis? =
         withContext(Dispatchers.IO) {
-            cancelled.set(false)
             currentCoroutineContext().ensureActive()
             val head = request(url, true)
             var candidate =
@@ -143,7 +142,6 @@ class DirectDownloader(private val client: OkHttpClient = secureClient()) {
         progress: (Long, Long?, Long) -> Unit,
     ) =
         withContext(Dispatchers.IO) {
-            cancelled.set(false)
             currentCoroutineContext().ensureActive()
             if (
                 connections > 1 &&
@@ -181,7 +179,7 @@ class DirectDownloader(private val client: OkHttpClient = secureClient()) {
                     journal.clear()
                     response = request(url)
                 }
-                requireIdentity(response)
+                HttpRepresentation.requireIdentity(response)
                 val body = response.body ?: throw IOException("Empty response")
                 val bodyLength = body.contentLength().takeIf { it >= 0 }
                 val targetHash = ResumeCheckpoint.hash(response.request.url.toString())
@@ -194,7 +192,7 @@ class DirectDownloader(private val client: OkHttpClient = secureClient()) {
                     if (prior.offset <= 0 || targetHash != prior.targetHash || etag != prior.etag)
                         throw IOException("Changed representation")
                     val range =
-                        parseRange(response.header("Content-Range"))
+                        HttpRepresentation.parseRange(response.header("Content-Range"))
                             ?: throw IOException("Invalid content range")
                     if (
                         range.first != prior.offset ||
@@ -290,32 +288,17 @@ class DirectDownloader(private val client: OkHttpClient = secureClient()) {
             }
         }
 
-    private fun requireIdentity(response: Response) {
-        val encoding = response.header("Content-Encoding")
-        if (!encoding.isNullOrBlank() && !encoding.equals("identity", true))
-            throw IOException("Unsupported content encoding")
-        val mime = response.header("Content-Type").orEmpty().trim()
-        if (mime.startsWith("text/html", true) || mime.startsWith("multipart/byteranges", true))
-            throw IOException("Unexpected response type")
-    }
-
-    private data class ByteRange(val first: Long, val last: Long, val total: Long)
-
-    private fun parseRange(value: String?): ByteRange? {
-        val parts =
-            Regex("bytes ([0-9]+)-([0-9]+)/([0-9]+)").matchEntire(value.orEmpty()) ?: return null
-        val first = parts.groupValues[1].toLongOrNull() ?: return null
-        val last = parts.groupValues[2].toLongOrNull() ?: return null
-        val total = parts.groupValues[3].toLongOrNull() ?: return null
-        return ByteRange(first, last, total).takeIf { first <= last && last < total }
-    }
-
     companion object {
-        fun secureClient() =
+        fun secureClient(allowCleartext: () -> Boolean = { false }) =
             OkHttpClient.Builder()
                 // A system HTTP proxy resolves origins itself and would bypass the public DNS
                 // policy.
                 .proxy(Proxy.NO_PROXY)
+                .addInterceptor { chain ->
+                    if (!chain.request().url.isHttps && !allowCleartext())
+                        throw PipelineException(Stage.TRANSFER, FailureCode.CLEARTEXT_DISABLED)
+                    chain.proceed(chain.request())
+                }
                 .dns(
                     object : okhttp3.Dns {
                         override fun lookup(hostname: String) = Safety.resolve(hostname)

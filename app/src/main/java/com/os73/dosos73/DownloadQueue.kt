@@ -45,6 +45,7 @@ internal object DownloadQueue {
     }
 
     private fun commit(context: Context, waiting: List<DownloadTask>, leased: DownloadTask?) {
+        if (waiting == mutable.value && leased == active) return
         val array = JSONArray()
         waiting.forEach { array.put(encodeTask(it)) }
         journal(context)
@@ -175,19 +176,19 @@ internal object DownloadQueue {
             .put("priority", task.priority.name)
             .put("paused", task.userPaused)
             .put("notBefore", task.notBefore)
-            .put(
-                "choice",
-                JSONObject()
-                    .put("id", task.choice.id)
-                    .put("kind", task.choice.kind.name)
-                    .put("ext", task.choice.extension)
-                    .put("quality", task.choice.quality)
-                    .put("height", task.choice.expectedHeight)
-                    .put("audio", task.choice.expectsAudio)
-                    .put("estimatedBytes", task.choice.estimatedBytes)
-                    .put("bitrateKbps", task.choice.bitrateKbps)
-                    .put("language", task.choice.language),
-            )
+            .put("choice", encodeChoice(task.choice))
+
+    internal fun encodeChoice(choice: Choice): JSONObject =
+        JSONObject()
+                    .put("id", choice.id)
+                    .put("kind", choice.kind.name)
+                    .put("ext", choice.extension)
+                    .put("quality", choice.quality)
+                    .put("height", choice.expectedHeight)
+                    .put("audio", choice.expectsAudio)
+                    .put("estimatedBytes", choice.estimatedBytes)
+                    .put("bitrateKbps", choice.bitrateKbps)
+                    .put("language", choice.language)
 
     internal fun decodeTask(json: JSONObject): DownloadTask {
         val source = Safety.url(json.getString("url"))
@@ -204,6 +205,10 @@ internal object DownloadQueue {
                 if (c.isNull("bitrateKbps")) null else c.getInt("bitrateKbps"),
                 if (c.isNull("language")) null else c.getString("language"),
             )
+        require(choice.extension.matches(Regex("[a-zA-Z0-9]{1,8}")))
+        require(choice.id.matches(Regex("[a-zA-Z0-9_.-]{1,80}(?:\\+[a-zA-Z0-9_.-]{1,80})?")))
+        val tree = if (json.isNull("tree")) null else Uri.parse(json.getString("tree"))
+        require(tree == null || tree.scheme == "content")
         val id = json.getString("id")
         require(UUID.fromString(id).toString() == id.lowercase())
         return DownloadTask(
@@ -215,7 +220,7 @@ internal object DownloadQueue {
                 if (json.isNull("size")) null else json.getLong("size"),
             ),
             choice,
-            if (json.isNull("tree")) null else Uri.parse(json.getString("tree")),
+            tree,
             id,
             TaskPriority.valueOf(json.optString("priority", "NORMAL")),
             json.optBoolean("paused", false),
