@@ -27,7 +27,7 @@ jobs:
         env:
           ANDROID_NDK_HOME: ${{ env.ANDROID_HOME }}/ndk/28.2.13676358
         run: bash tools/build_compact_ffmpeg.sh '${{ matrix.abi }}'
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: compact-engine-${{ matrix.abi }}
           path: native-out/
@@ -65,7 +65,7 @@ jobs:
           "$ANDROID_HOME/build-tools/35.0.0/zipalign" -P 16 -f 4 compact-universal-unsigned.apk compact-universal-aligned-unsigned.apk
           python3 -c "from pathlib import Path; p=Path('compact-universal-aligned-unsigned.apk'); print(p.stat().st_size); assert p.stat().st_size < 80000000"
           sha256sum compact-universal-aligned-unsigned.apk > compact-SHA256SUMS.txt
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: compact-universal-UNSIGNED-experiment
           path: |
