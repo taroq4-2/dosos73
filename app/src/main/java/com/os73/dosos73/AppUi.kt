@@ -199,8 +199,14 @@ internal fun HomeScreen(
     onSource: (String) -> Unit,
 ) {
     val locale = LocalConfiguration.current.locales[0]
+    val compactHeader = LocalConfiguration.current.screenHeightDp < 420
     Page {
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End,
+            verticalAlignment = Alignment.CenterVertically) {
+            if (compactHeader) {
+                Brand(compact = true)
+                Spacer(Modifier.weight(1f))
+            }
             IconAction(
                 Glyph.SETTINGS,
                 stringResource(R.string.settings),
@@ -208,7 +214,7 @@ internal fun HomeScreen(
                 Modifier.testTag("settings"),
             )
         }
-        Brand()
+        if (!compactHeader) Brand()
         CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
             Row(
                 Modifier.fillMaxWidth()
