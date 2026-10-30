@@ -10,7 +10,6 @@ import android.content.pm.ServiceInfo
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import java.io.File
-import java.util.UUID
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.first
 
@@ -19,7 +18,8 @@ class DownloadService : Service() {
     private var job: Job? = null
     @Volatile private var direct = DirectDownloader()
     @Volatile private var transferNetwork: android.net.Network? = null
-    private val media by lazy { MediaEngine(this) { transferNetwork ?: NetworkSettings.requireNetwork(this) } }
+    private val mediaDelegate = lazy { MediaEngine(this) { transferNetwork ?: NetworkSettings.requireNetwork(this) } }
+    private val media by mediaDelegate
     private val notificationGate = NotificationGate()
     private var detail = ""
     private val processor by lazy { TransferProcessor(this, ::publish, ::transferTask, { userCancelled }, ::completionNotification) }
@@ -43,107 +43,137 @@ class DownloadService : Service() {
     private var userCancelled = false
     private var latestStartId = 0
 
+    // Control commands are serialized separately from the transfer. In particular, a cold
+    // Resume must not be mistaken for a toggle of the new service's local pause flag.
+    private var controlJob: Job? = null
+
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         latestStartId = startId
-        if (intent?.action == "cancel") {
-            userCancelled = true
-            cancelTransfer()
-            if (job == null) stopSelf()
-            return START_NOT_STICKY
-        }
-        if (intent?.action == "pause" && flags and START_FLAG_REDELIVERY == 0) {
-            if (
-                Transfers.currentTask?.analysis?.direct == true &&
-                    Transfers.state.value.phase in setOf(Phase.DOWNLOADING, Phase.PAUSED)
-            ) {
-                val next = !paused.value
-                scope.launch {
-                    try {
-                        Transfers.currentTask?.let {
-                            DownloadQueue.setPaused(this@DownloadService, it.id, next)
+        val action = intent?.action.takeUnless { flags and START_FLAG_REDELIVERY != 0 }
+        if (action != "cancel" && (action != "pause" || job?.isActive != true))
+            enterForeground()
+        val previous = controlJob
+        val command = scope.launch(start = CoroutineStart.LAZY) {
+            previous?.join()
+            try {
+                when (action) {
+                    "cancel" -> {
+                        userCancelled = true
+                        cancelTransfer()
+                        job?.join()
+                        cancelColdLease()
+                    }
+                    "pause" -> {
+                        if (job?.isActive == true && !cancelled) {
+                            if (Transfers.currentTask?.analysis?.direct == true &&
+                                Transfers.state.value.phase in setOf(Phase.DOWNLOADING, Phase.PAUSED)) {
+                                val task = Transfers.currentTask ?: return@launch
+                                // Prevent moving to the next task while the journal write suspends.
+                                cancelled = true
+                                try {
+                                    DownloadQueue.setPaused(this@DownloadService, task.id, true)
+                                } catch (error: Exception) {
+                                    cancelled = false
+                                    throw error
+                                }
+                                paused.value = true
+                                cancelTransfer()
+                                job?.join()
+                                // A publication may have won the race with Pause. Preserve COMPLETE.
+                                if (DownloadQueue.interrupted(this@DownloadService)?.id == task.id)
+                                    Transfers.update(Transfers.state.value.copy(phase = Phase.PAUSED, bytesPerSecond = null))
+                            }
+                        } else {
+                            job?.join()
+                            val task = DownloadQueue.interrupted(this@DownloadService)
+                            if (task != null) {
+                                DownloadQueue.setPaused(this@DownloadService, task.id, false)
+                                enterForeground()
+                                startWorker()
+                            }
                         }
-                        paused.value = next
-                        publish(
-                            Transfers.state.value.copy(
-                                phase = if (next) Phase.PAUSED else Phase.DOWNLOADING,
-                                bytesPerSecond = null,
-                            )
-                        )
-                    } catch (_: Exception) {
-                        publish(Transfers.state.value.copy(error = R.string.error_storage))
+                    }
+                    else -> {
+                        if (cancelled) job?.join()
+                        if (job?.isActive != true) startWorker()
                     }
                 }
-            } else if (job?.isActive != true) {
-                scope.launch {
-                    DownloadQueue.interrupted(this@DownloadService)?.let {
-                        DownloadQueue.setPaused(this@DownloadService, it.id, false)
-                    }
-                    androidx.core.content.ContextCompat.startForegroundService(
-                        this@DownloadService,
-                        Intent(this@DownloadService, DownloadService::class.java),
-                    )
-                }
+            } catch (error: CancellationException) {
+                throw error
+            } catch (_: Exception) {
+                // Failed acknowledgement keeps the durable lease and its owned partial file.
+                Transfers.update(Transfers.state.value.copy(error = R.string.error_storage))
             }
-            return if (job?.isActive == true) START_REDELIVER_INTENT else START_NOT_STICKY
         }
-        startForeground(
-            73,
-            notification(Transfers.state.value),
-            ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC,
-        )
-        if (job?.isActive == true) return START_REDELIVER_INTENT
+        controlJob = command
+        command.invokeOnCompletion { stopWhenIdle() }
+        command.start()
+        // Pause stops itself after acknowledgement. A cold Resume remains redeliverable
+        // if the process dies while its transfer is running.
+        return if (action == "cancel") START_NOT_STICKY else START_REDELIVER_INTENT
+    }
+
+    private fun enterForeground() {
+        startForeground(73, notification(Transfers.state.value), ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
+    }
+
+    private suspend fun cancelColdLease() {
+        val task = DownloadQueue.interrupted(this) ?: return
+        // A cold service has no processor finally block. Commit retry history before
+        // acknowledging the exact lease; never remove another task's temporary data.
+        FailureJournal.record(this, FailedDownload(task, null, true))
+        DownloadQueue.finish(this, task.id)
+        withContext(Dispatchers.IO) { TransferFiles.discard(this@DownloadService, task.id) }
+        Transfers.take()
+        Transfers.update(TransferState(Phase.CANCELLED, task.analysis.title))
+    }
+
+    private fun stopWhenIdle() {
+        if (job?.isActive != true && controlJob?.isActive != true) {
+            stopForeground(STOP_FOREGROUND_REMOVE)
+            stopSelfResult(latestStartId)
+        }
+    }
+
+    private fun startWorker() {
         cancelled = false
         userCancelled = false
-        job =
-            scope.launch {
-                try {
-                    var task =
-                        Transfers.take()
-                            ?: DownloadQueue.take(this@DownloadService)?.also {
-                                Transfers.reserve(it)
-                                Transfers.take()
-                            }
-                    while (task != null) {
-                        DownloadQueue.rememberActive(this@DownloadService, task)
-                        paused.value = false
-                        detail = listOfNotNull(task.choice.expectedHeight?.let { "${it}p" }, task.choice.extension.uppercase()).joinToString(" · ")
-                        if (processor.run(task, detail) == Phase.FAILED) {
-                            cancelled =
-                                true // Keep waiting tasks until the user explicitly retries or
-                            // continues.
-                            break
-                        }
-                        ensureActive()
-                        task =
-                            DownloadQueue.take(this@DownloadService)?.also {
-                                Transfers.reserve(it)
-                                Transfers.take()
-                            }
+        paused.value = false
+        // LAZY assigns ownership before a fast failure can reach finally on Main.immediate.
+        val worker = scope.launch(start = CoroutineStart.LAZY) {
+            try {
+                // Preserve the existing reservation API, but commit before executing it.
+                Transfers.take()?.let { DownloadQueue.enqueue(this@DownloadService, it) }
+                var task = DownloadQueue.take(this@DownloadService)
+                while (task != null) {
+                    Transfers.reserve(task)
+                    Transfers.take()
+                    DownloadQueue.rememberActive(this@DownloadService, task)
+                    paused.value = false
+                    detail = listOfNotNull(task.choice.expectedHeight?.let { "${it}p" }, task.choice.extension.uppercase()).joinToString(" · ")
+                    if (processor.run(task, detail) == Phase.FAILED) {
+                        cancelled = true // Waiting tasks require an explicit retry/continue.
+                        break
                     }
-                } catch (error: CancellationException) {
-                    throw error
-                } catch (_: Exception) {
-                    cancelled = true
-                    Transfers.update(
-                        Transfers.state.value.copy(
-                            phase = Phase.FAILED,
-                            error = R.string.error_start,
-                        )
-                    )
-                } finally {
-                    stopForeground(STOP_FOREGROUND_REMOVE)
-                    job = null
-                    stopSelfResult(latestStartId)
-                    // A newly queued command may have arrived while the last empty take was
-                    // returning.
-                    if (!cancelled && DownloadQueue.hasRunnable())
-                        androidx.core.content.ContextCompat.startForegroundService(
-                            this@DownloadService,
-                            Intent(this@DownloadService, DownloadService::class.java),
-                        )
+                    ensureActive()
+                    if (cancelled) break
+                    task = DownloadQueue.take(this@DownloadService)
                 }
+            } catch (error: CancellationException) {
+                throw error
+            } catch (_: Exception) {
+                cancelled = true
+                Transfers.update(Transfers.state.value.copy(phase = Phase.FAILED, error = R.string.error_start))
+            } finally {
+                job = null
+                // Cover an enqueue racing the empty take without starting another FGS from
+                // the background. Deliberate Pause/Cancel always leaves the service idle.
+                if (!cancelled && DownloadQueue.hasRunnable()) startWorker()
+                stopWhenIdle()
             }
-        return START_REDELIVER_INTENT
+        }
+        job = worker
+        worker.start()
     }
 
     private suspend fun transferTask(task: DownloadTask, directory: File): File =
@@ -200,7 +230,7 @@ class DownloadService : Service() {
                             runCatching { NetworkSettings.requireSource(this@DownloadService, task.analysis.url) }.isFailure) {
                             networkLost = true
                             direct.cancel()
-                            media.cancel()
+                            if (mediaDelegate.isInitialized()) media.cancel()
                         }
                     }
                 }
@@ -284,7 +314,7 @@ class DownloadService : Service() {
     private fun cancelTransfer() {
         cancelled = true
         direct.cancel()
-        media.cancel()
+        if (mediaDelegate.isInitialized()) media.cancel()
         job?.cancel()
     }
 
@@ -296,7 +326,7 @@ class DownloadService : Service() {
     override fun onDestroy() {
         cancelled = true
         direct.cancel()
-        media.cancel()
+        if (mediaDelegate.isInitialized()) media.cancel()
         scope.cancel()
         super.onDestroy()
     }

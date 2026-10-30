@@ -26,7 +26,17 @@ internal class PrivateJournal(context: Context, name: String) {
     private fun readLocked(): String? {
         val bytes =
             try {
-                file.openRead().use { it.readBytes() }
+                file.openRead().use { input ->
+                    val output = java.io.ByteArrayOutputStream()
+                    val buffer = ByteArray(65536)
+                    while (true) {
+                        val n = input.read(buffer)
+                        if (n < 0) break
+                        if (output.size() + n > MAX_RECORD_BYTES) throw IOException("Private journal exceeds size limit")
+                        output.write(buffer, 0, n)
+                    }
+                    output.toByteArray()
+                }
             } catch (_: FileNotFoundException) {
                 return null
             }
@@ -65,6 +75,7 @@ internal class PrivateJournal(context: Context, name: String) {
     }
 
     companion object {
+        private const val MAX_RECORD_BYTES = 16 * 1024 * 1024
         private val FILE_LOCKS = Array(64) { Any() }
         private val MAGIC = byteArrayOf(68, 55, 51, 1)
         private const val ALIAS = "dosos73.private-journal.v1"

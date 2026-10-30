@@ -1,0 +1,21 @@
+package com.os73.dosos73
+
+import org.junit.Assert.*
+import org.junit.Test
+
+class ReviewInputRegressionTest {
+    @Test fun uppercaseSchemeIsCanonicalWithoutChangingSignedQuery() {
+        assertEquals("https://example.com/V?Sig=AbC", Safety.url("HTTPS://example.com/V?Sig=AbC"))
+    }
+    @Test fun sharedProseDelimitersDoNotBecomeDownloadTokens() {
+        assertEquals("https://example.com/a?token=AbC", Safety.shared("(https://example.com/a?token=AbC)"))
+        assertEquals("https://example.com/a(b)", Safety.shared("https://example.com/a(b)"))
+        assertEquals("https://example.com/a", Safety.shared("https://example.com/a،"))
+    }
+    @Test fun callDeadlineIsTimeoutButOrdinaryInterruptionIsNot() {
+        assertEquals(FailureCode.NETWORK_TIMEOUT, FailureClassifier.classify(Stage.TRANSFER,
+            java.io.InterruptedIOException("timeout")).code)
+        assertEquals(FailureCode.DOWNLOAD_FAILED, FailureClassifier.classify(Stage.TRANSFER,
+            java.io.InterruptedIOException("Cancelled")).code)
+    }
+}

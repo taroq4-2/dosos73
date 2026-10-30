@@ -22,6 +22,7 @@ import androidx.activity.viewModels
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.Modifier
@@ -69,8 +70,14 @@ internal fun MainActivity.AppScreen(model: MainViewModel, sharedGeneration: Int)
     var requestingNotifications by remember { mutableStateOf(false) }
     var details by remember { mutableStateOf(false) }
     var source by remember { mutableStateOf<String?>(null) }
-    var fileAction by remember { mutableStateOf<Pair<SavedFile, String>?>(null) }
-    var renamed by remember { mutableStateOf("") }
+    var fileAction by rememberSaveable(stateSaver = listSaver<Pair<SavedFile, String>?, Any>(
+        save = { value -> value?.let { (file, action) ->
+            listOf(file.uri, file.name, file.mime, file.bytes, file.date, action)
+        } ?: emptyList() },
+        restore = { if (it.isEmpty()) null else SavedFile(it[0] as String, it[1] as String,
+            it[2] as String, it[3] as Long, it[4] as Long) to (it[5] as String) },
+    )) { mutableStateOf(null) }
+    var renamed by rememberSaveable { mutableStateOf("") }
     var preview by remember { mutableStateOf<SavedFile?>(null) }
     var libraryRevision by remember { mutableIntStateOf(0) }
     val batchRequested by model.batchRequested.collectAsStateWithLifecycle()
@@ -469,15 +476,14 @@ internal fun MainActivity.AppScreen(model: MainViewModel, sharedGeneration: Int)
                                             require(queue.size + ready.size <= 50)
                                             ready.forEach { entry ->
                                                 val analysis = entry.analysis!!
-                                                DownloadQueue.enqueue(
-                                                    this@AppScreen,
+                                                model.queueBatch(
+                                                    entry,
                                                     DownloadTask(
                                                         analysis,
                                                         entry.choice?.takeIf { it in analysis.choices } ?: analysis.choices.first(),
                                                         if (entry.destinationOverride) entry.destination?.let(Uri::parse) else tree,
                                                     ),
                                                 )
-                                                model.removeBatch(entry)
                                             }
                                             // Failed and unselected entries remain available for retry.
                                             page = "downloads"
@@ -584,13 +590,7 @@ internal fun MainActivity.AppScreen(model: MainViewModel, sharedGeneration: Int)
                         )
                     "delete" -> Text(stringResource(R.string.delete_confirmation, item.name))
                     "forget" -> Text(stringResource(R.string.forget_missing_confirm))
-                    else ->
-                        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                            Text(item.name)
-                            Text(bytesLabel(item.bytes, LocalConfiguration.current.locales[0]))
-                            Text(item.mime)
-                            Text(DateFormat.getDateTimeInstance().format(Date(item.date)))
-                        }
+                    else -> FileDetailsContent(item)
                 }
             },
             confirmButton = {
@@ -616,6 +616,8 @@ internal fun MainActivity.AppScreen(model: MainViewModel, sharedGeneration: Int)
                                     } else if (type == "forget") {
                                         LibraryRepository.forgetMissing(this@AppScreen, item)
                                     } else LibraryRepository.delete(this@AppScreen, item)
+                                    hidden = LibraryRepository.hidden(this@AppScreen)
+                                    libraryRevision++
                                     fileAction = null
                                     message(R.string.action_done)
                                 } catch (_: Exception) {

@@ -1,0 +1,35 @@
+{
+  "reviewer_id": "26",
+  "scope": [
+    "Commit b89b957: tools/generate_sbom.py",
+    "Commit b89b957: docs/audit/maven-build-inputs.json",
+    "Commit b89b957: THIRD_PARTY_NOTICES.md",
+    "Supporting read-only inspection: app/build.gradle.kts exportRuntimeInventory and docs/VERIFICATION.md"
+  ],
+  "findings": [
+    {
+      "severity": "P2",
+      "file": "tools/generate_sbom.py",
+      "line": 47,
+      "title": "Pinned engine identities are asserted for every input APK without correspondence checks",
+      "evidence": "Lines 47-51 unconditionally append FFmpeg 9.0.2, LAME 3.100 and yt-dlp 2026.10.21, including a fixed zipapp hash, regardless of the APK contents. The inspected APK contributes its outer SHA-256 and ELF file hashes only; no check connects those ELF hashes or a zipapp entry to the declared engine versions. THIRD_PARTY_NOTICES.md:11 explicitly says untransformed developer APKs contain wrapper FFmpeg 7.1.1. Passing one of those valid APKs therefore produces an artifact-hashed SBOM falsely asserting FFmpeg 9.0.2 and LAME presence. This is a source-proven conditional defect, not evidence that the published RC5 APK has the wrong engines.",
+      "recommendation": "Require a verified transformation/provenance manifest tied to the supplied APK and per-ABI engine hashes, or identify engines from checked embedded assets. Reject an APK whose actual payload does not match the expected pinned versions instead of adding constant components."
+    },
+    {
+      "severity": "evidence_gap",
+      "file": "tools/generate_sbom.py",
+      "line": 13,
+      "title": "Maven build-input hashes are not independently bound to the supplied deployed APK",
+      "evidence": "Lines 13-19 copy every coordinate and hash from an arbitrary --maven JSON file; only --apk is freshly hashed. app/build.gradle.kts exports resolved releaseRuntimeClasspath AAR/JAR hashes, but the JSON has no build invocation, variant, APK hash, revision or transformation provenance. The checked snapshot has 86 rows and 85 unique coordinates/artifact hashes (one repeated androidx.core entry, correctly deduplicated by the generator). These hashes identify Maven inputs, not DEX or transformed/native bytes deployed inside the APK. The notices accurately call them build-input hashes, so no actual release mismatch or complete deployed transitive coverage is alleged.",
+      "recommendation": "Preserve a release evidence manifest that binds the exact runtime-inventory digest and build variant/revision to the final transformed and signed APK digest. Keep build-input scope explicit in machine-readable component properties and verify the manifest during SBOM generation."
+    }
+  ],
+  "test_gaps": [
+    "Static review only: no build, emulator, deployment or generator execution was performed. No published SBOM file was obtained or validated against the CycloneDX 1.6 schema during this review; docs/VERIFICATION.md reports earlier schema validation, which does not itself establish semantic correspondence.",
+    "Add a negative fixture using a structurally valid APK with absent or changed engines; it must not be accepted with the pinned FFmpeg/LAME/yt-dlp components and hashes.",
+    "Add an evidence-integrity check that rejects a stale runtime-inventory digest or APK/variant mismatch.",
+    "The inventory intentionally has no dependency edges, and ELF file hashes do not establish Python/QuickJS/source-license/component correspondence. These limits are explicitly acknowledged in the generator and notices; this review makes no claim of complete native/Python transitive coverage.",
+    "LAME SHA-256 is explicitly scoped to its official source archive at generator line 49, and should not be interpreted as the compiled deployed LAME binary hash."
+  ],
+  "runtime_execution": "Read-only git object and JSON inspection at b89b957; only this reviewer report was written."
+}

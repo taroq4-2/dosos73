@@ -1,0 +1,52 @@
+{
+  "reviewer_id": "reviewer-11",
+  "scope": {
+    "baseline": "b89b957",
+    "repository": "[workspace]/outputs/dosos73",
+    "read_in_full": [
+      "app/src/main/java/com/os73/dosos73/LibraryScreens.kt",
+      "app/src/main/java/com/os73/dosos73/DisplayFormat.kt",
+      "LibraryPreferences object: app/src/main/java/com/os73/dosos73/AdvancedScreens.kt:63-97",
+      "app/src/test/java/com/os73/dosos73/DisplayFormatTest.kt",
+      "app/src/androidTest/java/com/os73/dosos73/LibraryQueueTest.kt",
+      "app/src/androidTest/java/com/os73/dosos73/LibraryStreamingTest.kt",
+      "app/src/androidTest/java/com/os73/dosos73/FileAccessUiTest.kt",
+      "app/src/androidTest/java/com/os73/dosos73/FileAccessTest.kt",
+      "app/src/androidTest/java/com/os73/dosos73/UiFlowTest.kt",
+      "app/src/androidTest/java/com/os73/dosos73/TaskTimelineTest.kt"
+    ],
+    "supporting_reads": ["AppRoot.kt action/refresh/libraryRevision wiring", "LibraryRepository.kt delete/forgetMissing/rename paths", "DownloadQueue.kt", "AdvancedScreens.kt QueueControls", "Models.kt TransferState.active", "AppUi.kt TransferCard", "DownloadService.kt queue execution", "docs/FILE_AVAILABILITY.md"],
+    "method": "Static baseline review only; no source changes, builds, test execution, emulator/device use, publishing, or visual inspection. LibraryPreferences.kt does not exist at this baseline; its entire object was read in AdvancedScreens.kt."
+  },
+  "findings": [
+    {
+      "severity": "P2",
+      "file": "app/src/main/java/com/os73/dosos73/LibraryScreens.kt",
+      "line": 226,
+      "evidence": "Proven by the data flow when the last indexed member of a named collection is deleted or explicitly forgotten: collection chips are built from every value returned by LibraryPreferences.collections(), independently of the current files. LibraryRepository.delete (183-197) and forgetMissing (200-208) remove the index record but never remove collection:<uri>. Consequently the deleted file's collection remains selectable indefinitely and always yields an empty list when it has no remaining members. There is no collection-management/delete action for removing that orphan association; LibraryStreamingTest manually clears it in cleanup, so that test does not catch this condition.",
+      "recommendation": "Build visible collection names from memberships of URIs in the current file list; clear the URI's collection preference after a successful explicit delete/forget. Preserve associations for indexed records whose provider is merely offline or whose access was revoked."
+    },
+    {
+      "severity": "P2",
+      "file": "app/src/main/java/com/os73/dosos73/LibraryScreens.kt",
+      "line": 179,
+      "evidence": "Conditional proven UI/action inconsistency: after availability becomes MISSING for a deleted local MediaStore row, previewAction blocks preview and the dedicated forget action appears, but Rename/Delete remain enabled and dispatch unchanged. AppRoot invokes LibraryRepository.rename/delete for them. For this proven-missing MediaStore URI, update/delete return 0 and their check fails, yielding generic error_storage instead of the known missing-file state. The same menu also dispatches external/share without the availability mapping. FileAccessUiTest only checks the row click and forget action; it does not check these menu actions.",
+      "recommendation": "For a confirmed MISSING record, disable or replace file-dependent rename/delete/external/share actions and retain details, collection metadata, history removal, and the explicit forget command. Route denied/unavailable states to their specific feedback where appropriate; do not classify them as missing."
+    },
+    {
+      "severity": "P3",
+      "file": "app/src/main/java/com/os73/dosos73/LibraryScreens.kt",
+      "line": 333,
+      "evidence": "Proven under a nonempty library with blank search and a category, 100 MiB, or collection filter excluding all rows: filtered.isEmpty() shows no_files plus files_empty_body, which tells the user to start from Home to add a file. This is the same message as a genuinely empty library, although existing files become visible by clearing the filters. Only query text controls the alternative no_search_results message.",
+      "recommendation": "Distinguish an empty source library from an empty filtered result, and provide a clear-filters action or a filter-specific message for the latter."
+    }
+  ],
+  "test_gaps": [
+    "No read test covers combined category/search/size/collection filters, ascending/descending sorting, or retention of those controls through refresh and collection editing.",
+    "Add a collection lifecycle regression: assign the sole file to a group, delete/forget it, and verify the group disappears; separately verify provider unavailability preserves the indexed membership.",
+    "Add menu-state tests for AVAILABLE, MISSING, PERMISSION_REQUIRED, UNAVAILABLE, and initial inspection-pending states. Existing FileAccessUiTest asserts only missing badge, row click, and forget dispatch.",
+    "Queue persistence/priority/pause/reordering have repository tests, but DownloadsScreen tab counts, search results/empty states, queue-only-paused start-button behavior, and displayed order versus priority execution are not covered by the read UI tests. Treat potential usability changes here as proposals, not additional proven failures.",
+    "DisplayFormatTest covers binary units, maximum Long and selected locales; add negative byte input and percent bounds/non-finite values if those inputs are part of the intended public contract. No proven formatting defect was found in the requested scope.",
+    "No tests were executed and no visual behavior was verified during this review."
+  ]
+}

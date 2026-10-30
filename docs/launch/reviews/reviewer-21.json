@@ -1,0 +1,88 @@
+{
+  "reviewer_id": "21",
+  "scope": {
+    "repository": "[workspace]/outputs/dosos73",
+    "baseline_requested": "b89b957",
+    "mode": "static review only; no source changes, build, emulator, or deployment",
+    "files_read": ["app/src/main/java/com/os73/dosos73/DownloadQueue.kt", "app/src/main/java/com/os73/dosos73/DownloadService.kt", "app/src/main/AndroidManifest.xml"],
+    "limitation": "لم تُفحص واجهة الجدولة أو المستدعون أو manifest المدمج أو إعداد targetSdk؛ استنتاج غياب التنبيه الآلي مقصور على الملفات الثلاثة المسموح بها."
+  },
+  "findings": [
+    {
+      "id": "R21-F1",
+      "priority": "P2",
+      "title": "notBefore حاجز أهلية محفوظ، وليس جدولة إيقاظ ذاتية في المسار المراجع",
+      "evidence": [
+        {"file": "app/src/main/java/com/os73/dosos73/DownloadQueue.kt", "lines": "113-129,205-215,264", "detail": "يُحفظ notBefore ويُستعاد، وtake يفحصه فقط لحظة الاستدعاء؛ hasRunnable يفحص الوقت فقط عند استدعائه."},
+        {"file": "app/src/main/java/com/os73/dosos73/DownloadService.kt", "lines": "145-171,131-135", "detail": "إذا كانت كل المهام مستقبلية فإن take يعيد null، وhasRunnable يكون false، فتُزال حالة foreground وتتوقف الخدمة. لا يوجد انتظار حتى أقرب موعد أو تسجيل عمل مؤجل في هذا المسار."},
+        {"file": "app/src/main/AndroidManifest.xml", "lines": "14-25", "detail": "التصريحات المحلية تعرض Activity وDownloadService فقط؛ لا يثبت هذا وحده محتوى manifest المدمج أو عدم وجود جدولة في ملفات أخرى."}
+      ],
+      "trigger": "إضافة مهمة مستقبلية ثم تشغيل الخدمة قبل موعدها، مع عدم حصول استدعاء آخر عند حلول الموعد.",
+      "impact": "مرور الوقت وحده لا يعيد استدعاء take؛ لا يمكن اعتبار دعم التنفيذ التلقائي عند الموعد مثبتًا. الخدمة تتوقف بدل إبقاء FGS دائم للموعد، وهو سلوك يجب الحفاظ عليه.",
+      "confidence": "high within reviewed path; integration not inspected"
+    },
+    {
+      "id": "R21-F2",
+      "priority": "P2",
+      "title": "انتظار سياسة الشبكة يحتفظ بعامل FGS دون مهلة محلية",
+      "evidence": [
+        {"file": "app/src/main/java/com/os73/dosos73/DownloadService.kt", "lines": "50-54,116-118", "detail": "تدخل الخدمة وضع foreground من نوع dataSync قبل تشغيل العامل."},
+        {"file": "app/src/main/java/com/os73/dosos73/DownloadService.kt", "lines": "213-221,131-135", "detail": "عند عدم سماح سياسة الشبكة يُستدعى awaitPermitted دون timeout في الخدمة. يظل job نشطًا، ولذلك stopWhenIdle لا يوقف FGS طوال هذا الانتظار."},
+        {"file": "app/src/main/java/com/os73/dosos73/DownloadService.kt", "lines": "320-323", "detail": "onTimeout يلغي النقل ويستدعي stopSelf بالفعل، لكنه حماية عند حد النظام وليس جدولة للشبكة أو استئنافًا مؤجلًا."}
+      ],
+      "trigger": "بقاء سياسة الشبكة غير مستوفاة بينما ينتظر awaitPermitted، مثل انتظار شبكة مسموح بها لفترة طويلة.",
+      "impact": "يمكن استمرار إشعار/خدمة foreground أثناء غياب نقل فعلي؛ ومع استهداف API35+ يُستهلك حد dataSync الخلفي المشترك، حتى يصل callback المهلة. لا توجد مهلة توقف وإعادة جدولة محلية في هذا المسار.",
+      "confidence": "high for missing local bound; awaitPermitted implementation intentionally not read",
+      "source": "https://developer.android.com/develop/background-work/services/fgs/timeout"
+    }
+  ],
+  "test_gaps": [
+    "لم تُشغّل اختبارات أو بناء أو محاكي التزامًا بالنطاق. التقرير تصميم ومراجعة ساكنة فقط.",
+    "يلزم إثبات: مهمة مستقبلية مع مغادرة التطبيق، موت العملية، إعادة التشغيل، Doze، تغيير ساعة الجهاز والمنطقة الزمنية، ومهمة متأخرة عند فتح التطبيق. notBefore وقت جداري مطلق، فيجب تحديد معنى تغيير الساعة صراحة.",
+    "يلزم اختبار ملكية lease بين العامل والخدمة، enqueue قرب توقف الخدمة، تعديل/حذف/إيقاف مهمة مع عمل مؤجل مسجل، ومنع بدء نقل مزدوج.",
+    "يلزم اختبار انتظار شبكة طويل ثم عودتها، فقد الشبكة أثناء النقل، حفظ الاستئناف عند الإيقاف، وonTimeout على API35؛ لا يُفترض أن كل محرك قابل للتجزئة قبل فحصه.",
+    "يلزم فحص manifest المدمج وtargetSdk/dependencies لاحقًا؛ لا يمكن الجزم من الملفات الثلاثة بوجود/غياب WorkManager في التطبيق كله."
+  ],
+  "proposals": [
+    {
+      "id": "R21-P1",
+      "title": "تصميم صغير لجدولة مؤجلة بلا FGS أثناء الانتظار",
+      "status": "proposal only; not implemented or runtime-tested",
+      "steps": [
+        "اعتبار notBefore حدًا أدنى لوقت التنفيذ، مع توضيح أن التشغيل قد يتأخر بسبب قيود النظام والشبكة. لا تعد بموعد دقيق ولا تضف exact alarm لمجرد تنزيل قابل للتأجيل.",
+        "بعد نجاح journal commit، أعد حساب أقرب مهمة غير موقوفة. سجل OneTimeWorkRequest فريدًا لقائمة التنزيل، بتأخير max(0, earliestNotBefore-now) وقيد الشبكة المناسب. عند الإيقاف/الحذف/التعديل أعد التوفيق أو ألغ العمل إذا لم توجد مهمة. أعد التوفيق كذلك عند تهيئة التطبيق؛ WorkManager يحفظ تسجيله عبر إعادة التشغيل، وتبقى نافذة commit ثم enqueue بحاجة معالجة ومراجعة.",
+        "عند إيقاظ العامل أعد قراءة journal وافحص notBefore/paused والـ lease داخل قفل واحد؛ يمكن أن يكون وقت الجهاز أو محتوى الصف قد تغيّر. لا تجعل Worker مجرد جسر غير مشروط إلى startForegroundService في الخلفية.",
+        "للإصدار الصغير القابل للمراجعة: العامل المؤجل يعلن أن المهمة أصبحت جاهزة ويرسل إشعارًا يفتح التطبيق؛ ضغط المستخدم يبدأ مسار النقل الحالي. سمِّ هذا تذكيرًا/جاهزية مجدولة، ولا تقدمه كتنزيل تلقائي. تعامل مع رفض إذن الإشعار بعرض الجاهزية داخل التطبيق عند فتحه.",
+        "إذا كان المطلوب تنزيلًا تلقائيًا فعلًا: قبل إطلاقه استخرج منفذ نقل مشتركًا يملكه Worker أو الخدمة عبر lease واحد، واثبت الإيقاف والاستئناف؛ استخدم أعمالًا مقيدة ومحدودة وقابلة للاستئناف. لا تنقل حلقة انتظار الشبكة إلى long-running Worker وتتوقع اختفاء FGS أو الحصص. النقل الطويل غير القابل للاستئناف يحتاج قرار منتج/تنفيذ مستقل واختبارات قبل الوعد به."
+      ],
+      "sources": ["https://developer.android.com/develop/background-work/background-tasks/persistent", "https://developer.android.com/develop/background-work/background-tasks/persistent/getting-started/define-work", "https://developer.android.com/develop/background-work/services/fgs/restrictions-bg-start"]
+    },
+    {
+      "id": "R21-P2",
+      "title": "تحرير FGS عند انتظار شبكة غير مستوفاة",
+      "status": "proposal only; requires checkpoint/resume verification",
+      "steps": [
+        "اجعل انتظار الشبكة قبل النقل حالة صف محفوظة، لا coroutine معلقة داخل الخدمة. اخرج من العامل وأزل foreground بعد حفظ ملكية/نقطة الاستئناف بصورة متسقة، ثم دع قيد شبكة في العمل المؤجل يعيد المحاولة.",
+        "عند فقد الشبكة أثناء النقل امنح مهلة إعادة اتصال قصيرة ومحدودة فقط، ثم checkpoint وإيقاف وإعادة جدولة؛ أبقِ cancel وuserPaused ذوي أولوية على retry. لا تعتبر المهلة فشلًا نهائيًا يفقد ملفًا جزئيًا صالحًا.",
+        "احتفظ بـ onTimeout الذي يوقف الخدمة سريعًا؛ اختبر ترتيب حفظ الاستئناف والإلغاء لأن callback ليس ترخيصًا لتمديد الخدمة."
+      ]
+    },
+    {
+      "id": "R21-P3",
+      "title": "مخاطر API29–36 التي تقيد التصميم",
+      "api_risks": [
+        {"api": "29–30", "risk": "foregroundServiceType متاح من Android10؛ التصريح الحالي dataSync وتمرير النوع وقت التشغيل متسقان. لا تجعل بقاء الخدمة استراتيجية جدولة أو انتظار شبكة.", "source": "https://developer.android.com/about/versions/14/changes/fgs-types-required"},
+        {"api": "31–32", "risk": "عند استهداف31+ بدء FGS من الخلفية محظور إلا الاستثناءات الموثقة؛ حلول الموعد وحده ليس استثناءً عامًا. عمل مؤجل لا ينبغي أن يطلق DownloadService دون التحقق من مسار مسموح.", "source": "https://developer.android.com/develop/background-work/services/fgs/restrictions-bg-start"},
+        {"api": "33", "risk": "POST_NOTIFICATIONS إذن وقت تشغيل؛ رفضه لا يمنع بدء FGS لكنه يخفي إشعاراته من درج الإشعارات. تصميم التنبيه عند الاستحقاق يحتاج حالة داخل التطبيق إذا تعذر الإشعار.", "source": "https://developer.android.com/develop/ui/compose/notifications/notification-permission"},
+        {"api": "34", "risk": "عند استهداف34+ يلزم نوع FGS وصلاحيته؛ manifest الحالي يصرح dataSync وFOREGROUND_SERVICE_DATA_SYNC. UIDT متاح من34 للنقل الذي يبدأه المستخدم وبشروط بدء محددة؛ لا يُفترض أنه مؤقت تنزيل مستقبلي عام.", "sources": ["https://developer.android.com/about/versions/14/changes/fgs-types-required", "https://developer.android.com/develop/background-work/background-tasks/uidt"]},
+        {"api": "35", "risk": "عند استهداف35+ dataSync في الخلفية محدود بإجمالي6 ساعات خلال24 ساعة، ولا يجوز إطلاقه من BOOT_COMPLETED. معالج onTimeout الحالي موجود، لكن انتظار الشبكة يستهلك الميزانية قبل توقفه.", "sources": ["https://developer.android.com/develop/background-work/services/fgs/timeout", "https://developer.android.com/about/versions/15/behavior-changes-15"]},
+        {"api": "36", "risk": "حصص jobs تطبق أيضًا على jobs التي تبدأ من FGS، ومنها WorkManager، بغض النظر عن target. نقل العمل إلى long-running Worker ليس ضمانًا لاستمرار غير محدود؛ راجع UIDT للنقل الطويل المباشر من المستخدم وفق شروطه.", "source": "https://developer.android.com/develop/background-work/services/fgs/changes"}
+      ]
+    }
+  ],
+  "summary_three_lines": [
+    "notBefore محفوظ ويمنع البدء المبكر، لكن مسار الملفات الثلاثة لا يثبت إيقاظًا تلقائيًا عند الموعد.",
+    "الخدمة تتوقف إذا لم توجد مهمة مستحقة، لكنها قد تبقى FGS أثناء انتظار الشبكة دون مهلة محلية.",
+    "التصميم المقترح يفصل الانتظار إلى WorkManager ويحتفظ بـ lease واحد؛ التنزيل التلقائي الطويل مؤجل حتى إثبات الاستئناف وقيود API29–36."
+  ]
+}

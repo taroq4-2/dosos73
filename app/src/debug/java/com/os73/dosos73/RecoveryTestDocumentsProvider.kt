@@ -16,6 +16,8 @@ class RecoveryTestDocumentsProvider : DocumentsProvider() {
     companion object {
         val entries = java.util.concurrent.ConcurrentHashMap<String, Entry>()
         var failAfterRename = false
+        @Volatile var onRead: (() -> Unit)? = null
+        @Volatile var afterRename: (() -> Unit)? = null
         var rejectRename = false
         var unknownSize = false
         var denyRead = false
@@ -25,6 +27,7 @@ class RecoveryTestDocumentsProvider : DocumentsProvider() {
         var renames = 0
         fun reset() {
             entries.values.forEach { it.file.delete() }; entries.clear()
+            afterRename = null; onRead = null
             failAfterRename = false; rejectRename = false; unknownSize = false; denyRead = false; denyQuery = false; emptyQuery = false; deletes = 0; renames = 0
         }
     }
@@ -58,6 +61,7 @@ class RecoveryTestDocumentsProvider : DocumentsProvider() {
     }
     override fun openDocument(documentId: String, mode: String, signal: CancellationSignal?): ParcelFileDescriptor {
         val entry = entries[documentId] ?: throw FileNotFoundException()
+        if (mode == "r") onRead?.invoke()
         if (mode == "r" && denyRead) throw FileNotFoundException("Storage offline")
         if (mode == "r" && unknownSize) {
             val bytes = entry.file.readBytes()
@@ -75,6 +79,7 @@ class RecoveryTestDocumentsProvider : DocumentsProvider() {
         entries[next] = entry.copy(name = displayName)
         renames++
         if (failAfterRename) throw FileNotFoundException("Interrupted after rename")
+        afterRename?.invoke()
         return next
     }
     override fun deleteDocument(documentId: String) {

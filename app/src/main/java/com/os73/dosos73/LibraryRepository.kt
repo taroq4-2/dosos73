@@ -169,14 +169,20 @@ internal object LibraryRepository {
                         android.provider.DocumentsContract.renameDocument(context.contentResolver, uri, clean)
                             ?: error("Document rename unavailable")
                     }
-                val actualName = context.contentResolver.query(newUri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)
-                    ?.use { if (it.moveToFirst()) it.getString(0) else null } ?: clean
+                // The rename already happened. Optional metadata must not discard its returned URI.
+                val actualName = try {
+                    context.contentResolver.query(newUri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)
+                        ?.use { if (it.moveToFirst()) it.getString(0) else null }
+                } catch (_: Exception) { null } ?: clean
                 val changed = item.copy(uri = newUri.toString(), name = actualName)
-                LibraryPreferences.migrateUri(context, item.uri, newUri.toString())
                 val next = mutable.value.map { if (it.uri == item.uri) changed else it }
-                write(context, next)
+                // Keep the usable reference in this session even if the following disk write fails.
+                // Provider rename and this private index are not one durable transaction.
                 mutable.value = next
                 cache.remove(item.uri)
+                write(context, next)
+                migrateHiddenUri(context, item.uri, newUri.toString())
+                LibraryPreferences.migrateUri(context, item.uri, newUri.toString())
             }
         }
 
@@ -214,15 +220,29 @@ internal object LibraryRepository {
             .orEmpty()
             .toSet()
 
+    // Called only while holding lock, just like hideHistory and clearHistory.
+    private fun migrateHiddenUri(context: Context, previous: String, next: String) {
+        if (previous == next) return
+        val current = hidden(context)
+        if (previous !in current) return
+        check(
+            context.getSharedPreferences("library", Context.MODE_PRIVATE).edit()
+                .putStringSet("hidden_history", current - previous + next)
+                .commit()
+        )
+    }
+
     suspend fun hideHistory(context: Context, item: SavedFile) =
         withContext(Dispatchers.IO) {
-            check(
-                context
-                    .getSharedPreferences("library", Context.MODE_PRIVATE)
-                    .edit()
-                    .putStringSet("hidden_history", hidden(context) + item.uri)
-                    .commit()
-            )
+            lock.withLock {
+                check(
+                    context
+                        .getSharedPreferences("library", Context.MODE_PRIVATE)
+                        .edit()
+                        .putStringSet("hidden_history", hidden(context) + item.uri)
+                        .commit()
+                )
+            }
         }
 
     suspend fun clearHistory(context: Context) =

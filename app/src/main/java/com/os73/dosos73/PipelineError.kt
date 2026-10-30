@@ -60,7 +60,8 @@ object FailureClassifier {
                 "no supported javascript runtime" in message -> FailureCode.JS_RUNTIME_UNAVAILABLE
                 "ejs" in message && ("not found" in message || "unavailable" in message) ->
                     FailureCode.EJS_COMPONENT_UNAVAILABLE
-                error is java.net.SocketTimeoutException || "timed out" in message ->
+                error is java.net.SocketTimeoutException ||
+                    (error is java.io.InterruptedIOException && message == "timeout") || "timed out" in message ->
                     FailureCode.NETWORK_TIMEOUT
                 error is java.net.UnknownHostException || error is java.net.ConnectException ->
                     FailureCode.NETWORK_UNAVAILABLE

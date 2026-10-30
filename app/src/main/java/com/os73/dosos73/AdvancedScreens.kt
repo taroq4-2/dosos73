@@ -38,6 +38,7 @@ internal data class BatchEntry(
     val choice: Choice? = null,
     val destination: String? = null,
     val destinationOverride: Boolean = false,
+    val deliveryId: String = java.util.UUID.randomUUID().toString(),
 )
 
 internal object BatchInput {

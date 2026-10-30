@@ -1,0 +1,28 @@
+{
+  "reviewer": 34,
+  "scope": "DownloadService.kt and TransferProcessor.kt: Android foreground limits and cold paused/resume races; prioritize recent service changes",
+  "baseline": {
+    "kind": "current working tree",
+    "head": "b89b957b32b2c9d73bfff505fecdf0abfadd5cf7",
+    "dirty": true,
+    "sha256": {
+      "app/src/main/java/com/os73/dosos73/DownloadService.kt": "BC73208E434624C916EA42CB014633CF8EE02A38E78EB24F186F1D7718457233",
+      "app/src/main/java/com/os73/dosos73/TransferProcessor.kt": "86C1CC2BAF2F4862E8DAD7EFF4A4F477AD69B333F7611F724245532FA51A9C7E"
+    }
+  },
+  "findings": [],
+  "checks": [
+    "Read both complete source files and their working-tree diffs against HEAD",
+    "Traced serialized control commands, cold pause/resume and cancel, foreground entry, stopWhenIdle, timeout, and worker ownership/finalization",
+    "Read DownloadQueue take/setPaused/finish/interrupted/rememberActive, Transfers reservation semantics, AppRoot startService/startForegroundService callers, PrivateJournal, and ColdServiceControlTest",
+    "Checked targetSdk 35 and dataSync service declaration",
+    "Reviewed commit callback and NonCancellable finalization in TransferProcessor against pause/cancel completion races",
+    "Initial sandbox launcher failed on BitLocker-locked P:; source inspection subsequently succeeded using approved direct execution"
+  ],
+  "limits": [
+    "Static review only; no reproducible defect established in assigned scope",
+    "No repository edits, builds, emulator runs, runtime Android behavior verification, or publishing performed",
+    "Existing cold-service tests were inspected but not executed"
+  ],
+  "status": "complete_no_proven_findings"
+}

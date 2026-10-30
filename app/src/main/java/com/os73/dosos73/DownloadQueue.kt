@@ -19,6 +19,7 @@ internal object DownloadQueue {
     private val mutable = MutableStateFlow<List<DownloadTask>>(emptyList())
     val tasks = mutable.asStateFlow()
     private var loaded = false
+    private var acceptedBatch = emptySet<String>()
     @Volatile private var active: DownloadTask? = null
 
     private fun journal(context: Context) = PrivateJournal(context, "waiting-tasks.json")
@@ -27,6 +28,7 @@ internal object DownloadQueue {
         if (loaded) return
         val text = journal(context).readOrNull()
         var leased: DownloadTask? = null
+        var accepted = emptySet<String>()
         val waiting =
             if (text == null) emptyList()
             else {
@@ -35,27 +37,35 @@ internal object DownloadQueue {
                     else {
                         val obj = JSONObject(text)
                         leased = obj.optJSONObject("active")?.let(::decodeTask)
+                        val receipts = obj.optJSONArray("acceptedBatch") ?: JSONArray()
+                        require(receipts.length() <= 20)
+                        accepted = (0 until receipts.length()).map { receipts.getString(it) }.toSet()
+                        accepted.forEach { require(UUID.fromString(it).toString() == it) }
                         obj.getJSONArray("waiting")
                     }
                 (0 until array.length()).map { decodeTask(array.getJSONObject(it)) }
             }
         active = leased
+        acceptedBatch = accepted
         mutable.value = waiting
         loaded = true
     }
 
-    private fun commit(context: Context, waiting: List<DownloadTask>, leased: DownloadTask?) {
-        if (waiting == mutable.value && leased == active) return
+    private fun commit(context: Context, waiting: List<DownloadTask>, leased: DownloadTask?,
+        accepted: Set<String> = acceptedBatch) {
+        if (waiting == mutable.value && leased == active && accepted == acceptedBatch) return
         val array = JSONArray()
         waiting.forEach { array.put(encodeTask(it)) }
         journal(context)
             .write(
                 JSONObject()
+                    .put("acceptedBatch", JSONArray(accepted.toList()))
                     .put("waiting", array)
                     .put("active", leased?.let(::encodeTask))
                     .toString()
             )
         active = leased
+        acceptedBatch = accepted
         mutable.value = waiting
     }
 
@@ -70,6 +80,33 @@ internal object DownloadQueue {
                     require(mutable.value.size < 50)
                     commit(context, mutable.value + task, active)
                 }
+            }
+        }
+
+    /** Called only by the serialized draft actor after this identity is durable in its draft. */
+    suspend fun enqueueBatch(context: Context, deliveryId: String, task: DownloadTask) =
+        withContext(Dispatchers.IO) {
+            lock.withLock {
+                load(context)
+                require(UUID.fromString(deliveryId).toString() == deliveryId)
+                if (deliveryId !in acceptedBatch) {
+                    require(acceptedBatch.size < 20)
+                    val stableTask = task.copy(id = deliveryId)
+                    val waiting = if (active?.id == deliveryId || mutable.value.any { it.id == deliveryId })
+                        mutable.value else (mutable.value + stableTask).also { require(it.size <= 50) }
+                    // Receipt and task are one journal commit, including across finish/remove.
+                    commit(context, waiting, active, acceptedBatch + deliveryId)
+                }
+            }
+        }
+
+    /** Only after a successful draft read/write; serialize with enqueueBatch in the draft actor. */
+    suspend fun reconcileBatch(context: Context, durableDeliveryIds: Set<String>) =
+        withContext(Dispatchers.IO) {
+            lock.withLock {
+                load(context)
+                require(durableDeliveryIds.size <= 20)
+                commit(context, mutable.value, active, acceptedBatch.intersect(durableDeliveryIds))
             }
         }
 
@@ -97,8 +134,12 @@ internal object DownloadQueue {
         withContext(Dispatchers.IO) {
             lock.withLock {
                 load(context)
-                check(active == null || active?.id == task.id)
-                commit(context, mutable.value.filterNot { it.id == task.id }, task)
+                val lease = active ?: task
+                check(lease.id == task.id)
+                // Startup may hold a snapshot from before a Pause/Resume journal commit.
+                // The current lease owns those control fields; refreshing ownership must
+                // not restore stale values from the worker's captured task.
+                commit(context, mutable.value.filterNot { it.id == task.id }, lease)
             }
         }
 

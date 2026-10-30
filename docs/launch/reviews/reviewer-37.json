@@ -1,0 +1,29 @@
+{
+  "reviewer_id": "37",
+  "scope": ["PublicationReceipt.kt", "OutputStore.kt", "TransferProcessor.kt", "PublicationCommitRaceTest.kt", "PublicationRecoveryTest.kt", "supporting queue/journal/provider code"],
+  "findings": [
+    {
+      "severity": "P2",
+      "file": "app/src/main/java/com/os73/dosos73/OutputStore.kt",
+      "line": 155,
+      "end_line": 157,
+      "title": "Cancellation during staged-output verification still publishes the file",
+      "trigger": "Cancel the worker while openInputStream(uri)/StreamIntegrity.fingerprint is reading a large staged destination, after the ensureActive at line146 and before rename/update starts.",
+      "evidence": "The fingerprint read is synchronous and checks Thread.isInterrupted, while ordinary Job.cancel does not interrupt a Dispatchers.IO thread. After fingerprint returns, save sets verified, writes the receipt and invokes publishVerified with no further coroutine cancellation check. Publication therefore begins after the user already cancelled; onCommitted sets terminal COMPLETE and TransferProcessor deliberately retains that state. This is a pre-commit cancellation, unlike the existing test which cancels from afterRename. It can cause a large verification read to finish and publish a download the user cancelled before publication.",
+      "recommendation": "Check currentCoroutineContext().ensureActive() after destination fingerprint validation and before setting verified/starting publication. Add a provider fixture that blocks the verification read, cancels the worker, releases the read, and asserts no rename or completed callback occurs.",
+      "confidence": "Source-proven conditional control-flow defect; no device execution. The missing cancellation checkpoint predates the current callback diff but remains exposed by this integration."
+    },
+    {
+      "severity": "P2",
+      "file": "app/src/main/java/com/os73/dosos73/OutputStore.kt",
+      "line": 157,
+      "end_line": 164,
+      "title": "A post-commit reopen failure is still reported as a failed download",
+      "trigger": "The provider successfully renames the verified document (or MediaStore clears IS_PENDING), the ready receipt is written, then the additional openFileDescriptor(finalUri, r) fails, for example because removable storage becomes unavailable at that point.",
+      "evidence": "PublicationReceipt.publish writes ready=true at lines161-162 before returning. OutputStore then performs another fallible provider open/stat at lines158-161 before notifying onCommitted at line164. If that open throws/returns null, verified=true preserves the published file, but TransferProcessor has never received the commit callback, so its terminal state remains CANCELLED and the exception path changes it to FAILED, records a failure, and acknowledges the queue. The cancellation fix only protects events after the callback; this path still labels an already committed download failed and halts the waiting queue.",
+      "recommendation": "Make the successful durable publication observable immediately at its commit boundary, and handle any subsequent availability check without converting the committed task into FAILED. Add a fault-provider test that succeeds at rename and fails only the next final-URI read.",
+      "confidence": "Source-proven conditional control-flow defect; no device execution. The final reopen predates this diff; the newly added commit callback is positioned after it."
+    }
+  ],
+  "validation": {"method": "Read-only source and diff inspection", "builds_or_device_runs": "none", "source_edits": "none"}
+}

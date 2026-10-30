@@ -13,6 +13,8 @@ internal class PublicationReceipt(private val context: Context, private val id: 
     init { require(id.matches(Regex("[a-zA-Z0-9_-]{1,100}"))) }
     private val name = "publication-$id.json"
     private val journal = PrivateJournal(context, name)
+    var recoveredBytes: Long? = null
+        private set
     private fun review(cause: Throwable? = null): Nothing =
         throw PipelineException(Stage.PUBLISH, FailureCode.PUBLICATION_REVIEW_REQUIRED, cause)
 
@@ -42,8 +44,11 @@ internal class PublicationReceipt(private val context: Context, private val id: 
 
     /** Used both after a normal copy and after process death. All mutations are retryable. */
     fun recover(): Pair<Uri, String>? {
+        recoveredBytes = null
         val value = journal.readOrNull()?.let(::JSONObject) ?: return null
-        return if (value.optInt("plan") == 1) recoverPlan(value) else recoverLegacy(value)
+        val result = if (value.optInt("plan") == 1) recoverPlan(value) else recoverLegacy(value)
+        if (result != null) recoveredBytes = expected(value).bytes
+        return result
     }
 
     private fun recoverPlan(value: JSONObject): Pair<Uri, String>? {
@@ -52,7 +57,9 @@ internal class PublicationReceipt(private val context: Context, private val id: 
         val temporary = value.getString("temporary")
         val final = value.getString("final")
         require(temporary.startsWith("dosos73-$id.partial."))
+        val recordedUri = if (value.isNull("uri")) null else Uri.parse(value.getString("uri"))
         val candidates = mutableListOf<Pair<Uri, String>>()
+        var recordedCandidate: Pair<Uri, String>? = null
         if (tree == null) {
             resolver.query(MediaStore.setIncludePending(MediaStore.Downloads.EXTERNAL_CONTENT_URI),
                 arrayOf(MediaStore.MediaColumns._ID, MediaStore.MediaColumns.DISPLAY_NAME),
@@ -61,9 +68,14 @@ internal class PublicationReceipt(private val context: Context, private val id: 
                 while (cursor.moveToNext()) candidates += android.content.ContentUris.withAppendedId(
                     MediaStore.Downloads.EXTERNAL_CONTENT_URI, cursor.getLong(0)) to cursor.getString(1)
             } ?: review()
+            recordedCandidate = recordedUri?.let(::mediaStoreCandidate)
         } else {
             val folder = DocumentFile.fromTreeUri(context, tree) ?: review()
             if (!folder.isDirectory) review()
+            val recordedDocumentId = recordedUri?.let { recorded ->
+                if (recorded.scheme != "content" || recorded.authority != tree.authority) review()
+                runCatching { android.provider.DocumentsContract.getDocumentId(recorded) }.getOrElse { review(it) }
+            }
             // The actual queries enforce read permission, including owner-provided documents on API29.
             val children = android.provider.DocumentsContract.buildChildDocumentsUriUsingTree(
                 tree, android.provider.DocumentsContract.getTreeDocumentId(tree))
@@ -71,15 +83,21 @@ internal class PublicationReceipt(private val context: Context, private val id: 
                 android.provider.DocumentsContract.Document.COLUMN_DISPLAY_NAME), null, null, null)?.use { cursor ->
                 while (cursor.moveToNext()) {
                     val actual = cursor.getString(1)
-                    if (actual == temporary || actual == final) candidates +=
-                        android.provider.DocumentsContract.buildDocumentUriUsingTree(tree, cursor.getString(0)) to actual
+                    val documentId = cursor.getString(0)
+                    val child = android.provider.DocumentsContract.buildDocumentUriUsingTree(tree, documentId) to actual
+                    if (actual == temporary || actual == final) candidates += child
+                    // Membership in this exact directory, not merely a matching display name,
+                    // binds a normalized document back to the URI recorded after creation.
+                    if (recordedDocumentId == documentId) recordedCandidate = child
                 }
             } ?: review()
         }
+        recordedCandidate?.let { recorded ->
+            if (candidates.none { it.first == recorded.first }) candidates += recorded
+        }
         if (candidates.size > 1) review()
         if (candidates.isEmpty()) {
-            // A recorded URI can survive a provider-normalized name. It is still receipt-bound.
-            if (!value.isNull("uri")) review()
+            if (recordedUri != null) review()
             forget() // Plan persisted but creation did not produce a discoverable document.
             return null
         }
@@ -97,9 +115,25 @@ internal class PublicationReceipt(private val context: Context, private val id: 
             forget()
             return null
         }
+        // A durable ready receipt already crossed the commit point. Preserve a provider's
+        // normalized name (or a later user rename) instead of renaming the file again.
+        if (value.optBoolean("ready")) return uri to value.getString("mime")
         value.put("uri", uri.toString()).put("verified", true)
         journal.write(value.toString()) // Durable before any provider rename/update.
         return publish(value, uri, actualName)
+    }
+
+    private fun mediaStoreCandidate(uri: Uri): Pair<Uri, String> {
+        if (uri.scheme != "content" || uri.authority != MediaStore.AUTHORITY) review()
+        val rowId = runCatching { android.content.ContentUris.parseId(uri) }.getOrElse { review(it) }
+        if (uri != android.content.ContentUris.withAppendedId(MediaStore.Downloads.EXTERNAL_CONTENT_URI, rowId)) review()
+        return context.contentResolver.query(MediaStore.setIncludePending(uri),
+            arrayOf(MediaStore.MediaColumns.DISPLAY_NAME, MediaStore.MediaColumns.RELATIVE_PATH,
+                MediaStore.MediaColumns.OWNER_PACKAGE_NAME), null, null, null)?.use { cursor ->
+            if (!cursor.moveToFirst()) review()
+            if (cursor.getString(1) != "Download/dosos73/" || cursor.getString(2) != context.packageName) review()
+            uri to (cursor.getString(0) ?: review())
+        } ?: review()
     }
 
     fun publishVerified(uri: Uri): Pair<Uri, String> {

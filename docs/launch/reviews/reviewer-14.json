@@ -1,0 +1,67 @@
+{
+  "reviewer_id": "reviewer-14",
+  "scope": "MainViewModel.kt entirely: job lifetime, cancellation, shares while busy, draft read/write/retry channels; baseline b89b957b32b2c9d73bfff505fecdf0abfadd5cf7. Static review only; NativeProcessSession and service excluded.",
+  "findings": [
+    {
+      "id": "R14-01",
+      "severity": "P2",
+      "confidence": "high",
+      "title": "The 120-second analysis timeout cannot cancel the synchronous direct probe",
+      "file": "app/src/main/java/com/os73/dosos73/MainViewModel.kt",
+      "line_start": 99,
+      "line_end": 109,
+      "evidence": [
+        "MainViewModel.kt:99 wraps direct analyze in withTimeout(120_000), while actual direct.cancel() is deferred to the catch at 287-290 or 209-212.",
+        "DirectDownloader.kt:68-71 runs the request inside withContext(Dispatchers.IO); request() blocks in call.execute() at line 56 and has no coroutine cancellation handler. NetworkSettings.client preserves the six-hour callTimeout from DirectDownloader.kt:311.",
+        "A cancelled withContext waits for its blocking IO block to finish, so the timeout catch cannot close the call while it is blocking."
+      ],
+      "reproduction": [
+        "Use an owned public HTTPS endpoint whose HEAD response delivers incomplete headers slowly, with at least one byte every ten seconds, for more than 120 seconds. This avoids the 30-second inactivity read timeout.",
+        "Analyze this URL in single or batch mode and wait 120 seconds. The coroutine is cancelled, but busy/batchBusy remains set and no timeout result is shown until the synchronous HEAD finishes or fails.",
+        "Manual Cancel does invoke direct.cancel(), confirming the missing link is specifically timeout-driven cancellation."
+      ],
+      "impact": "The promised two-minute bound is ineffective for direct probes; one slow origin can hold the single analysis or block the remaining batch for much longer.",
+      "suggested_fix": "Connect cancellation of the analyzing coroutine to the active OkHttp Call at the request boundary, or use a cancellable asynchronous OkHttp adapter; keep timeout cleanup independent of waiting for call.execute() to return."
+    },
+    {
+      "id": "R14-02",
+      "severity": "P2",
+      "confidence": "high",
+      "title": "Accepting a pending multi-link share discards it when draft storage is in error",
+      "file": "app/src/main/java/com/os73/dosos73/MainViewModel.kt",
+      "line_start": 143,
+      "line_end": 151,
+      "evidence": [
+        "receive() stores shares while busy at 117-120.",
+        "acceptPending() clears pendingShared at 146 before calling receive(pending) at 147.",
+        "receive() dispatches two or more URLs to prepareBatch() at 122-124, but prepareBatch() silently returns when draftErrorMutable is true at 151.",
+        "AppRoot.kt:517-524 displays an enabled pending-share confirmation independently of batchStorageError, so the failing path is reachable in the UI."
+      ],
+      "reproduction": [
+        "Cause draft.read() or draft.write() to fail, leaving batchStorageError=true. Single-link analysis remains permitted by analyze().",
+        "While single analysis is busy, share text containing two URLs; pendingShared now contains that text.",
+        "Cancel or finish analysis and press the pending-link dialog confirmation. acceptPending clears pendingShared, then prepareBatch returns immediately because of the storage error.",
+        "Retry storage successfully. The shared links are absent from the batch and no pending dialog remains."
+      ],
+      "impact": "A user-confirmed incoming share is silently lost during a recoverable storage failure; retrying storage cannot recover it.",
+      "suggested_fix": "Do not consume pendingShared until the selected receive path accepts it; preserve or defer multi-link input when draft storage is in error."
+    }
+  ],
+  "test_gaps": [
+    {
+      "area": "Direct timeout and cancellation",
+      "gap": "No test found for MainViewModel timeout while DirectDownloader.call.execute remains blocked, or for cancellation followed immediately by another single/batch analysis.",
+      "suggested_test": "Use an injected cancellable analyzer and an owned slow-header HTTP endpoint to verify deadline cancellation closes the call and clears busy before a new run."
+    },
+    {
+      "area": "Draft channel lifecycle",
+      "gap": "Existing BatchChoiceUiTest.storageFailureOffersRetryAndPreventsEnqueue tests only the composable flags. No MainViewModel tests found for read failure/retry, write failure with conflated revisions, initial restore racing a new draft, or ViewModel clearance during IO.",
+      "suggested_test": "Inject draft storage with barriers and failures; assert latest accepted revision remains in memory, storage errors preserve user input, and saving becomes false only for the latest durable revision."
+    },
+    {
+      "area": "Incoming shares",
+      "gap": "ClipboardInputTest covers normal multi-link input but not pending acceptance under storage failure, multiple shares while busy, cancellation, or batch busy.",
+      "suggested_test": "Assert pending text is preserved until processing succeeds, including multi-link shares during a draft storage failure."
+    }
+  ]
+}

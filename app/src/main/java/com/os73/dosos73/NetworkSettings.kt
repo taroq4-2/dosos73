@@ -21,9 +21,9 @@ internal object NetworkSettings {
     fun setAllowCleartext(context: Context, value: Boolean) {
         check(prefs(context).edit().putBoolean("allow_cleartext", value).commit())
     }
-    fun requireSource(context: Context, url: String) {
+    fun requireSource(context: Context, url: String, stage: Stage = Stage.TRANSFER) {
         if (!url.startsWith("https:", true) && !allowCleartext(context))
-            throw PipelineException(Stage.TRANSFER, FailureCode.CLEARTEXT_DISABLED)
+            throw PipelineException(stage, FailureCode.CLEARTEXT_DISABLED)
     }
 
     fun wifiOnly(context: Context) = prefs(context).getBoolean("wifi_only", false)
@@ -38,10 +38,10 @@ internal object NetworkSettings {
         check(prefs(context).edit().putBoolean("unmetered_only", value).commit())
     }
 
-    fun requireNetwork(context: Context): Network {
+    fun requireNetwork(context: Context, stage: Stage = Stage.TRANSFER): Network {
         val manager = context.getSystemService(ConnectivityManager::class.java)
-        val network = manager.activeNetwork ?: throw PipelineException(Stage.TRANSFER, FailureCode.NETWORK_UNAVAILABLE)
-        if (!permitted(context, network)) throw PipelineException(Stage.TRANSFER, FailureCode.NETWORK_UNAVAILABLE)
+        val network = manager.activeNetwork ?: throw PipelineException(stage, FailureCode.NETWORK_UNAVAILABLE)
+        if (!permitted(context, network)) throw PipelineException(stage, FailureCode.NETWORK_UNAVAILABLE)
         return network
     }
 

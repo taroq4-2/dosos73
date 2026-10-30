@@ -7,6 +7,7 @@ import okhttp3.HttpUrl.Companion.toHttpUrl
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.sync.withLock
 
 data class ScreenState(
     val url: String = "",
@@ -31,8 +32,18 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     private var direct = DirectDownloader()
 
     private val draft = BatchDraft(app)
-    private val draftWrites = kotlinx.coroutines.channels.Channel<Pair<Long, List<BatchEntry>>>(kotlinx.coroutines.channels.Channel.CONFLATED)
+    private sealed interface DraftCommand {
+        data class Write(val revision: Long, val rows: List<BatchEntry>) : DraftCommand
+        data class Queue(val entry: BatchEntry, val task: DownloadTask,
+            val done: CompletableDeferred<Unit>) : DraftCommand
+    }
+    // At most twenty analysis snapshots plus one handoff; UI edits wait for saving to finish.
+    private val draftWrites = kotlinx.coroutines.channels.Channel<DraftCommand>(32)
+    private var draftReady = false
     private var draftRevision = 0L
+    private var invalidThroughRevision = 0L
+    private var durableDraftToken: String? = null
+    private class DraftChanged(val latest: BatchDraftSnapshot) : IllegalStateException("Batch draft changed")
     private val savingMutable = MutableStateFlow(true)
     val batchSaving = savingMutable.asStateFlow()
 
@@ -44,28 +55,108 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             while (true) {
                 try {
-                    val restored = withContext(Dispatchers.IO) { draft.read() }
-                    if (draftRevision == 0L) {
-                        batchMutable.value = restored
-                        savingMutable.value = false
+                    // BatchDraft.read commits legacy delivery IDs before they become sendable.
+                    val restored = BatchDraft.protocolLock.withLock {
+                        val snapshot = withContext(Dispatchers.IO) { draft.readSnapshot() }
+                        DownloadQueue.reconcileBatch(app, snapshot.rows.map { it.deliveryId }.toSet())
+                        durableDraftToken = snapshot.token
+                        snapshot.rows
                     }
+                    batchMutable.value = restored
+                    draftReady = true
+                    savingMutable.value = false
                     draftErrorMutable.value = false
                     break
                 } catch (error: CancellationException) { throw error }
                 catch (_: Exception) { awaitDraftRetry() }
             }
-            for ((revision, rows) in draftWrites) {
-                while (true) {
-                    try {
-                        withContext(Dispatchers.IO) { draft.write(rows) }
-                        draftErrorMutable.value = false
-                        if (revision == draftRevision) savingMutable.value = false
-                        break
-                    } catch (error: CancellationException) { throw error }
-                    catch (_: Exception) { awaitDraftRetry() }
+            for (command in draftWrites) {
+                when (command) {
+                    is DraftCommand.Write -> if (command.revision > invalidThroughRevision)
+                        saveDraft(command.revision, command.rows)
+                    is DraftCommand.Queue -> {
+                        try {
+                            BatchDraft.protocolLock.withLock {
+                                val latest = withContext(Dispatchers.IO) { draft.readSnapshot() }
+                                if (latest.token != durableDraftToken) throw DraftChanged(latest)
+                                check(batchMutable.value.any { it == command.entry })
+                                DownloadQueue.reconcileBatch(app, latest.rows.map { it.deliveryId }.toSet())
+                                DownloadQueue.enqueueBatch(app, command.entry.deliveryId, command.task)
+                            }
+                            batchMutable.value = batchMutable.value.filterNot {
+                                it.deliveryId == command.entry.deliveryId
+                            }
+                            val revision = ++draftRevision
+                            savingMutable.value = true
+                            saveDraft(revision, batchMutable.value.toList()) {
+                                // Release the caller's submission UI while retaining the receipt.
+                                command.done.completeExceptionally(it)
+                            }
+                            command.done.complete(Unit)
+                        } catch (error: CancellationException) {
+                            command.done.completeExceptionally(error)
+                            throw error
+                        } catch (error: DraftChanged) {
+                            adoptLatestDraft(error.latest)
+                            command.done.completeExceptionally(error)
+                        } catch (error: Exception) {
+                            command.done.completeExceptionally(error)
+                        } finally {
+                            batchBusyMutable.value = false
+                        }
+                    }
                 }
             }
         }
+    }
+
+    private suspend fun saveDraft(revision: Long, rows: List<BatchEntry>,
+        onFailure: (Exception) -> Unit = {}) {
+        while (true) {
+            try {
+                BatchDraft.protocolLock.withLock {
+                    val latest = withContext(Dispatchers.IO) { draft.readSnapshot() }
+                    if (latest.token != durableDraftToken) throw DraftChanged(latest)
+                    val committed = withContext(Dispatchers.IO) { draft.writeSnapshot(rows) }
+                    durableDraftToken = committed.token
+                    // Never drop an acceptance receipt before the row's removal is durable.
+                    DownloadQueue.reconcileBatch(getApplication<Application>(), rows.map { it.deliveryId }.toSet())
+                }
+                draftErrorMutable.value = false
+                if (revision == draftRevision) savingMutable.value = false
+                return
+            } catch (error: CancellationException) { throw error }
+            catch (error: DraftChanged) {
+                adoptLatestDraft(error.latest)
+                onFailure(error)
+                return
+            }
+            catch (error: Exception) {
+                onFailure(error)
+                awaitDraftRetry()
+            }
+        }
+    }
+
+    private fun adoptLatestDraft(snapshot: BatchDraftSnapshot) {
+        // Invalidate every buffered snapshot from this actor, including one waiting for Retry.
+        invalidThroughRevision = draftRevision
+        draftRevision++
+        durableDraftToken = snapshot.token
+        batchMutable.value = snapshot.rows
+        savingMutable.value = false
+        draftErrorMutable.value = false
+        mutable.value = mutable.value.copy(error = R.string.error_storage)
+        if (batchBusyMutable.value) job?.cancel()
+    }
+
+    internal suspend fun queueBatch(entry: BatchEntry, task: DownloadTask) {
+        check(draftReady && !batchBusyMutable.value && !savingMutable.value && !draftErrorMutable.value)
+        val done = CompletableDeferred<Unit>()
+        batchBusyMutable.value = true
+        // The actor owns busy until the handoff ends, even if the screen's caller is cancelled.
+        draftWrites.send(DraftCommand.Queue(entry, task, done))
+        done.await()
     }
 
     private suspend fun awaitDraftRetry() {
@@ -84,13 +175,13 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     private fun persistBatch() {
         draftRevision++
         savingMutable.value = true
-        if (draftWrites.trySend(draftRevision to batchMutable.value.toList()).isFailure)
+        if (draftWrites.trySend(DraftCommand.Write(draftRevision, batchMutable.value.toList())).isFailure)
             mutable.value = mutable.value.copy(error = R.string.error_storage)
     }
 
     private fun directForNetwork(): DirectDownloader {
         val app = getApplication<Application>()
-        return DirectDownloader(NetworkSettings.client(app, NetworkSettings.requireNetwork(app)))
+        return DirectDownloader(NetworkSettings.client(app, NetworkSettings.requireNetwork(app, Stage.EXTRACT)))
             .also { direct = it }
     }
 
@@ -98,15 +189,23 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     private suspend fun analyzeSource(url: String): Analysis = withTimeout(120_000) {
         val app = getApplication<Application>()
-        NetworkSettings.requireSource(app, url)
+        NetworkSettings.requireSource(app, url, Stage.EXTRACT)
         val downloader = directForNetwork()
-        val candidate = try { downloader.analyze(url) }
-        catch (error: java.io.IOException) {
-            currentCoroutineContext().ensureActive()
-            if (!url.startsWith("https://")) throw error
-            null
+        withAnalysisCancellation({ downloader.cancel(); media.cancel() }) {
+            val candidate = try { downloader.analyze(url) }
+            catch (error: java.io.IOException) {
+                currentCoroutineContext().ensureActive()
+                if (!url.startsWith("https://")) throw error
+                null
+            }
+            candidate ?: media.analyze(url)
         }
-        candidate ?: media.analyze(url)
+    }
+
+    internal fun restoreInput(url: String?, shared: String?) {
+        // A retained ViewModel already owns its active analysis; only restore an empty draft.
+        if (mutable.value == ScreenState()) mutable.value = ScreenState(
+            url = url.orEmpty().take(8192), pendingShared = shared?.take(32768))
     }
 
     fun edit(url: String) {
@@ -115,7 +214,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun receive(text: String) {
-        if (mutable.value.busy || batchBusyMutable.value) {
+        if (mutable.value.busy || batchBusyMutable.value || !draftReady || savingMutable.value || draftErrorMutable.value) {
             mutable.value = mutable.value.copy(pendingShared = text.take(32768))
             return
         }
@@ -141,14 +240,17 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun acceptPending() {
-        if (mutable.value.busy || batchBusyMutable.value) return
+        if (mutable.value.busy || batchBusyMutable.value || !draftReady || savingMutable.value || draftErrorMutable.value) return
         val pending = mutable.value.pendingShared ?: return
         mutable.value = mutable.value.copy(pendingShared = null)
         receive(pending)
     }
 
     fun prepareBatch(text: String) {
-        if (mutable.value.busy || batchBusyMutable.value || draftErrorMutable.value) return
+        if (mutable.value.busy || batchBusyMutable.value || !draftReady || savingMutable.value || draftErrorMutable.value) {
+            mutable.value = mutable.value.copy(pendingShared = text.take(32768))
+            return
+        }
         batchMutable.value =
             BatchInput.parse(text)
                 .map { raw ->
@@ -166,7 +268,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun selectBatch(index: Int, selected: Boolean) {
-        if (batchBusyMutable.value || draftErrorMutable.value) return
+        if (batchBusyMutable.value || !draftReady || savingMutable.value || draftErrorMutable.value) return
         batchMutable.value =
             batchMutable.value.mapIndexed { i, item ->
                 if (i == index && item.url != null) item.copy(selected = selected) else item
@@ -175,7 +277,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun chooseBatch(index: Int, choice: Choice) {
-        if (batchBusyMutable.value || draftErrorMutable.value) return
+        if (batchBusyMutable.value || !draftReady || savingMutable.value || draftErrorMutable.value) return
         batchMutable.value = batchMutable.value.mapIndexed { i, item ->
             if (i == index && item.analysis?.choices?.contains(choice) == true) item.copy(choice = choice)
             else item
@@ -184,7 +286,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun batchDestination(url: String, destination: String?) {
-        if (batchBusyMutable.value) return
+        if (batchBusyMutable.value || !draftReady || savingMutable.value || draftErrorMutable.value) return
         if (destination != null && android.net.Uri.parse(destination).scheme != "content") return
         batchMutable.value = batchMutable.value.map { item ->
             if (item.url == url) item.copy(destination = destination, destinationOverride = true) else item
@@ -193,7 +295,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun analyzeBatch() {
-        if (batchBusyMutable.value || mutable.value.busy || draftErrorMutable.value) return
+        if (batchBusyMutable.value || mutable.value.busy || !draftReady || savingMutable.value || draftErrorMutable.value) return
         batchBusyMutable.value = true
         job =
             viewModelScope.launch {
@@ -231,13 +333,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             }
     }
 
-    internal fun removeBatch(entry: BatchEntry) {
-        batchMutable.value = batchMutable.value.filterNot { it == entry }
-        persistBatch()
-    }
-
     fun clearBatch() {
-        if (!batchBusyMutable.value) {
+        if (!batchBusyMutable.value && draftReady && !savingMutable.value && !draftErrorMutable.value) {
             batchMutable.value = emptyList()
             persistBatch()
         }
@@ -316,3 +413,14 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         super.onCleared()
     }
 }
+
+/** Close the underlying blocking operation as soon as timeout or scope cancellation begins. */
+internal suspend fun <T> withAnalysisCancellation(cancelOperation: () -> Unit, work: suspend () -> T): T =
+    coroutineScope {
+        val guardian = launch(Dispatchers.Default, start = CoroutineStart.UNDISPATCHED) {
+            try { awaitCancellation() }
+            finally { cancelOperation() }
+        }
+        try { work() }
+        finally { withContext(NonCancellable) { guardian.cancelAndJoin() } }
+    }

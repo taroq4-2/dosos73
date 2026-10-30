@@ -1,0 +1,33 @@
+{
+  "reviewer_id": "08/60",
+  "scope": "Baseline b89b957; complete review of app/src/main/java/com/os73/dosos73/LibraryRepository.kt and app/src/androidTest/java/com/os73/dosos73/LibraryStreamingTest.kt; static inspection only, no source changes/build/emulator/deployment.",
+  "findings": [
+    {
+      "severity": "P2",
+      "file": "app/src/main/java/com/os73/dosos73/LibraryRepository.kt",
+      "line": 172,
+      "evidence": "After a successful SAF rename returning a changed URI (lines 169–171), querying DISPLAY_NAME can throw before either the index or mutable state receives newUri. A deterministic condition supported by the baseline RecoveryTestDocumentsProvider is: remember a document; enable denyQuery; call rename. The provider's renameDocument moves the entry to a new document ID, but queryDocument throws SecurityException. rename exits with the old URI still durable/in memory; refresh only unions saved metadata with MediaStore rows, so it cannot rediscover the renamed SAF document. The file contents survive, but the library loses its usable reference. LibraryStreamingTest lines 37–56 cover only the successful metadata query.",
+      "recommendation": "Treat the post-rename metadata query as optional and fall back to clean while retaining the returned URI. Durably recover the old-to-new URI transition across subsequent preference/index failures, and add a fault test proving the renamed document remains reachable after a post-rename query failure."
+    },
+    {
+      "severity": "P2",
+      "file": "app/src/main/java/com/os73/dosos73/LibraryRepository.kt",
+      "line": 175,
+      "evidence": "When a previously hidden SAF document is renamed and its provider returns a different URI, rename migrates only LibraryPreferences.collection. hidden_history remains keyed to item.uri (lines 210–224), while the replacement SavedFile uses newUri. AppRoot.kt lines 394–396 filters history by URI membership; FileLibraryScreen still exposes hidden files for rename. Therefore hide a document, rename it from the file library using a provider with changing IDs (the existing rename test provider), and it reappears in completed history despite the prior hide/clear-history action.",
+      "recommendation": "Migrate hidden_history from the old URI to the returned URI in the same coordinated rename operation, retaining the hidden decision after refresh/restart. Test both hideHistory and clearHistory followed by an ID-changing rename."
+    },
+    {
+      "severity": "P2",
+      "file": "app/src/main/java/com/os73/dosos73/LibraryRepository.kt",
+      "line": 223,
+      "evidence": "hideHistory performs an unprotected read-modify-write of hidden_history on Dispatchers.IO. Two concurrent calls for different items can both read the same initial set H, then commit H+A and H+B; the last commit drops the other hidden item. AppRoot.kt lines 246–253 launches an independent coroutine for each hide action, allowing this interleaving. clearHistory takes lock, but hideHistory does not, so its read/commit can also overwrite the larger set written by clearHistory.",
+      "recommendation": "Guard every hidden_history read-modify-write with the same mutex, including hideHistory and URI migration. Add a controlled concurrent two-hide test and a hide-versus-clear test asserting the union is retained."
+    }
+  ],
+  "test_gaps": [
+    "LibraryStreamingTest tests 10,000 metadata rows and logs elapsed time, but asserts no latency or heap limit. read retains every row; refresh additionally builds discovered, concatenated, distinct and sorted collections, and remember rereads/rewrites the complete index. Larger-index peak memory, repeated insertion cost and sustained index growth remain unmeasured; no concrete OOM threshold was established by this static review.",
+    "Corruption coverage exercises only refresh on malformed JSON. Missing/wrong-type fields, trailing JSON, interrupted AtomicFile recovery, write failure, and corruption observed during later remember/rename/delete operations are not covered.",
+    "The successful rename test checks returned URI, collection and contents, but has no post-rename query failure, preference/index commit failure, cancellation/process interruption, hidden-history migration or concurrency coverage.",
+    "No refresh test snapshots actual document/MediaStore bytes and rows before and after refresh or simulates a revoked/offline SAF provider. Static inspection shows refresh issues only a MediaStore query and writes the private saved-files.json; it does not rename/delete/write real file contents."
+  ]
+}

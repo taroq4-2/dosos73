@@ -61,7 +61,8 @@ jobs:
         run: |
           chmod +x gradlew
           ./gradlew testDebugUnitTest lintRelease assembleRelease --console=plain
-          python3 tools/assemble_compact_experiment.py app/build/outputs/apk/release/app-release-unsigned.apk compact-engines compact-universal-unsigned.apk
+          python3 tools/fetch_runtime_overrides.py /tmp/runtime-overrides
+          python3 tools/assemble_compact_experiment.py app/build/outputs/apk/release/app-release-unsigned.apk compact-engines compact-universal-unsigned.apk --runtime-overrides /tmp/runtime-overrides --ffmpeg-version 9.0.2 --lame-version 3.100
           "$ANDROID_HOME/build-tools/35.0.0/zipalign" -P 16 -f 4 compact-universal-unsigned.apk compact-universal-aligned-unsigned.apk
           python3 -c "from pathlib import Path; p=Path('compact-universal-aligned-unsigned.apk'); print(p.stat().st_size); assert p.stat().st_size < 80000000"
           sha256sum compact-universal-aligned-unsigned.apk > compact-SHA256SUMS.txt

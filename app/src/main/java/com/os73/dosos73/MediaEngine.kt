@@ -123,7 +123,7 @@ class MediaEngine(
                 active.attachProxy(p)
                 val request =
                     request(task.analysis.url, p).apply {
-                        addOption("-f", task.choice.id)
+                        addOption("-f", formatSelector(task.choice.id))
                         addOption("-o", File(directory, "media.%(ext)s").absolutePath)
                         addOption("--no-part")
                         addOption("--no-continue")
@@ -162,6 +162,37 @@ class MediaEngine(
         }
 
     companion object {
+        internal fun formatSelector(id: String): String {
+            val components = id.split('+')
+            require(components.size in 1..2 && components.all { it.matches(Regex("[a-zA-Z0-9_.-]{1,80}")) })
+            // Extractor IDs such as "all" or "best" must remain literal field values.
+            // "all" also admits an exact audio-only or video-only match.
+            return components.joinToString("+") { "all[format_id=$it]" }
+        }
+
+        internal fun audioChoice(
+            id: String,
+            sourceExtension: String,
+            abr: Double,
+            sourceBytes: Long?,
+            language: String?,
+        ): Choice {
+            val converted = sourceExtension != "mp3"
+            val bitrate = abr.takeIf { it.isFinite() && it > 0 }?.toInt()?.takeIf { it > 0 }
+            return Choice(
+                id, Kind.AUDIO, "mp3",
+                listOfNotNull(
+                    if (converted) "MP3 V0" else "Original",
+                    bitrate?.let { if (converted) "source $it kbps" else "$it kbps" },
+                    language,
+                ).joinToString(" · "),
+                // Only unchanged MP3 can retain the source size and bitrate as output estimates.
+                estimatedBytes = if (converted) null else sourceBytes,
+                bitrateKbps = if (converted) null else bitrate,
+                language = language,
+            )
+        }
+
         fun mapFormats(json: JSONObject): List<Choice> {
             val formats = json.optJSONArray("formats") ?: org.json.JSONArray().put(json)
             require(formats.length() <= 1000)
@@ -218,22 +249,14 @@ class MediaEngine(
                 .mapNotNull { f ->
                     when {
                         f.unspecified ->
-                            Choice(
-                                f.id,
-                                if (f.ext in setOf("mp4", "webm")) Kind.VIDEO else Kind.AUDIO,
-                                if (f.ext in setOf("mp4", "webm")) f.ext else "mp3",
-                                "Original",
-                                estimatedBytes = f.bytes,
-                                language = f.language,
-                            )
-                        f.audio && !f.video -> Choice(
-                            f.id, Kind.AUDIO, "mp3",
-                            listOfNotNull("MP3 V0", f.abr.toInt().takeIf { it > 0 }?.let { "source $it kbps" }, f.language).joinToString(" · "),
-                            // Conversion changes size and bitrate; do not advertise source values as output.
-                            estimatedBytes = null,
-                            bitrateKbps = null,
-                            language = f.language,
-                        )
+                            if (f.ext in setOf("mp4", "webm"))
+                                Choice(
+                                    f.id, Kind.VIDEO, f.ext, "Original",
+                                    estimatedBytes = f.bytes,
+                                    language = f.language,
+                                )
+                            else audioChoice(f.id, f.ext, f.abr, f.bytes, f.language)
+                        f.audio && !f.video -> audioChoice(f.id, f.ext, f.abr, f.bytes, f.language)
                         f.video && f.audio ->
                             Choice(
                                 f.id,

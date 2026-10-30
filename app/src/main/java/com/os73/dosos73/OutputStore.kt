@@ -14,15 +14,20 @@ import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 
-class OutputStore(private val context: Context) {
+class OutputStore(
+    private val context: Context,
+    private val onCommitted: (Uri, String) -> Unit = { _, _ -> },
+) {
     suspend fun recover(task: DownloadTask): Pair<Uri, String>? =
         withContext(Dispatchers.IO) {
-            PublicationReceipt(context, task.id).recover()?.also { (uri, mime) ->
-                val bytes =
-                    context.contentResolver.openFileDescriptor(uri, "r")?.use {
-                        it.statSize.coerceAtLeast(0)
-                    } ?: 0L
-                LibraryRepository.remember(context, uri, mime, task.analysis.title, bytes)
+            val receipt = PublicationReceipt(context, task.id)
+            receipt.recover()?.also { (uri, mime) ->
+                // Deliver the commit before a cancelled dispatcher return can discard it.
+                onCommitted(uri, mime)
+                runCatching {
+                    val bytes = checkNotNull(receipt.recoveredBytes)
+                    LibraryRepository.remember(context, uri, mime, task.analysis.title, bytes)
+                }
             }
         }
 
@@ -147,13 +152,13 @@ class OutputStore(private val context: Context) {
                 resolver.openInputStream(uri)?.use { input ->
                     StreamIntegrity.requireSame(expected, StreamIntegrity.fingerprint(input))
                 } ?: throw IOException("Output cannot be verified")
+                currentCoroutineContext().ensureActive()
                 verified = true // Preserve on any ambiguous provider operation from this point.
                 receipt.markVerified()
                 val finalUri = receipt.publishVerified(uri).first
-                resolver.openFileDescriptor(finalUri, "r")?.use { descriptor ->
-                    if (descriptor.statSize >= 0 && descriptor.statSize != file.length())
-                        throw IOException("Output size mismatch")
-                } ?: throw IOException("Output cannot be opened")
+                // This callback is synchronous: the caller owns the committed URI even if
+                // withContext subsequently resumes it with CancellationException.
+                onCommitted(finalUri, mime)
                 runCatching {
                     LibraryRepository.remember(context, finalUri, mime, name, file.length())
                 }
