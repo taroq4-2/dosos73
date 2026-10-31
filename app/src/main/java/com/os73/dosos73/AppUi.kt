@@ -626,9 +626,9 @@ internal fun TransferCard(
                         style = MaterialTheme.typography.titleSmall,
                     )
                     if (state.active) {
-                        if (state.percent != null)
+                        if (state.percent != null || state.phase in setOf(Phase.PAUSED, Phase.WAITING))
                             LinearProgressIndicator(
-                                progress = { state.percent },
+                                progress = { state.percent ?: 0f },
                                 modifier = Modifier.fillMaxWidth().height(7.dp).clip(CircleShape),
                                 color = Neon.Cyan,
                                 trackColor = Neon.Raised,
@@ -655,7 +655,7 @@ internal fun TransferCard(
                             style = MaterialTheme.typography.labelSmall,
                         )
                         state.bytesPerSecond
-                            ?.takeIf { it > 0 && state.phase != Phase.PAUSED }
+                            ?.takeIf { it > 0 && state.phase !in setOf(Phase.PAUSED, Phase.WAITING) }
                             ?.let {
                                 Text(
                                     stringResource(R.string.speed_value, bytesLabel(it, locale)),
@@ -666,13 +666,13 @@ internal fun TransferCard(
                     }
                 }
                 if (
-                    state.phase in setOf(Phase.DOWNLOADING, Phase.PAUSED) &&
-                        Transfers.currentTask?.analysis?.direct == true
+                    state.phase in setOf(Phase.PAUSED, Phase.WAITING) ||
+                        (state.phase == Phase.DOWNLOADING && Transfers.currentTask?.analysis?.direct == true)
                 )
                     IconAction(
-                        if (state.phase == Phase.PAUSED) Glyph.PLAY else Glyph.PAUSE,
+                        if (state.phase in setOf(Phase.PAUSED, Phase.WAITING)) Glyph.PLAY else Glyph.PAUSE,
                         stringResource(
-                            if (state.phase == Phase.PAUSED) R.string.resume else R.string.pause
+                            if (state.phase in setOf(Phase.PAUSED, Phase.WAITING)) R.string.resume else R.string.pause
                         ),
                         onPause,
                     )

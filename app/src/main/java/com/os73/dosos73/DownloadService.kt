@@ -14,6 +14,11 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.first
 
 class DownloadService : Service() {
+    companion object {
+        // Debug fixtures can exercise the real service's timeout/lease path without
+        // changing device connectivity or waiting fifteen seconds per test.
+        @Volatile internal var networkWaitMillisForTests: Long? = null
+    }
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private var job: Job? = null
     @Volatile private var direct = DirectDownloader()
@@ -42,6 +47,8 @@ class DownloadService : Service() {
     private var cancelled = false
     private var userCancelled = false
     private var latestStartId = 0
+    private var networkDeferred = false
+    private class DeferredNetworkWait : CancellationException("Network wait handed to JobScheduler")
 
     // Control commands are serialized separately from the transfer. In particular, a cold
     // Resume must not be mistaken for a toggle of the new service's local pause flag.
@@ -60,6 +67,7 @@ class DownloadService : Service() {
                     "cancel" -> {
                         userCancelled = true
                         cancelTransfer()
+                        DeferredTransferScheduler.userStarted(this@DownloadService)
                         job?.join()
                         cancelColdLease()
                     }
@@ -139,11 +147,13 @@ class DownloadService : Service() {
         cancelled = false
         userCancelled = false
         paused.value = false
+        networkDeferred = false
         // LAZY assigns ownership before a fast failure can reach finally on Main.immediate.
         val worker = scope.launch(start = CoroutineStart.LAZY) {
             try {
                 // Preserve the existing reservation API, but commit before executing it.
                 Transfers.take()?.let { DownloadQueue.enqueue(this@DownloadService, it) }
+                DeferredTransferScheduler.userStarted(this@DownloadService)
                 var task = DownloadQueue.take(this@DownloadService)
                 while (task != null) {
                     Transfers.reserve(task)
@@ -151,7 +161,19 @@ class DownloadService : Service() {
                     DownloadQueue.rememberActive(this@DownloadService, task)
                     paused.value = false
                     detail = listOfNotNull(task.choice.expectedHeight?.let { "${it}p" }, task.choice.extension.uppercase()).joinToString(" · ")
-                    if (processor.run(task, detail) == Phase.FAILED) {
+                    val outcome = processor.run(task, detail)
+                    if (networkDeferred && outcome == Phase.PAUSED && !userCancelled &&
+                        DownloadQueue.interrupted(this@DownloadService)?.id == task.id) {
+                        // Processor finalization retained this exact unpaused lease. A
+                        // network deferral is neither a user Pause nor a failed transfer.
+                        cancelled = true
+                        val scheduled = DeferredTransferScheduler.defer(this@DownloadService)
+                        ensureActive() // A racing Cancel owns terminal truth and its lease acknowledgement.
+                        Transfers.update(TransferState(Phase.WAITING, task.analysis.title,
+                            detail = detail, error = if (scheduled) null else R.string.error_start))
+                        break
+                    }
+                    if (outcome == Phase.FAILED) {
                         cancelled = true // Waiting tasks require an explicit retry/continue.
                         break
                     }
@@ -169,6 +191,10 @@ class DownloadService : Service() {
                 // Cover an enqueue racing the empty take without starting another FGS from
                 // the background. Deliberate Pause/Cancel always leaves the service idle.
                 if (!cancelled && DownloadQueue.hasRunnable()) startWorker()
+                else withContext(NonCancellable) {
+                    // A future notBefore never keeps a foreground worker alive.
+                    DeferredTransferScheduler.refresh(this@DownloadService)
+                }
                 stopWhenIdle()
             }
         }
@@ -215,9 +241,18 @@ class DownloadService : Service() {
         recoverNetwork(
             awaitNetwork = {
                 NetworkSettings.requireSource(this@DownloadService, task.analysis.url)
-                if (!NetworkSettings.permitted(this@DownloadService)) {
+                val testWait = if (BuildConfig.DEBUG) networkWaitMillisForTests else null
+                if (testWait != null || !NetworkSettings.permitted(this@DownloadService)) {
                     publish(TransferState(Phase.WAITING, task.analysis.title))
-                    NetworkSettings.awaitPermitted(this@DownloadService)
+                    val ready = withTimeoutOrNull(testWait?.coerceIn(1, 15_000) ?: 15_000L) {
+                        if (testWait != null) awaitCancellation()
+                        NetworkSettings.awaitPermitted(this@DownloadService)
+                        true
+                    } ?: false
+                    if (!ready) {
+                        networkDeferred = true
+                        throw DeferredNetworkWait()
+                    }
                 }
             },
             acquire = { NetworkSettings.requireNetwork(this@DownloadService) },

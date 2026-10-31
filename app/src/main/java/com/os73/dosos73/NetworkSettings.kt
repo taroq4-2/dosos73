@@ -31,10 +31,12 @@ internal object NetworkSettings {
 
     fun setWifiOnly(context: Context, value: Boolean) {
         check(prefs(context).edit().putBoolean("wifi_only", value).commit())
+        DeferredTransferScheduler.policyChanged(context)
     }
 
     fun setUnmeteredOnly(context: Context, value: Boolean) {
         check(prefs(context).edit().putBoolean("unmetered_only", value).commit())
+        DeferredTransferScheduler.policyChanged(context)
     }
 
     fun requireNetwork(context: Context, stage: Stage = Stage.TRANSFER): Network {

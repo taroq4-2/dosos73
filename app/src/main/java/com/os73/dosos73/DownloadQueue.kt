@@ -72,6 +72,18 @@ internal object DownloadQueue {
     suspend fun initialize(context: Context) =
         withContext(Dispatchers.IO) { lock.withLock { load(context) } }
 
+    /** Snapshot only: the wakeup job never takes a lease or downloads a file. */
+    internal suspend fun deferredCandidate(context: Context, now: Long = System.currentTimeMillis()): DownloadTask? =
+        withContext(Dispatchers.IO) {
+            lock.withLock {
+                load(context)
+                active?.let { return@withLock it.takeUnless { task -> task.userPaused } }
+                val eligible = mutable.value.filter { !it.userPaused }
+                eligible.filter { it.notBefore <= now }.minByOrNull { it.priority.ordinal }
+                    ?: eligible.minByOrNull { it.notBefore }
+            }
+        }
+
     suspend fun enqueue(context: Context, task: DownloadTask) =
         withContext(Dispatchers.IO) {
             lock.withLock {
@@ -81,7 +93,7 @@ internal object DownloadQueue {
                     commit(context, mutable.value + task, active)
                 }
             }
-        }
+        }.also { DeferredTransferScheduler.refresh(context) }
 
     /** Called only by the serialized draft actor after this identity is durable in its draft. */
     suspend fun enqueueBatch(context: Context, deliveryId: String, task: DownloadTask) =
@@ -98,7 +110,7 @@ internal object DownloadQueue {
                     commit(context, waiting, active, acceptedBatch + deliveryId)
                 }
             }
-        }
+        }.also { DeferredTransferScheduler.refresh(context) }
 
     /** Only after a successful draft read/write; serialize with enqueueBatch in the draft actor. */
     suspend fun reconcileBatch(context: Context, durableDeliveryIds: Set<String>) =
@@ -149,7 +161,7 @@ internal object DownloadQueue {
                 load(context)
                 if (active?.id == id) commit(context, mutable.value, null)
             }
-        }
+        }.also { DeferredTransferScheduler.refresh(context) }
 
     suspend fun interrupted(context: Context): DownloadTask? =
         withContext(Dispatchers.IO) {
@@ -188,7 +200,7 @@ internal object DownloadQueue {
                 load(context)
                 commit(context, mutable.value.filterNot { it.id == id }, active)
             }
-        }
+        }.also { DeferredTransferScheduler.refresh(context) }
 
     suspend fun updatePriority(context: Context, id: String, priority: TaskPriority) =
         withContext(Dispatchers.IO) {
@@ -200,7 +212,7 @@ internal object DownloadQueue {
                     active,
                 )
             }
-        }
+        }.also { DeferredTransferScheduler.refresh(context) }
 
     suspend fun setPaused(context: Context, id: String, paused: Boolean) =
         withContext(Dispatchers.IO) {
@@ -212,7 +224,7 @@ internal object DownloadQueue {
                     active?.let { if (it.id == id) it.copy(userPaused = paused) else it },
                 )
             }
-        }
+        }.also { DeferredTransferScheduler.refresh(context) }
 
     suspend fun move(context: Context, id: String, delta: Int) =
         withContext(Dispatchers.IO) {
@@ -227,7 +239,7 @@ internal object DownloadQueue {
                     commit(context, list, active)
                 }
             }
-        }
+        }.also { DeferredTransferScheduler.refresh(context) }
 
     internal fun encodeTask(task: DownloadTask): JSONObject =
         JSONObject()
