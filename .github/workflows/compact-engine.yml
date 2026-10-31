@@ -72,4 +72,5 @@ jobs:
           path: |
             compact-universal-aligned-unsigned.apk
             compact-SHA256SUMS.txt
+            compact-universal-unsigned.runtime-proof.json
           if-no-files-found: error

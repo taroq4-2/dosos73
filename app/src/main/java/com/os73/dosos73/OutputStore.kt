@@ -44,14 +44,16 @@ class OutputStore(
             context.packageManager.resolveContentProvider(folder.uri.authority!!, 0)
                 ?.applicationInfo?.uid == android.os.Process.myUid()
         }.getOrDefault(false)
-        val ownedCreate = ownsProvider && runCatching {
+        // DocumentFile.canWrite also accepts delete-only documents. Creation is a
+        // separate capability and must be advertised even when a write grant exists.
+        val supportsCreate = runCatching {
             context.contentResolver.query(folder.uri,
                 arrayOf(android.provider.DocumentsContract.Document.COLUMN_FLAGS), null, null, null)
                 ?.use { cursor -> cursor.moveToFirst() &&
                     (cursor.getInt(0) and android.provider.DocumentsContract.Document.FLAG_DIR_SUPPORTS_CREATE) != 0 }
                 ?: false
         }.getOrDefault(false)
-        if (!folder.isDirectory || (!folder.canWrite() && !ownedCreate))
+        if (!folder.isDirectory || !supportsCreate || (!folder.canWrite() && !ownsProvider))
             throw PipelineException(Stage.PUBLISH, FailureCode.STORAGE_PERMISSION_DENIED)
         // Actual creation is covered by the durable publication plan in save().
     }

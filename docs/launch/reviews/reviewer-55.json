@@ -1,0 +1,57 @@
+{
+  "reviewer_id": 55,
+  "role": "Destination tree grants, SAF and MediaStore publication permissions and stale/revoked access",
+  "scope": {
+    "application_commit_reviewed": "e625ee7 with unrelated parent repairs in progress",
+    "files_read_complete": [
+      "OutputStore.kt",
+      "PublicationReceipt.kt",
+      "TransferProcessor.kt",
+      "DownloadQueue.kt",
+      "BatchDraft.kt",
+      "FileAvailability.kt",
+      "PipelineError.kt",
+      "OwnedProviderPreflightTest.kt",
+      "RecoveryTestDocumentsProvider.kt",
+      "FileAccessTest.kt"
+    ],
+    "additional_read": [
+      "AppRoot.kt complete from reviewer52/54, specifically tree pickers, persisted grants and destination snapshots",
+      "MainViewModel.kt destination editing and batch persistence",
+      "app/build.gradle.kts pinned DocumentFile1.0.1 dependency",
+      "javap read-only disassembly of cached documentfile-1.0.1 classes.jar DocumentsContractApi19.canWrite",
+      "Official AndroidX DocumentsContractApi19.java source"
+    ],
+    "method": "Read-only static application/platform/dependency-bytecode review. No source changes, builds, tests, provider mutations or device actions."
+  },
+  "findings": [
+    {
+      "id": "R55-1",
+      "priority": "P2",
+      "title": "Destination preflight accepts writable/deletable directories without create capability",
+      "file": "app/src/main/java/com/os73/dosos73/OutputStore.kt",
+      "start_line": 47,
+      "end_line": 54,
+      "evidence": "Explicit FLAG_DIR_SUPPORTS_CREATE inspection currently applies only to the owned-provider fallback. All other destinations pass when folder.isDirectory and folder.canWrite are true. The actual pinned androidx.documentfile1.0.1 canWrite bytecode returns true for flags&4 (SUPPORTS_DELETE), and separately flags&2 (SUPPORTS_WRITE), without requiring flags&8 (DIR_SUPPORTS_CREATE). Official AndroidX source confirms this behavior.",
+      "trigger_and_impact": "An external DocumentsProvider directory with a valid write URI grant and DELETE-only or WRITE-only capabilities passes preflight despite not supporting child creation. TransferProcessor then invokes the full transfer before OutputStore.save attempts createFile and fails. This unnecessarily downloads/caches potentially large media for a destination known in advance not to support creation.",
+      "recommendation": "Require a successful directory metadata query explicitly advertising FLAG_DIR_SUPPORTS_CREATE for all SAF destinations. Independently require the external write URI grant, retaining the same-UID exception needed on API29. Extend the existing owned-provider fixture/regression to cover delete-only and write-only flags and fail before a transfer begins.",
+      "primary_source": "https://raw.githubusercontent.com/androidx/androidx/androidx-main/documentfile/documentfile/src/main/java/androidx/documentfile/provider/DocumentsContractApi19.java",
+      "dependency_evidence": "Cached actual pinned classes.jar inspected with javap; canWrite contains independent early-success checks for flags4,8 and2.",
+      "status": "Reported to parent; not edited by reviewer."
+    }
+  ],
+  "verified_observations": [
+    "Both destination pickers obtain persisted read/write URI permission before adopting the selected tree. Queued tasks and batch drafts store destination snapshots; changing a later default does not silently redirect existing tasks.",
+    "The app intentionally retains old persisted grants when the default changes, preserving existing queued jobs and saved SAF documents. This is not treated as an unconditional permission leak without reference/usage evidence.",
+    "Preflight runs on Dispatchers.IO before transfer. SecurityException failures are classified as STORAGE_PERMISSION_DENIED; missing/offline provider state is not proof that its saved file entries should be erased.",
+    "Default Downloads publication uses MediaStore scoped rows with IS_PENDING before verification, then clears pending only at commit. Recovery filters exact app owner and expected Download/dosos73 directory.",
+    "SAF publication recovery validates same authority and exact directory membership of the recorded document ID, then verifies size/SHA256. Ambiguous or unverifiable results preserve the file for review rather than indiscriminately deleting it.",
+    "The same-UID API29 grant-lookup compatibility path still checks provider UID and declared creation capability; the finding concerns missing explicit creation checks in the ordinary external-provider path."
+  ],
+  "limitations": [
+    "No real revoked grant, removable volume or third-party cloud provider was exercised. Runtime outcomes still need targeted tests.",
+    "An apparently writable provider can still reject a later operation or lose its grant; preflight cannot guarantee that future publication will succeed.",
+    "The exact pinned dependency bytecode was inspected, but no instrumented reproduction was run.",
+    "No second independent proven defect was identified. Grant-count garbage collection or a destination-repair UI was not invented as a mandatory feature in this review."
+  ]
+}

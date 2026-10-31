@@ -19,13 +19,21 @@ object Safety {
         require(text.length <= 32768)
         val matches = Regex("https?://[^\\s<>\"]+", RegexOption.IGNORE_CASE).findAll(text).toList()
         require(matches.size == 1) { "Choose one URL" }
-        var candidate = matches.single().value.trimEnd('،', '؛', '؟')
+        val candidate = matches.single().value.trimEnd('،', '؛', '؟')
         // Remove only unmatched prose delimiters; retain balanced parentheses in real URLs.
+        var end = candidate.length
         for ((open, close) in listOf('(' to ')', '[' to ']', '{' to '}')) {
-            while (candidate.endsWith(close) && candidate.count { it == close } > candidate.count { it == open })
-                candidate = candidate.dropLast(1)
+            var balance = 0
+            for (index in 0 until end) {
+                if (candidate[index] == open) balance--
+                if (candidate[index] == close) balance++
+            }
+            while (end > 0 && candidate[end - 1] == close && balance > 0) {
+                end--
+                balance--
+            }
         }
-        return url(candidate)
+        return url(candidate.substring(0, end))
     }
 
     fun publicAddress(address: InetAddress): Boolean {

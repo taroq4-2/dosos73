@@ -4,7 +4,7 @@ This branch prepares 1.2.0/code12. It is **not yet an official release**. The pu
 
 ## Actual review work
 
-40 distinct AI reviewers completed source reviews (reports01–40). Reviewer41 and42 stopped at the service usage limit without reports. Reviews41–60 are incomplete. These are AI review tasks, not human hiring, independent certification or proof of 100% device coverage. The original reports are retained under reviews/; each states whether it ran tests. Later fixes do not rewrite earlier evidence.
+60 distinct AI review tasks completed source reviews (reports01–60). These are AI review tasks, not human hiring, independent certification or proof of 100% device coverage. Original findings are retained under reviews/ and distinguish static inspection from executed tests. Triage and residual limitations are recorded in REVIEW_DISPOSITIONS.md; completing the review count does not itself clear release acceptance.
 
 ## Implemented changes
 
@@ -24,14 +24,25 @@ This branch prepares 1.2.0/code12. It is **not yet an official release**. The pu
 
 ## Completed checks at this checkpoint
 
--88 JVM tests:0 failures,0 errors,0 skipped.
-- Debug lint, minified Release build and Release vital lint passed. Full lintRelease remains a separate required check.
-- First emulator suite:100 tests,3 failures in newly stale input-test readiness assertions; native cancellation, MP3, updated Python/runtime inventory, journal, queue, storage and publication cases passed. Readiness assertions were corrected and a102-case rerun is pending. Do not count the failed run as overall success.
-- Signed universal candidate:62,018,329bytes (62.02MB), all4 ABIs, same signing certificate. Candidate hash is4da0e218921e328a28e8fca2a4b58ad8b8ad4460dd43efc7e0d92a652b9018b7.
-- Candidate SBOM contains699 components,608ELF records and85Maven input components; schema validation/negative-case checks remain pending.
+-106 JVM tests:0 failures,0 errors,0 skipped, including proxy deadlines/half-close, network observation/retry, runtime partial-init retry and maximum shared-input regressions.
+- Debug/Release full lint and debug/test/minified Release assembly passed after network/history/destination integrations. An API30-only network builder call was replaced with an API29-compatible VPN-filter removal.
+- Current-source compact debug device suite:116 reported cases,0 failures on the final run. Optional live-network/TLS diagnostic cases were not enabled in this default suite. The preceding run had1 about/contact semantic-node readiness failure; its focused retry passed, then a bounded readiness wait preserved the reachability assertions and the full116-case rerun passed. New failure-retention, tombstone pruning, directory-create and repeated network-callback registration cases passed.
+- Previous committed e625ee7 source passed the API29–36 matrix in GitHub run41152259709; this does not cover the newer working-tree integrations. A fresh source-pinned matrix remains required.
+- Previously accepted a8e4d87 source / signed candidate SHA-25695ea86067e2dcc73bbca85f631566e2ed6474d4e4e0309ba045fd5aead7969dd:62,018,329bytes, all4ABIs and unchanged signing certificate. Fresh-profile actual YouTube720p video, MP3 and W3C direct downloads plus video playback passed. Those results are not reassigned to a newer artifact.
+- Prior candidate SBOM/schema, wrong-payload rejection, ELF and deterministic unsigned packaging checks passed. SBOM contains699components,608ELF records and85Maven input components. Final integration artifact checks must be regenerated.
+
+## Additional integrated fixes from reviews41–60
+
+- Bound unauthenticated CONNECT headers by an absolute deadline and origin read inactivity without breaking half-close response delivery or long receiving-only downloads.
+- Observe loss of a transfer's original bound network after default-route handover. Register all observers before transport start, clean up partial registration failures, and bound only policy/acquisition recovery; ordinary cancellation and unrelated failures are not retried.
+- Preserve successfully initialized Python/FFmpeg files when a later runtime stage fails and initialization retries in the same process.
+- Dispose evicted failed-task partials only after durable journal commit while queue ownership is locked; preserve queued, leased and active partials. Prune hidden-history URI metadata on explicit delete/confirmed-missing forget.
+- Build share ClipData from known MIME metadata without synchronous provider discovery on the UI thread. Strip long shared-link prose delimiters in linear bounded scans.
+- Require directory-create capability before downloading to SAF, including delete-only/write-only destination regressions, retaining the API29 same-UID compatibility fix.
+- Retain artifact-bound runtime-proof JSON in compact workflow uploads and correct the current rebuild commands.
 
 ## Still required before official publication
 
-Complete reviews41–60 and triage any findings; finish the corrected local suite and API29–36 CI; validate the final minified APK on a clean/update emulator with real YouTube/video/MP3/direct downloads; verify deterministic packaging, signature and payload/source evidence; capture current Arabic/English UI; update final verification/README/source offers. Only then replace obsolete download assets and publish a single official universal APK.
+Finish finding dispositions and the corrected current-source local suite and API29–36 CI; validate the final minified APK on a clean/update emulator with real YouTube/video/MP3/direct downloads; verify deterministic packaging, signature and payload/source evidence; capture current Arabic/English UI; update final verification/README/source offers. Only then replace obsolete download assets and publish a single official universal APK.
 
 Native source evidence is materially improved, not represented as a completed legal audit: exact CPython producer build lock remains unavailable. See NATIVE_SOURCES.md. OS-scheduled wakeups, multiple simultaneous active files and subtitle selection remain separate unimplemented features, as recorded in the requirements ledger. A paused queue barrier/strict priority is deliberate behavior. Source-specific restrictions and physical-device coverage are not guaranteed.

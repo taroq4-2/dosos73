@@ -1,0 +1,56 @@
+{
+  "reviewer_id": "reviewer-47",
+  "source_commit": "e625ee7",
+  "scope": {
+    "mode": "static_read_only",
+    "files": [
+      "app/src/main/java/com/os73/dosos73/EngineRuntime.kt",
+      "app/src/main/java/com/os73/dosos73/PythonCommonRuntime.kt",
+      "app/src/main/java/com/os73/dosos73/BundledEngine.kt"
+    ],
+    "assessment": "One proven same-process initialization retry defect; no additional proven path or symlink defect under the requested non-compromised-app threat model."
+  },
+  "findings": [
+    {
+      "id": "R47-1",
+      "priority": "P2",
+      "title": "Do not delete an already initialized wrapper runtime again on retry",
+      "file": "app/src/main/java/com/os73/dosos73/EngineRuntime.kt",
+      "line_start": 21,
+      "line_end": 25,
+      "trigger": "On first launch after installation or update, YoutubeDL.init returns successfully, then the shared Python install, FFmpeg extraction, or final install-marker write fails (for example because storage is full). Restore storage and retry a media operation without restarting the app process.",
+      "description": "The final install marker is absent or retains the previous APK identity until all initialization stages succeed, so the retry enters this block and deletes both runtime directories again. YoutubeDL 0.18.1 has already set its process-wide initialized flag after its successful first init, and its next init immediately returns without re-extracting Python. PythonCommonRuntime.install then fails its root.isDirectory check; every subsequent retry repeats this failure. In an untransformed developer APK the common installer returns early, allowing initialization to report ready with the Python files missing. Recoverable initialization errors therefore leave media operations unusable until the process restarts.",
+      "evidence": [
+        "EngineRuntime.kt:21-25 repeats invalidation whenever the durable success marker is absent or mismatches.",
+        "EngineRuntime.kt:29 initializes the upstream Python singleton before the fallible common extraction, FFmpeg extraction, and marker commit at lines 30-35.",
+        "Official local library-0.18.1-sources.jar, com/yausername/youtubedl_android/YoutubeDL.kt:32 returns if initialized; line 53 sets initialized=true after Python initialization.",
+        "PythonCommonRuntime.kt:24 returns for an untransformed APK; line 30 otherwise requires the root directory to exist.",
+        "The local Maven sources manifest records SHA-256 26e94f33de0ba802f3507862d509f80d100c1c9065ded7556d16ff51249c4a9a for the inspected library sources JAR."
+      ],
+      "recommendation": "Track successful cache invalidation separately for the current process/install identity, so a later-stage failure can retry without deleting directories belonging to already initialized upstream singletons. Alternatively provide a complete re-extraction path that does not depend on upstream init guards. Keep the durable completion marker after all stages succeed.",
+      "validation": "Static control-flow proof against application code and the locally available official dependency sources; no build, device, emulator, network call, fault injection, or source edit performed."
+    }
+  ],
+  "evidence": [
+    {
+      "file": "app/src/main/java/com/os73/dosos73/PythonCommonRuntime.kt",
+      "lines": "44-74,81-86",
+      "observation": "Common files are constrained to signed manifest names, checked for root containment before and after parent creation, verified by size and hash, and replaced with same-directory temporary files before the completion marker is committed. Missing completion markers cause shared-file replacement to retry."
+    },
+    {
+      "file": "app/src/main/java/com/os73/dosos73/BundledEngine.kt",
+      "lines": "32-47",
+      "observation": "The pinned bundled engine is copied to a temporary file, synced and checksum-verified before atomic replacement; installed is set only after the operation succeeds."
+    }
+  ],
+  "test_gaps": [
+    {
+      "area": "Initialization recovery",
+      "gap": "SharedRuntimeTest exercises missing common-file markers in a scratch directory, but does not exercise EngineRuntime retries after an earlier upstream singleton has initialized and a later stage fails."
+    },
+    {
+      "area": "Verification boundary",
+      "gap": "No source edits, builds, devices, emulators, publishing, or test execution performed. Arbitrary same-UID malicious code was excluded as requested."
+    }
+  ]
+}

@@ -1,0 +1,53 @@
+{
+  "reviewer_id": 56,
+  "role": "PrivateJournal concurrency, cross-journal commit ordering, locks and durable rollback",
+  "scope": {
+    "application_commit_reviewed": "e625ee7 with concurrent working-tree fixes, including FailureJournal/DownloadQueue eviction coordination under active development by reviewer51",
+    "files_read_complete": [
+      "PrivateJournal.kt",
+      "ResumeJournal.kt",
+      "PublicationReceipt.kt",
+      "BatchDraft.kt",
+      "TaskTimeline.kt",
+      "FailureJournal.kt",
+      "DownloadQueue.kt",
+      "LibraryRepository.kt",
+      "MainViewModel.kt",
+      "PrivateJournalTest.kt",
+      "ConcurrentJournalTest.kt",
+      "BatchHandoffTest.kt",
+      "PublicationCommitRaceTest.kt"
+    ],
+    "additional_read": [
+      "AdvancedScreens.kt complete LibraryPreferences object",
+      "Previously completed OutputStore.kt and TransferProcessor.kt control-flow reads",
+      "reviewer-01 through reviewer-49 JSON report search for pre-existing rename durability findings"
+    ],
+    "method": "Read-only static control-flow review. No application/test/build edits, builds, test execution, device interaction or publication."
+  },
+  "findings": [],
+  "verified_observations": [
+    "PrivateJournal.kt:20-24/60 serializes per-path read/write operations across separate instances through bounded canonical-path lock stripes. Atomic writes invoke finishWrite on success and failWrite on thrown exceptions at lines 69-75; legacy read migration re-enters the same JVM monitor safely. key() takes a separate synchronized class monitor and does not acquire journal locks.",
+    "MainViewModel.kt:59-64/79-84/117-124 consistently takes BatchDraft.protocolLock before queue operations. The actor compares durable snapshot tokens before updates/handoffs. Queue task and acceptance receipt are committed together, while acceptance receipt cleanup follows durable draft-row removal, protecting the cross-journal crash windows.",
+    "DownloadQueue commits disk state before replacing active/acceptedBatch/StateFlow snapshots. TaskTimeline likewise serializes read-modify-write under its own Mutex; unrelated journal operations do not establish a demonstrated reverse lock path.",
+    "Current FailureJournal.saveAndDiscard coordinates failure-lock -> queue-lock ownership and journal eviction before deletion. The known retained-partial eviction/tombstone work being edited by reviewer51 was not reported again.",
+    "PublicationReceipt writes its plan before external creation and verified state before provider publication; ambiguous publication results retain a recoverable receipt and do not delete verified documents.",
+    "PrivateJournalTest and ConcurrentJournalTest source cover encrypted migration/tamper preservation and separate-instance concurrent full-snapshot reads/writes. BatchHandoffTest source covers failed acceptance/removal, process-like cold reload, stale actors and snapshot-token checks. These were read, not run."
+  ],
+  "excluded_known_issues": [
+    {
+      "file": "app/src/main/java/com/os73/dosos73/LibraryRepository.kt",
+      "line": 183,
+      "status": "Existing reviewer08 residual; excluded from new findings",
+      "condition": "A SAF provider returns a changed URI from successful rename, the saved-files index write then fails, and the process dies before the memory-only returned URI can be saved. Cold reload retains the previous URI.",
+      "duplicate_evidence": "reviewer-08.json finding1 explicitly recommends durable old-to-new URI recovery across subsequent preference/index failures, and its gaps include preference/index commit failure and process interruption.",
+      "remaining_limit": "Current lines 178-183 preserve returned URI in this session but explicitly acknowledge provider rename and private index are not a durable transaction. Ordinary successful rename is not claimed to fail."
+    }
+  ],
+  "limitations": [
+    "No disk-fault, process-death, cross-thread stress or power-loss scenario was executed; test source is not passing-test evidence.",
+    "The process uses one application process in the inspected manifest; no unsupported cross-process locking requirement was assumed.",
+    "Concurrent agents may change FailureJournal, DownloadQueue and LibraryRepository after these reads. Their known eviction/tombstone issues were deliberately not duplicated.",
+    "Maximum-two finding cap yielded zero new proven actionable defects in this scope after deduplication."
+  ]
+}

@@ -212,45 +212,41 @@ class DownloadService : Service() {
                 }
 
     private suspend fun <T> withNetworkRecovery(task: DownloadTask, block: suspend () -> T): T =
-        coroutineScope {
-            var retries = 0
-            while (true) {
+        recoverNetwork(
+            awaitNetwork = {
                 NetworkSettings.requireSource(this@DownloadService, task.analysis.url)
                 if (!NetworkSettings.permitted(this@DownloadService)) {
                     publish(TransferState(Phase.WAITING, task.analysis.title))
                     NetworkSettings.awaitPermitted(this@DownloadService)
                 }
-                val network = NetworkSettings.requireNetwork(this@DownloadService)
+            },
+            acquire = { NetworkSettings.requireNetwork(this@DownloadService) },
+            attempt = { network ->
                 transferNetwork = network
-                direct = DirectDownloader(NetworkSettings.client(this@DownloadService, network))
-                var networkLost = false
-                val guard = launch {
-                    NetworkSettings.changes(this@DownloadService).collect { permitted ->
-                        if (!permitted || !NetworkSettings.permitted(this@DownloadService, network) ||
-                            runCatching { NetworkSettings.requireSource(this@DownloadService, task.analysis.url) }.isFailure) {
-                            networkLost = true
+                try {
+                    direct = DirectDownloader(NetworkSettings.client(this@DownloadService, network))
+                    guardedNetworkTransfer(
+                        changes = NetworkSettings.changes(this@DownloadService, network),
+                        shouldInterrupt = { permitted ->
+                            NetworkSettings.requireSource(this@DownloadService, task.analysis.url)
+                            !permitted || !NetworkSettings.permitted(this@DownloadService, network)
+                        },
+                        cancelTransport = {
                             direct.cancel()
                             if (mediaDelegate.isInitialized()) media.cancel()
-                        }
-                    }
-                }
-                try {
-                    return@coroutineScope block()
-                } catch (error: Exception) {
-                    currentCoroutineContext().ensureActive()
-                    // Retry only a connection-policy interruption, not arbitrary server/storage
-                    // failures.
-                    if (!networkLost || retries >= 2 || userCancelled) throw error
-                    retries++
-                    publish(TransferState(Phase.WAITING, task.analysis.title))
-                    delay(1000L shl retries)
+                        },
+                        block = {
+                            publish(TransferState(Phase.DOWNLOADING, task.analysis.title))
+                            block()
+                        },
+                    )
                 } finally {
-                    guard.cancelAndJoin()
                     transferNetwork = null
                 }
-            }
-            @Suppress("UNREACHABLE_CODE") error("Unreachable")
-        }
+            },
+            waiting = { publish(TransferState(Phase.WAITING, task.analysis.title)) },
+            allowRetry = { !userCancelled },
+        )
 
     private fun publish(state: TransferState) {
         Transfers.update(state.copy(detail = detail))

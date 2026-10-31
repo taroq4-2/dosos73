@@ -159,6 +159,29 @@ internal object DownloadQueue {
             }
         }
 
+    /** Called with the failure-journal lock held; never call back into that journal. */
+    internal suspend fun commitAndDiscardUnownedPartials(
+        context: Context,
+        ids: Set<String>,
+        commitEviction: () -> Unit,
+    ) = withContext(Dispatchers.IO) {
+        lock.withLock {
+            load(context)
+            // Hold queue ownership stable through the durable eviction and deletion.
+            // A failed queue read or eviction write must leave every partial intact.
+            commitEviction()
+            ids.filterNot { id ->
+                active?.id == id || mutable.value.any { it.id == id } ||
+                    (Transfers.state.value.active && Transfers.currentTask?.id == id)
+            }.forEach { id ->
+                val directory = TransferFiles.directory(context, id)
+                val root = File(context.noBackupFilesDir.canonicalFile, "transfers")
+                // Only exact app-owned UUID directories, never provider/user files.
+                if (directory.canonicalFile == File(root, id)) TransferFiles.discard(context, id)
+            }
+        }
+    }
+
     suspend fun remove(context: Context, id: String) =
         withContext(Dispatchers.IO) {
             lock.withLock {

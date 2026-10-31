@@ -4,8 +4,7 @@ import android.content.Context
 import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
-import kotlinx.coroutines.channels.awaitClose
-import kotlinx.coroutines.flow.callbackFlow
+import android.net.NetworkRequest
 import kotlinx.coroutines.flow.first
 
 internal object NetworkSettings {
@@ -48,10 +47,13 @@ internal object NetworkSettings {
     fun permitted(context: Context, network: Network? = context.getSystemService(ConnectivityManager::class.java).activeNetwork): Boolean {
         val manager = context.getSystemService(ConnectivityManager::class.java)
         val caps = manager.getNetworkCapabilities(network) ?: return false
-        return caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
+        return permitted(context, caps)
+    }
+
+    private fun permitted(context: Context, caps: NetworkCapabilities): Boolean =
+        caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
             (!wifiOnly(context) || caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) &&
             (!unmeteredOnly(context) || caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED))
-    }
 
     fun client(context: Context, network: Network, stage: Stage = Stage.TRANSFER): okhttp3.OkHttpClient =
         DirectDownloader.secureClient { allowCleartext(context) }.newBuilder()
@@ -68,36 +70,50 @@ internal object NetworkSettings {
             }
             .build()
 
-    fun changes(context: Context) = callbackFlow {
+    fun changes(context: Context, watchedNetwork: Network? = null): kotlinx.coroutines.flow.Flow<Boolean> {
         val manager = context.getSystemService(ConnectivityManager::class.java)
-        val callback =
-            object : ConnectivityManager.NetworkCallback() {
-                override fun onAvailable(network: Network) {
-                    trySend(permitted(context))
-                }
-
-                override fun onLost(network: Network) {
-                    trySend(permitted(context))
-                }
-
-                override fun onCapabilitiesChanged(
-                    network: Network,
-                    capabilities: NetworkCapabilities,
-                ) {
-                    trySend(permitted(context))
+        val registrations = mutableListOf<NetworkChangeRegistration>()
+        registrations += { changed ->
+            val callback = object : ConnectivityManager.NetworkCallback() {
+                override fun onAvailable(network: Network) { changed(false) }
+                override fun onLost(network: Network) { changed(false) }
+                override fun onCapabilitiesChanged(network: Network, capabilities: NetworkCapabilities) {
+                    changed(false)
                 }
             }
-        manager.registerDefaultNetworkCallback(callback)
-        val listener =
-            android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, _ ->
-                trySend(permitted(context))
-            }
-        prefs(context).registerOnSharedPreferenceChangeListener(listener)
-        trySend(permitted(context))
-        awaitClose {
-            manager.unregisterNetworkCallback(callback)
-            prefs(context).unregisterOnSharedPreferenceChangeListener(listener)
+            manager.registerDefaultNetworkCallback(callback)
+            val unregister: () -> Unit = { manager.unregisterNetworkCallback(callback) }
+            unregister
         }
+        if (watchedNetwork != null) registrations += { changed ->
+            val callback = object : ConnectivityManager.NetworkCallback() {
+                override fun onLost(network: Network) {
+                    // The default callback stops reporting the old network after a handover.
+                    if (network == watchedNetwork) changed(true)
+                }
+                override fun onCapabilitiesChanged(network: Network, capabilities: NetworkCapabilities) {
+                    if (network == watchedNetwork) changed(!permitted(context, capabilities))
+                }
+            }
+            manager.registerNetworkCallback(
+                NetworkRequest.Builder()
+                    // Builder defaults exclude VPNs; remove that filter on API 29 too.
+                    .removeCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VPN)
+                    .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET).build(),
+                callback,
+            )
+            val unregister: () -> Unit = { manager.unregisterNetworkCallback(callback) }
+            unregister
+        }
+        registrations += { changed ->
+            val listener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, _ ->
+                changed(false)
+            }
+            prefs(context).registerOnSharedPreferenceChangeListener(listener)
+            val unregister: () -> Unit = { prefs(context).unregisterOnSharedPreferenceChangeListener(listener) }
+            unregister
+        }
+        return observeNetworkPolicy({ permitted(context) }, registrations)
     }
 
     suspend fun awaitPermitted(context: Context) {

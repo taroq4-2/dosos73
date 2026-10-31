@@ -241,7 +241,7 @@ internal fun MainActivity.AppScreen(model: MainViewModel, sharedGeneration: Int)
                                 .setType(item.mime)
                                 .putExtra(Intent.EXTRA_STREAM, uri)
                                 .apply {
-                                    clipData = ClipData.newUri(contentResolver, item.name, uri)
+                                    clipData = ClipData(item.name, arrayOf(item.mime), ClipData.Item(uri))
                                 }
                                 .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION),
                             getString(R.string.share),

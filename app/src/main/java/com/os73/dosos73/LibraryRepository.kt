@@ -200,6 +200,7 @@ internal object LibraryRepository {
                 mutable.value = next
                 cache.remove(item.uri)
                 LibraryPreferences.clearUri(context, item.uri)
+                removeHiddenUri(context, item.uri)
             }
         }
 
@@ -212,6 +213,7 @@ internal object LibraryRepository {
             mutable.value = next
             cache.remove(item.uri)
             LibraryPreferences.clearUri(context, item.uri)
+            removeHiddenUri(context, item.uri)
         }
     }
 
@@ -223,6 +225,13 @@ internal object LibraryRepository {
             .toSet()
 
     // Called only while holding lock, just like hideHistory and clearHistory.
+    private fun removeHiddenUri(context: Context, uri: String) {
+        val current = hidden(context)
+        if (uri !in current) return
+        check(context.getSharedPreferences("library", Context.MODE_PRIVATE).edit()
+            .putStringSet("hidden_history", current - uri).commit())
+    }
+
     private fun migrateHiddenUri(context: Context, previous: String, next: String) {
         if (previous == next) return
         val current = hidden(context)

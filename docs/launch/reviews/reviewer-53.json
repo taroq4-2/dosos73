@@ -1,0 +1,39 @@
+{
+  "reviewer_id": 53,
+  "role": "Notification PendingIntent security and foreground-service action/lifecycle handling",
+  "scope": {
+    "application_commit_reviewed": "e625ee7; in-progress network/runtime fixes present in working tree",
+    "files_read_complete": [
+      "app/src/main/AndroidManifest.xml",
+      "MainActivity.kt",
+      "DownloadService.kt",
+      "DownloadQueue.kt",
+      "OutputStore.kt",
+      "TransferProcessor.kt",
+      "DososApp.kt",
+      "ColdServiceControlTest.kt",
+      "ServiceQueueTest.kt",
+      "app/src/debug/AndroidManifest.xml",
+      "app/build.gradle.kts"
+    ],
+    "additional_read": [
+      "AppRoot.kt startup lease restoration, runQueue/enqueue, notification-permission launcher, command dispatch, open/share, and DownloadsScreen callback wiring"
+    ],
+    "method": "Separate read-only static control-flow audit following reviewer50. Checked applicable ancestor/source AGENTS.md paths; none found. No source/test/build edits, test execution, build, device interaction or publication."
+  },
+  "findings": [],
+  "verified_observations": [
+    "AndroidManifest.xml:25 declares DownloadService exported=false and foregroundServiceType=dataSync; lines 4-6 declare notification and foreground-service permissions. MainActivity is the exported launcher/share endpoint and handles only SEND text/plain input in receive().",
+    "DownloadService.kt:260-271 uses explicit MainActivity/DownloadService components and immutable PendingIntents for foreground open/cancel actions. Completion open at lines 287-296 carries the committed URI, MIME type and read grant; its identity includes that URI.",
+    "DownloadService.kt:50-58 enters foreground synchronously for start/resume deliveries before asynchronous queue work and serializes control commands by joining the preceding command. Cancellation has START_NOT_STICKY, while normal/resume deliveries are redeliverable and redelivered action text is discarded.",
+    "DownloadService.kt:131-135 removes foreground state and uses stopSelfResult(latestStartId) only when worker/control jobs are idle. onTimeout cancels transport/worker and stops service; onDestroy cancels direct/native transport and the owned coroutine scope.",
+    "ColdServiceControlTest source covers restored paused-lease resume and repeated cold cancel, including exact-lease acknowledgement and unrelated partial-file retention; ServiceQueueTest source covers preserving waiting tasks after an active-task failure. These tests were inspected, not executed.",
+    "AppRoot.kt:122/173 starts queue execution through explicit foreground-service intents; UI pause/cancel at lines 210-212 uses explicit service intents. MainActivity shared text does not directly dispatch service control actions."
+  ],
+  "limitations": [
+    "No on-device Android lifecycle, notification permission denial, PendingIntent delivery, timeout deadline, process-death redelivery or foreground-start restriction scenario was exercised.",
+    "Inspected tests provide source evidence of intended coverage, not passing runtime evidence.",
+    "No new external Android platform/security requirement was inferred as an actionable defect without a demonstrated violating path.",
+    "Concurrent agents may change the final working tree after these reads. Maximum-two finding cap yielded zero proven actionable defects in this narrow scope."
+  ]
+}
