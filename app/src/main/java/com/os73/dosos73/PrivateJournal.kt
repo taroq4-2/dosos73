@@ -60,6 +60,8 @@ internal class PrivateJournal(context: Context, name: String) {
     fun write(text: String) = synchronized(monitor) { writeLocked(text) }
 
     private fun writeLocked(text: String) {
+        // Fault injection is debug-only and eliminated from minified Release.
+        if (BuildConfig.DEBUG) beforeWriteForTests?.invoke(file.baseFile)
         val cipher = Cipher.getInstance("AES/GCM/NoPadding")
         cipher.init(Cipher.ENCRYPT_MODE, key())
         cipher.updateAAD(binding)
@@ -75,6 +77,7 @@ internal class PrivateJournal(context: Context, name: String) {
     }
 
     companion object {
+        @Volatile internal var beforeWriteForTests: ((File) -> Unit)? = null
         private const val MAX_RECORD_BYTES = 16 * 1024 * 1024
         private val FILE_LOCKS = Array(64) { Any() }
         private val MAGIC = byteArrayOf(68, 55, 51, 1)

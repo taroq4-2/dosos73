@@ -107,7 +107,7 @@ class PublicationCommitRaceTest {
             RecoveryTestDocumentsProvider.afterRename = { worker.cancel() }
             worker.start()
             worker.join()
-            assertTrue("The provider must trigger cancellation after its rename", worker.isCancelled)
+            assertTrue("Expected rename cancellation; phase=${Transfers.state.value.phase}, failure=${FailureJournal.failures.value.firstOrNull { it.task.id == task.id }?.code}", worker.isCancelled)
             val result = completed.get()
             assertNotNull("Committed publication must reach onComplete despite cancellation", result)
             assertEquals(Phase.COMPLETE, result!!.phase)
@@ -138,7 +138,7 @@ class PublicationCommitRaceTest {
             worker = launch(Dispatchers.Default, start = CoroutineStart.LAZY) { processor.run(task, "before commit fixture") }
             worker.start()
             worker.join()
-            assertTrue(worker.isCancelled)
+            assertTrue("Expected pre-commit cancellation; phase=${Transfers.state.value.phase}, failure=${FailureJournal.failures.value.firstOrNull { it.task.id == task.id }?.code}", worker.isCancelled)
             assertNull(completed.get())
             assertEquals(Phase.CANCELLED, Transfers.state.value.phase)
             assertTrue(FailureJournal.failures.value.single { it.task.id == task.id }.cancelled)

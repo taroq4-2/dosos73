@@ -115,7 +115,8 @@ class LiveDownloadTest {
         val engine = MediaEngine(context)
         val analysis = engine.analyze(url)
         assertTrue(analysis.choices.isNotEmpty())
-        val choice = analysis.choices.first { it.kind == Kind.VIDEO }
+        val height = InstrumentationRegistry.getArguments().getString("mediaHeight")?.toIntOrNull()
+        val choice = analysis.choices.first { it.kind == Kind.VIDEO && (height == null || it.expectedHeight == height) }
         val directory = File(context.cacheDir, "live-media-test").apply { mkdirs() }
         try {
             val output =

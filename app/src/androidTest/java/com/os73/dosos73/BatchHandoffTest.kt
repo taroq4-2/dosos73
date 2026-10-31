@@ -35,6 +35,7 @@ class BatchHandoffTest {
         coldQueue(context)
         try { block(context, folder) }
         finally {
+            PrivateJournal.beforeWriteForTests = null
             // Reset before returning to tests which use the application's ordinary journal.
             DownloadQueue::class.java.getDeclaredField("loaded").apply { isAccessible = true }
                 .setBoolean(DownloadQueue, false)
@@ -62,11 +63,17 @@ class BatchHandoffTest {
         JSONObject(PrivateJournal(context, "waiting-tasks.json").readOrNull()!!)
             .getJSONArray("acceptedBatch")
 
-    private fun blockWrite(folder: File, name: String): File = File(folder, "$name.new").apply {
-        mkdir()
-        // Keep AtomicFile.openRead from unlinking this failure injector as a stale empty .new.
-        File(this, "block").writeText("blocked", Charsets.UTF_8)
-    }
+    private fun blockWrite(folder: File, name: String): File =
+        File(folder, ".fault-$name").apply {
+            check(mkdir())
+            val marker = this
+            val target = File(folder, name).canonicalPath
+            // Platform AtomicFile uses .bak on API29 and .new on newer versions.
+            // Inject the same disk failure at the journal boundary on every API.
+            PrivateJournal.beforeWriteForTests = { file ->
+                if (marker.exists() && file.canonicalPath == target) throw IOException("Injected journal write failure")
+            }
+        }
     private fun legacy(context: Context, row: BatchEntry, version: Int) {
         BatchDraft(context).write(listOf(row))
         val journal = PrivateJournal(context, "batch-review.json")
