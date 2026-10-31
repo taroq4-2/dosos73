@@ -13,6 +13,10 @@ internal class TransferProcessor(
     private val isUserCancelled: () -> Boolean,
     private val onComplete: (TransferState) -> Unit,
 ) {
+    companion object {
+        @Volatile internal var failureObserverForTests: ((PipelineException) -> Unit)? = null
+    }
+
     suspend fun run(task: DownloadTask, detail: String) = coroutineScope {
         val directory =
             if (task.analysis.direct) TransferFiles.directory(context, task.id)
@@ -113,6 +117,7 @@ internal class TransferProcessor(
         } catch (e: Exception) {
             if (terminal.phase != Phase.COMPLETE) {
                 val failure = FailureClassifier.classify(stage, e)
+                if (BuildConfig.DEBUG) failureObserverForTests?.invoke(failure)
                 failureCode = failure.code
                 withContext(NonCancellable) { trace(failure.stage, TimelineResult.FAILED, code = failure.code) }
                 Diagnostics.event(failure.stage, "failed", code = failure.code)

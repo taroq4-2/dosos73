@@ -19,11 +19,16 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class PublicationCommitRaceTest {
     private val context get() = InstrumentationRegistry.getInstrumentation().targetContext
+    private val observedFailure = AtomicReference<String?>()
     private val mime = "application/octet-stream"
     private val bytes = "verified publication survives cancellation".toByteArray()
 
     private suspend fun saf(block: suspend (Uri, DownloadTask) -> Unit) {
         RecoveryTestDocumentsProvider.reset()
+        observedFailure.set(null)
+        TransferProcessor.failureObserverForTests = {
+            observedFailure.set("${it.stage}:${it.code}:${it.cause?.javaClass?.simpleName}:${it.cause?.message}")
+        }
         val tree = DocumentsContract.buildTreeDocumentUri("com.os73.dosos73.recovery-tests", "root")
         val flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION or
             Intent.FLAG_GRANT_PREFIX_URI_PERMISSION
@@ -34,6 +39,7 @@ class PublicationCommitRaceTest {
         try {
             block(tree, task)
         } finally {
+            TransferProcessor.failureObserverForTests = null
             RecoveryTestDocumentsProvider.reset()
             PublicationReceipt(context, task.id).forget()
             DownloadQueue.finish(context, task.id)
@@ -107,7 +113,7 @@ class PublicationCommitRaceTest {
             RecoveryTestDocumentsProvider.afterRename = { worker.cancel() }
             worker.start()
             worker.join()
-            assertTrue("Expected rename cancellation; phase=${Transfers.state.value.phase}, failure=${FailureJournal.failures.value.firstOrNull { it.task.id == task.id }?.code}", worker.isCancelled)
+            assertTrue("Expected rename cancellation; phase=${Transfers.state.value.phase}, failure=${observedFailure.get()}", worker.isCancelled)
             val result = completed.get()
             assertNotNull("Committed publication must reach onComplete despite cancellation", result)
             assertEquals(Phase.COMPLETE, result!!.phase)
@@ -138,7 +144,7 @@ class PublicationCommitRaceTest {
             worker = launch(Dispatchers.Default, start = CoroutineStart.LAZY) { processor.run(task, "before commit fixture") }
             worker.start()
             worker.join()
-            assertTrue("Expected pre-commit cancellation; phase=${Transfers.state.value.phase}, failure=${FailureJournal.failures.value.firstOrNull { it.task.id == task.id }?.code}", worker.isCancelled)
+            assertTrue("Expected pre-commit cancellation; phase=${Transfers.state.value.phase}, failure=${observedFailure.get()}", worker.isCancelled)
             assertNull(completed.get())
             assertEquals(Phase.CANCELLED, Transfers.state.value.phase)
             assertTrue(FailureJournal.failures.value.single { it.task.id == task.id }.cancelled)
