@@ -1,0 +1,26 @@
+{
+  "reviewer_id": "reviewer-16",
+  "scope": "b89b957b32b2c9d73bfff505fecdf0abfadd5cf7: TaskTimeline.kt, PrivateJournal.kt, TaskTimelineDialog/PrivacyScreen in AdvancedScreens.kt, TaskTimelineTest.kt; focused static review of bounds, encryption, retention, and sensitive-data exposure. No build, emulator, deployment, or source changes.",
+  "findings": [
+    {
+      "severity": "P2",
+      "file": "app/src/main/java/com/os73/dosos73/PrivateJournal.kt",
+      "line": 29,
+      "evidence": "readLocked() uses InputStream.readBytes() without a byte ceiling. TaskTimeline.load() checks text.length <= 1 MiB only after the entire file has been allocated, decrypted, and converted to a String; legacy plaintext additionally gets encrypted/written before this check. An oversized/corrupt task-timeline.json therefore consumes memory proportional to its disk size and can raise OutOfMemoryError before the intended limit. The dialog and TransferProcessor catch Exception, which does not catch OutOfMemoryError. The normal typed writer remains bounded; this finding concerns the on-disk input boundary.",
+      "recommendation": "Give PrivateJournal a caller-specific maximum encoded length, reject oversized streams with a bounded read before decryption/migration, and keep the plaintext/row checks in TaskTimeline. Test a file larger than the configured ceiling and assert bounded failure without replacing its bytes."
+    },
+    {
+      "severity": "P2",
+      "file": "app/src/main/java/com/os73/dosos73/PrivateJournal.kt",
+      "line": 33,
+      "evidence": "The first-byte legacy branch accepts every file beginning with { or [, even after that same journal was already encrypted. Replacing a valid encrypted timeline with the plaintext object {\"version\":1,\"events\":[]} makes readLocked() encrypt and return the replacement and TaskTimeline.read() succeed with empty history. No GCM authentication is attempted, so replacement with syntactically valid legacy JSON bypasses the tamper rejection currently demonstrated only by a flipped ciphertext byte in TaskTimelineTest lines 53-62. This is an integrity/downgrade issue for an actor or fault that can replace private journal bytes, not evidence of a remote link leak.",
+      "recommendation": "Separate and explicitly gate the one-time legacy upgrade path from normal authenticated journal reads; after an encrypted journal is established, reject plaintext replacement rather than silently migrating it. Add a regression test that replaces an already-encrypted timeline with valid empty and valid forged legacy JSON and requires an error without rewriting it."
+    }
+  ],
+  "test_gaps": [
+    "TaskTimelineTest checks one ciphertext-bit flip, but not valid-JSON downgrade, truncated/malformed headers, wrong journal-name AAD, or a missing/unavailable Keystore key.",
+    "The size assertion covers normally generated small history only; there is no oversized disk-input test proving rejection before readBytes/decryption/migration allocations.",
+    "Retention is tested for a single expired event at seven days. Missing boundaries include exactly-at-cutoff timestamps, mixed expired/current events for one task, 30-day retention, and repeated reads confirming persisted pruning.",
+    "The allowed-field assertion inspects only the first generated row. There is no UI assertion that loaded failures and formatted timestamps never expose task UUIDs, URLs, titles, or destinations; current TaskTimelineDialog rendering was statically checked and displays only ordinal task labels, timestamps, stage/result labels and enum-mapped failure messages."
+  ]
+}

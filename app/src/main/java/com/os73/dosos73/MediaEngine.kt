@@ -11,8 +11,12 @@ class MediaEngine(
     private val context: Context,
     private val networkProvider: () -> android.net.Network = { NetworkSettings.requireNetwork(context) },
 ) {
-    private fun publicProxy(): PublicProxy {
-        val network = networkProvider()
+    private fun publicProxy(stage: Stage): PublicProxy {
+        val network = try { networkProvider() } catch (error: PipelineException) {
+            if (error.code == FailureCode.NETWORK_UNAVAILABLE)
+                throw PipelineException(stage, error.code, error)
+            throw error
+        }
         return PublicProxy(
             resolve = { host ->
                 if (!NetworkSettings.permitted(context, network)) throw java.io.IOException("Network policy unavailable")
@@ -55,6 +59,9 @@ class MediaEngine(
         require(Safety.url(url).startsWith("https://"))
         return YoutubeDLRequest(url).apply {
             addOption("--ignore-config")
+            // Prefer the bundled urllib handler; other handlers remain available when needed.
+            // Both routes retain origin certificate verification and the checked CONNECT proxy.
+            addOption("--compat-options", "prefer-legacy-http-handler")
             addOption("--no-colors")
             addOption("--js-runtimes", "quickjs:${context.applicationInfo.nativeLibraryDir}/libqjs.so")
             addOption("--ffmpeg-location", "${context.applicationInfo.nativeLibraryDir}/libffmpeg.so")
@@ -77,7 +84,7 @@ class MediaEngine(
             initialize()
             val dir = File(context.cacheDir, "analysis-${active.id}").apply { mkdirs() }
             try {
-                publicProxy().use { p ->
+                publicProxy(Stage.EXTRACT).use { p ->
                     active.attachProxy(p)
                     val request =
                         request(url, p).apply {
@@ -119,11 +126,11 @@ class MediaEngine(
     ): File =
         invocation { active ->
             initialize()
-            publicProxy().use { p ->
+            publicProxy(Stage.TRANSFER).use { p ->
                 active.attachProxy(p)
                 val request =
                     request(task.analysis.url, p).apply {
-                        addOption("-f", task.choice.id)
+                        addOption("-f", formatSelector(task.choice.id))
                         addOption("-o", File(directory, "media.%(ext)s").absolutePath)
                         addOption("--no-part")
                         addOption("--no-continue")
@@ -162,6 +169,41 @@ class MediaEngine(
         }
 
     companion object {
+        internal fun formatSelector(id: String): String {
+            val components = id.split('+')
+            require(components.size in 1..2 && components.all { it.matches(Regex("[a-zA-Z0-9_.-]{1,80}")) })
+            // Extractor IDs such as "all" or "best" must remain literal field values.
+            // "all" also admits an exact audio-only or video-only match.
+            return components.joinToString("+") {
+                // Numeric selector tokens are literal IDs in yt-dlp. Keep their normal
+                // extractor hints; arbitrary/reserved names require a field filter.
+                if (it.all { character -> character in '0'..'9' }) it else "all[format_id=$it]"
+            }
+        }
+
+        internal fun audioChoice(
+            id: String,
+            sourceExtension: String,
+            abr: Double,
+            sourceBytes: Long?,
+            language: String?,
+        ): Choice {
+            val converted = sourceExtension != "mp3"
+            val bitrate = abr.takeIf { it.isFinite() && it > 0 }?.toInt()?.takeIf { it > 0 }
+            return Choice(
+                id, Kind.AUDIO, "mp3",
+                listOfNotNull(
+                    if (converted) "MP3 V0" else "Original",
+                    bitrate?.let { if (converted) "source $it kbps" else "$it kbps" },
+                    language,
+                ).joinToString(" · "),
+                // Only unchanged MP3 can retain the source size and bitrate as output estimates.
+                estimatedBytes = if (converted) null else sourceBytes,
+                bitrateKbps = if (converted) null else bitrate,
+                language = language,
+            )
+        }
+
         fun mapFormats(json: JSONObject): List<Choice> {
             val formats = json.optJSONArray("formats") ?: org.json.JSONArray().put(json)
             require(formats.length() <= 1000)
@@ -218,22 +260,14 @@ class MediaEngine(
                 .mapNotNull { f ->
                     when {
                         f.unspecified ->
-                            Choice(
-                                f.id,
-                                if (f.ext in setOf("mp4", "webm")) Kind.VIDEO else Kind.AUDIO,
-                                if (f.ext in setOf("mp4", "webm")) f.ext else "mp3",
-                                "Original",
-                                estimatedBytes = f.bytes,
-                                language = f.language,
-                            )
-                        f.audio && !f.video -> Choice(
-                            f.id, Kind.AUDIO, "mp3",
-                            listOfNotNull("MP3 V0", f.abr.toInt().takeIf { it > 0 }?.let { "source $it kbps" }, f.language).joinToString(" · "),
-                            // Conversion changes size and bitrate; do not advertise source values as output.
-                            estimatedBytes = null,
-                            bitrateKbps = null,
-                            language = f.language,
-                        )
+                            if (f.ext in setOf("mp4", "webm"))
+                                Choice(
+                                    f.id, Kind.VIDEO, f.ext, "Original",
+                                    estimatedBytes = f.bytes,
+                                    language = f.language,
+                                )
+                            else audioChoice(f.id, f.ext, f.abr, f.bytes, f.language)
+                        f.audio && !f.video -> audioChoice(f.id, f.ext, f.abr, f.bytes, f.language)
                         f.video && f.audio ->
                             Choice(
                                 f.id,

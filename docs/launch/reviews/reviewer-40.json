@@ -1,0 +1,63 @@
+{
+  "reviewer_id": "reviewer-40",
+  "scope": {
+    "mode": "static_read_only",
+    "files": [
+      "app/src/main/java/com/os73/dosos73/Safety.kt",
+      "app/src/main/java/com/os73/dosos73/OutputStore.kt",
+      "app/src/main/java/com/os73/dosos73/MediaEngine.kt",
+      "app/src/main/java/com/os73/dosos73/DirectFileName.kt",
+      "app/src/main/java/com/os73/dosos73/LibraryRepository.kt",
+      "app/src/main/java/com/os73/dosos73/PublicationReceipt.kt"
+    ],
+    "assessment": "No proven filename/path traversal, shell-argument injection, or header injection defect found. Publication and rename use content-provider APIs; source titles do not become private filesystem paths or command options."
+  },
+  "findings": [],
+  "evidence": [
+    {
+      "file": "app/src/main/java/com/os73/dosos73/Safety.kt",
+      "lines": "95-108",
+      "observation": "Rename rejects separators, controls, format characters, dot/dot-dot and excess length. Publication filenames replace path separators, control and format characters and require an alphanumeric extension."
+    },
+    {
+      "file": "app/src/main/java/com/os73/dosos73/DirectFileName.kt",
+      "lines": "24-55",
+      "observation": "Content-Disposition input is bounded, decoded defensively, reduced to a basename, stripped of controls, and given a validated or MIME-mapped extension. OutputStore applies Safety.filename before publication."
+    },
+    {
+      "file": "app/src/main/java/com/os73/dosos73/MediaEngine.kt",
+      "lines": "87,126-138,165-170,219-223",
+      "observation": "Metadata and download output templates use fixed local basenames. Format IDs use a narrow allowlist and literal filter selectors; mapped extensions use an allowlist."
+    },
+    {
+      "file": "app/src/main/java/com/os73/dosos73/NativeProcessSession.kt",
+      "lines": "188-195",
+      "observation": "Arguments are passed as a ProcessBuilder list, without a shell."
+    },
+    {
+      "file": "app/src/main/java/com/os73/dosos73/DownloadQueue.kt",
+      "lines": "249-254,274-276",
+      "observation": "Recovered choices validate extension and format ID. Task directory paths validate UUIDs."
+    },
+    {
+      "file": "app/src/main/java/com/os73/dosos73/ResumeJournal.kt",
+      "lines": "25-33",
+      "observation": "Replayed If-Range tags reject CR/LF and other ASCII control bytes."
+    }
+  ],
+  "test_gaps": [
+    {
+      "area": "Provider-specific filename normalization",
+      "evidence": [
+        "Safety.kt:106 truncates in UTF-16 code units.",
+        "PublicationReceipt.kt:24 appends the task identifier to the final display name.",
+        "LibraryRepository.kt:173-176 reads the actual name returned by providers after rename."
+      ],
+      "gap": "Very long multibyte titles and supplementary Unicode at truncation boundaries need provider acceptance coverage. Static review does not prove failure because providers may normalize or truncate names; no defect is asserted."
+    },
+    {
+      "area": "Verification boundary",
+      "gap": "No source edits, builds, devices, emulators, network calls, or test execution were performed. Existing source tests were inspected only."
+    }
+  ]
+}

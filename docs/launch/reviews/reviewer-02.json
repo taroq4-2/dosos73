@@ -1,0 +1,63 @@
+{
+  "reviewer_id": "02",
+  "reviewed_commit": "b89b957",
+  "completed_utc": "2026-10-30T10:30:52.583454+00:00",
+  "scope": [
+    "app/src/main/java/com/os73/dosos73/Safety.kt (entire file)",
+    "app/src/main/java/com/os73/dosos73/PublicProxy.kt (entire file)",
+    "app/src/main/java/com/os73/dosos73/NetworkSettings.kt (entire file)",
+    "app/src/main/java/com/os73/dosos73/HttpRepresentation.kt (entire file)",
+    "SafetyTest.kt, SecurityReviewTest.kt, PublicProxyTest.kt (entire files)",
+    "ProxyTransportTest.kt (entire file)",
+    "DirectDownloader.kt request/secureClient and ParallelDownloader.kt representation/range call sites"
+  ],
+  "findings": [
+    {
+      "severity": "P1",
+      "file": "app/src/main/java/com/os73/dosos73/DirectDownloader.kt",
+      "line": 292,
+      "title": "Literal-IP requests bypass the custom public-address DNS gate before socket creation",
+      "evidence": "Safety.url at lines8–15 accepts https://127.0.0.1/a. secureClient installs Safety.resolve only as OkHttp Dns at lines303–308. OkHttp4.12 routes literal IP hosts without invoking that Dns. A standalone Java harness against the existing compiled Debug classes and actual cached OkHttp4.12 JAR used a recording SocketFactory that never contacts the network. It observed: LITERAL_IP: acceptedBySafetyUrl=https://127.0.0.1/a; DNS_calls=0; socketConnectCalls=1; endpoint=/127.0.0.1:443. The recording factory threw IOException before any real connection. The production NetworkSettings.client DNS override has the same limitation. DirectDownloader.request applies Safety.url again to redirect destinations, which also accepts the literal. Thus direct source/redirect paths can attempt private sockets; HTTP opt-in makes unencrypted private HTTP responses reachable without a TLS-certificate obstacle. No TLS validation bypass or private-data exfiltration was demonstrated.",
+      "recommendation": "Add an independent pre-socket literal-address policy, applied to the canonical OkHttp host and every redirect, not only custom DNS. Cover standard IPv4, shortened/decimal numeric representations accepted by the networking stack, IPv6 and mapped addresses. Preserve public literal destinations. Use a recording SocketFactory in regression tests and assert zero connect calls for forbidden inputs; manual dns.lookup tests are insufficient.",
+      "reproduction_artifacts": [
+        "work/launch-review/repro-02/NetworkBoundaryRepro.java",
+        "work/launch-review/repro-02/result.txt"
+      ],
+      "confidence": "confirmed socket-boundary bypass; no actual private network contacted"
+    }
+  ],
+  "positive_observations": [
+    "Proxy validates all DNS answers and connects to InetSocketAddress(InetAddress,443), avoiding a second hostname lookup. Existing deterministic rebinding test covers this proxy property.",
+    "Default cleartext rejection runs before the request proceeds; HTTPS-to-HTTP redirects are explicitly rejected by DirectDownloader.request.",
+    "Proxy uses independent session credentials and constant-time comparison, has bounded header length, tunnel count and worker count, and tracks late-created sockets for cancellation.",
+    "HttpRepresentation range parser rejects overflow, malformed ranges and endpoints outside total. Unsupported content encodings and HTML/multipart types are rejected under the current single-header interpretation."
+  ],
+  "validation": {
+    "executed": "standalone Java recording-socket reproduction only; did not run Gradle/device tests or an emulator",
+    "literal_ip_result": "DNS_calls=0, connect_calls=1, target loopback:443",
+    "slow_header_result": "Exploratory host harness reached a connection-reset exception on the ninth client, but no clean completed assertion was captured. Not counted as a confirmed finding; parent requested handoff to another reviewer.",
+    "source_changes": "none"
+  },
+  "test_gaps": [
+    {
+      "file": "app/src/test/java/com/os73/dosos73/DirectDownloaderTest.kt",
+      "line": 230,
+      "gap": "The private-host check invokes secureClient().dns.lookup(\"127.0.0.1\") directly, which does not exercise the actual literal-IP route bypass."
+    },
+    {
+      "file": "app/src/main/java/com/os73/dosos73/PublicProxy.kt",
+      "line": 63,
+      "gap": "Header parsing sets only a per-read30s timeout, while8 slots are reserved before authentication at lines37–45. There is no absolute header-completion deadline. A dedicated slow-header regression should distinguish idle timeout from total elapsed time; exploit proof was not completed in this review."
+    },
+    {
+      "file": "app/src/main/java/com/os73/dosos73/HttpRepresentation.kt",
+      "line": 11,
+      "gap": "No test for duplicate Content-Encoding/Content-Type/Content-Range headers with conflicting values; response.header selects one value. Consider fail-closed validation of conflicting metadata, especially for resume/ranges."
+    },
+    {
+      "file": "app/src/androidTest/java/com/os73/dosos73/ProxyTransportTest.kt",
+      "line": 18,
+      "gap": "Large verified Java/Python CONNECT transport remains opt-in and is skipped by default CI. Physical DNS/network handover and VPN/metered-policy transitions were not exercised here."
+    }
+  ]
+}

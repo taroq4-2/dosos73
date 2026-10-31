@@ -1,8 +1,8 @@
 # Compact universal delivery
 
-RC4 is one **72,758,008-byte** signed APK containing the four supported ABIs. Both extraction and MP3 conversion work locally; no remote processing service or first-use native download is introduced.
+The public RC5 universal APK is **61,944,601 bytes**. The previously accepted 1.2.0 launch candidate measured **62,018,329 bytes**; newer source changes require a fresh artifact measurement and acceptance before publication. All four supported ABIs remain in one APK. Extraction and MP3 conversion run locally without a remote processing service or first-use native download.
 
-The earlier unoptimized universal measured 204,892,299 bytes. Current size is about 64.5% smaller by file length, while retaining the application features exercised in [VERIFICATION.md](VERIFICATION.md). This does not prove equivalence for every old codec/protocol path.
+The earlier unoptimized universal measured 204,892,299 bytes. The accepted 1.2.0 candidate was about 69.7% smaller by file length, while retaining the application features exercised in its acceptance tests. Public RC5 evidence is recorded in [VERIFICATION.md](VERIFICATION.md); in-progress launch evidence is separate in [the checkpoint](launch/CHECKPOINT.md). This does not prove equivalence for every old codec/protocol path.
 
 ## Composition
 
@@ -18,11 +18,14 @@ Use the pinned NDK/build configuration in [build_compact_ffmpeg.sh](../tools/bui
 
 ```sh
 ./gradlew testDebugUnitTest lintRelease assembleRelease
-python3 tools/assemble_compact_experiment.py app/build/outputs/apk/release/app-release-unsigned.apk compact-engines compact-universal-unsigned.apk
+python3 tools/fetch_runtime_overrides.py runtime-overrides
+python3 tools/assemble_compact_experiment.py app/build/outputs/apk/release/app-release-unsigned.apk compact-engines compact-universal-unsigned.apk --runtime-overrides runtime-overrides --ffmpeg-version 9.0.2 --lame-version 3.100
 zipalign -P 16 -f 4 compact-universal-unsigned.apk compact-universal-aligned-unsigned.apk
 # Sign with the owner's protected key; never commit the key or password.
 apksigner verify --verbose --print-certs signed-universal.apk
-python3 tools/audit_elf_alignment.py signed-universal.apk
+python3 tools/audit_elf_alignment.py signed-universal.apk elf-alignment.json
 ```
 
 `compact-engines` contains an ABI directory for each target, with ffmpeg, ffprobe and usr/lib/*.so from the native workflow. Retain the accompanying config/license files. Source code/build recipe is open; publication signing uses the existing protected key. Refer to [third-party notices](../THIRD_PARTY_NOTICES.md) for component license scope. Full Python/native source correspondence and physical 16KB runtime review remain open.
+
+The assembler writes `compact-universal-unsigned.runtime-proof.json`. Retain this exact proof with the APK payload; the compact workflow uploads it beside the aligned unsigned artifact. `generate_sbom.py --engine-proof` requires the artifact-bound proof and rejects unrelated payloads. Alignment/signing do not replace the proof with a new, unverified declaration.

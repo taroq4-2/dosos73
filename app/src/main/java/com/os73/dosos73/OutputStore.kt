@@ -14,15 +14,20 @@ import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 
-class OutputStore(private val context: Context) {
+class OutputStore(
+    private val context: Context,
+    private val onCommitted: (Uri, String) -> Unit = { _, _ -> },
+) {
     suspend fun recover(task: DownloadTask): Pair<Uri, String>? =
         withContext(Dispatchers.IO) {
-            PublicationReceipt(context, task.id).recover()?.also { (uri, mime) ->
-                val bytes =
-                    context.contentResolver.openFileDescriptor(uri, "r")?.use {
-                        it.statSize.coerceAtLeast(0)
-                    } ?: 0L
-                LibraryRepository.remember(context, uri, mime, task.analysis.title, bytes)
+            val receipt = PublicationReceipt(context, task.id)
+            receipt.recover()?.also { (uri, mime) ->
+                // Deliver the commit before a cancelled dispatcher return can discard it.
+                onCommitted(uri, mime)
+                runCatching {
+                    val bytes = checkNotNull(receipt.recoveredBytes)
+                    LibraryRepository.remember(context, uri, mime, task.analysis.title, bytes)
+                }
             }
         }
 
@@ -32,7 +37,24 @@ class OutputStore(private val context: Context) {
         if (tree == null) return
         val folder =
             DocumentFile.fromTreeUri(context, tree) ?: throw IOException("Destination unavailable")
-        if (!folder.isDirectory || !folder.canWrite()) throw IOException("Destination is read-only")
+        // API29 may deny an explicit URI-grant lookup for a provider owned by this
+        // UID even though same-UID provider access is allowed. Retain both ownership
+        // and declared directory-create capability; external providers still need a grant.
+        val ownsProvider = runCatching {
+            context.packageManager.resolveContentProvider(folder.uri.authority!!, 0)
+                ?.applicationInfo?.uid == android.os.Process.myUid()
+        }.getOrDefault(false)
+        // DocumentFile.canWrite also accepts delete-only documents. Creation is a
+        // separate capability and must be advertised even when a write grant exists.
+        val supportsCreate = runCatching {
+            context.contentResolver.query(folder.uri,
+                arrayOf(android.provider.DocumentsContract.Document.COLUMN_FLAGS), null, null, null)
+                ?.use { cursor -> cursor.moveToFirst() &&
+                    (cursor.getInt(0) and android.provider.DocumentsContract.Document.FLAG_DIR_SUPPORTS_CREATE) != 0 }
+                ?: false
+        }.getOrDefault(false)
+        if (!folder.isDirectory || !supportsCreate || (!folder.canWrite() && !ownsProvider))
+            throw PipelineException(Stage.PUBLISH, FailureCode.STORAGE_PERMISSION_DENIED)
         // Actual creation is covered by the durable publication plan in save().
     }
 
@@ -147,13 +169,13 @@ class OutputStore(private val context: Context) {
                 resolver.openInputStream(uri)?.use { input ->
                     StreamIntegrity.requireSame(expected, StreamIntegrity.fingerprint(input))
                 } ?: throw IOException("Output cannot be verified")
+                currentCoroutineContext().ensureActive()
                 verified = true // Preserve on any ambiguous provider operation from this point.
                 receipt.markVerified()
                 val finalUri = receipt.publishVerified(uri).first
-                resolver.openFileDescriptor(finalUri, "r")?.use { descriptor ->
-                    if (descriptor.statSize >= 0 && descriptor.statSize != file.length())
-                        throw IOException("Output size mismatch")
-                } ?: throw IOException("Output cannot be opened")
+                // This callback is synchronous: the caller owns the committed URI even if
+                // withContext subsequently resumes it with CancellationException.
+                onCommitted(finalUri, mime)
                 runCatching {
                     LibraryRepository.remember(context, finalUri, mime, name, file.length())
                 }

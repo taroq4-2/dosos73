@@ -1,0 +1,95 @@
+{
+  "reviewer_id": "reviewer-17",
+  "baseline": "b89b957b32b2c9d73bfff505fecdf0abfadd5cf7",
+  "scope": [
+    "PipelineError.kt: FailureClassifier, messageResource and Diagnostics",
+    "MainViewModel.kt: analysis error/cancellation catches",
+    "SafeReport, diagnostic copy/share call sites and relevant tests",
+    "NetworkSettings and transfer error producers inspected for classification evidence"
+  ],
+  "findings": [
+    {
+      "id": "R17-01",
+      "severity": "P3",
+      "confidence": "high",
+      "title": "OkHttp total-call timeout is exported as DOWNLOAD_FAILED instead of NETWORK_TIMEOUT",
+      "file": "app/src/main/java/com/os73/dosos73/PipelineError.kt",
+      "line_start": 63,
+      "line_end": 64,
+      "condition": "A direct transfer reaches its configured six-hour OkHttp callTimeout while the coroutine remains active.",
+      "evidence": [
+        "DirectDownloader.secureClient configures callTimeout(6, TimeUnit.HOURS) at DirectDownloader.kt:311; DownloadService uses this client through NetworkSettings.client.",
+        "Read-only inspection of the cached pinned okhttp-4.12.0.jar with javap confirms RealCall.timeoutExit constructs java.io.InterruptedIOException with the exact message timeout.",
+        "The classifier accepts SocketTimeoutException or the substring timed out, but InterruptedIOException(timeout) matches neither; at Stage.TRANSFER it falls through to DOWNLOAD_FAILED at line 75.",
+        "TransferProcessor maps that code to error_download, records it in the failed-download journal and timeline, and SafeReport consequently exports DOWNLOAD_FAILED. The dedicated retry-after-network-timeout message is lost."
+      ],
+      "reproduction": [
+        "Static classifier case: FailureClassifier.classify(Stage.TRANSFER, java.io.InterruptedIOException(\"timeout\")) returns DOWNLOAD_FAILED; expected NETWORK_TIMEOUT for the verified pinned transport producer.",
+        "A later focused regression can use the same production client with a short test callTimeout and a slow response. No six-hour wait or build was run by this reviewer."
+      ],
+      "impact": "The UI and support report misidentify a total-call deadline as an unspecified download failure. The request still terminates, so this is a diagnostic quality defect.",
+      "suggested_fix": "Recognize the transport's exact InterruptedIOException timeout representation, with tests ensuring ordinary interruption or user cancellation is not reclassified as a network timeout.",
+      "distinct_from_reviewer_14": "This is the transfer deadline's error classification, not the analysis withTimeout inability to interrupt the synchronous direct probe. R14-01 is deliberately not repeated."
+    },
+    {
+      "id": "R17-02",
+      "severity": "P3",
+      "confidence": "high",
+      "title": "Analysis network-policy errors retain TRANSFER as their reported stage",
+      "file": "app/src/main/java/com/os73/dosos73/NetworkSettings.kt",
+      "line_start": 41,
+      "line_end": 44,
+      "condition": "Single-link Analyze is invoked with no active network or with a network disallowed by the app's Wi-Fi/unmetered policy; cleartext-disabled analysis has the same stage mismatch at NetworkSettings.kt:24-26.",
+      "evidence": [
+        "MainViewModel.analyzeSource calls NetworkSettings.requireSource and directForNetwork (MainViewModel.kt:101-102); directForNetwork calls requireNetwork at line 93 before extraction or transfer begins.",
+        "requireNetwork throws PipelineException(Stage.TRANSFER, NETWORK_UNAVAILABLE); requireSource likewise hardcodes TRANSFER for CLEARTEXT_DISABLED.",
+        "MainViewModel's catch calls FailureClassifier.classify(Stage.EXTRACT, error) at line 294, but PipelineError.kt:42 returns an existing PipelineException unchanged.",
+        "Diagnostics.event(failure.stage, failed, ...) at MainViewModel.kt:295 therefore records TRANSFER for this failed analysis. The localized error code/message itself remains correct."
+      ],
+      "reproduction": [
+        "In a debug build, disable all networks and Analyze a valid HTTPS link. The failure event stage is TRANSFER although the operation was EXTRACT and no download was started.",
+        "Equivalent source-only flow is completely determined by the cited branches; no app or emulator was launched."
+      ],
+      "impact": "Debug diagnostics associate analysis failures with the wrong pipeline stage, impairing stage-based support and diagnosis. This does not change the user-visible error text.",
+      "suggested_fix": "Let network-policy guards receive the operation stage and pass EXTRACT from analysis callers. Preserve existing typed exceptions at real stage boundaries, as the MERGE preservation test requires."
+    }
+  ],
+  "test_gaps": [
+    {
+      "area": "Transport timeout representations",
+      "gap": "FailureClassifierTest has no SocketTimeoutException, InterruptedIOException(timeout), wrapped timeout/cause, or generic InterruptedIOException cases.",
+      "suggested_test": "Add table-driven cases for the pinned transport's exact timeout exception and distinguish cancellation/interruption; include the final resource and exported failure code."
+    },
+    {
+      "area": "Stage/code/resource integration",
+      "gap": "Existing tests assert selected codes and preservation of an existing MERGE exception, but do not verify messageResource mappings across all FailureCode values or the stage produced by analysis policy failures.",
+      "suggested_test": "Cover all enum-to-resource mappings, plus EXTRACT callers failing offline/cleartext policy and TRANSFER callers using the same guards."
+    },
+    {
+      "area": "MainViewModel cancellation and batch diagnostics",
+      "gap": "No existing test exercises single/batch cancellation versus timeout catch ordering and subsequent busy-state recovery. Single errors log a failed event, but batch errors and both timeout catches do not emit a terminal Diagnostics event.",
+      "suggested_test": "Use injected analyzers and a diagnostic sink to assert cancellation is not presented as failure, timeout gets the intended resource, busy resets, and chosen diagnostic policy is consistent for batch and single analysis. Analysis timeout liveness itself remains assigned to reviewer 14."
+    },
+    {
+      "area": "Privacy and diagnostic schema",
+      "gap": "ClipboardInputTest.diagnosticExportContainsOnlyAllowlistedFields checks one code and absence of three substrings. There is no exact output/schema test for SafeReport, no JSON key/value test for Diagnostics, and no release/debug logging gate test.",
+      "suggested_test": "Verify exact allowed report fields and all nullable/code values; capture structured Diagnostics output to assert keys, bounded result, and no release emission. Existing callers supply constant result strings, so no current leak was found."
+    }
+  ],
+  "positive_observations": [
+    "SafeReport accepts only FailureCode and uses fixed app version/Android API fields; neither URLs, task names, URIs, Throwable nor native stderr can enter the support report through its current API.",
+    "Diagnostic copy/share actions export SafeReport.text rather than raw logs. Diagnostics is debug-only, and all current result call sites pass fixed strings.",
+    "PipelineException.message is restricted to stage:code; raw native text remains only in the exception cause and is not forwarded into the UI/report by the inspected catches.",
+    "TimeoutCancellationException is caught before CancellationException in single and batch analysis. Batch cancellation is rethrown; single cancellation resets busy without displaying a failure.",
+    "All existing FailureCode values reach a localized message resource; typed MERGE/PUBLISH failures survive the generic TRANSFER boundary."
+  ],
+  "verification": {
+    "mode": "Read-only static review plus read-only disassembly of the locally cached pinned OkHttp dependency",
+    "source_modified": false,
+    "build_run": false,
+    "tests_run": false,
+    "emulator_started": false,
+    "deployment_performed": false,
+    "working_tree_note": "Other reviewers have concurrent source edits. Findings are tied to b89b957; PipelineError, MainViewModel, AdvancedScreens, NetworkSettings and FailureClassifierTest were unchanged in the observed working tree."
+  }
+}

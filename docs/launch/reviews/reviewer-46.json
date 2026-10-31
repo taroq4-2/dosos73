@@ -1,0 +1,44 @@
+{
+  "reviewer_id": "reviewer-46",
+  "source_revision": "e625ee73e7a3d85abe502485c46faeb08b85090c",
+  "scope": [
+    "NativeProcessSession.kt: authenticated process-group teardown, parent-exit cleanup and cancellation races",
+    "ProcessLease.kt: start/registration/cancellation ownership",
+    "NativeCancellationTest.kt and ProcessLeaseTest.kt: inspected source only"
+  ],
+  "findings": [],
+  "conclusion": "No additional source-proven defect was identified within the assigned scope.",
+  "evidence": [
+    {
+      "file": "app/src/main/java/com/os73/dosos73/NativeProcessSession.kt",
+      "lines": "103-135",
+      "observation": "Group signaling is independent of Process.isAlive. The authenticated UUID/PID/starttime record must be accepted, and ownership is checked using the original leader or a surviving token-bearing group/session member before SIGKILL."
+    },
+    {
+      "file": "app/src/main/java/com/os73/dosos73/NativeProcessSession.kt",
+      "lines": "48-93,132-134,265-283",
+      "observation": "A stopping guard coalesces concurrent termination attempts. The shared gate covers group creation and ownership check/signaling, including destruction of an unpublished bootstrap; main-thread calls dispatch the bounded cleanup to IO."
+    },
+    {
+      "file": "app/src/main/java/com/os73/dosos73/ProcessLease.kt",
+      "lines": "13-25",
+      "observation": "Cancellation and process registration synchronize on the same lock. A late registration sees sticky cancellation and invokes termination; identity-based detach cannot clear a distinct registered Process."
+    }
+  ],
+  "excluded_documented_limits": [
+    "Denied /proc identity or environment access, bounded scan/gate-budget exhaustion, and cache eviction can prevent proof and leave helpers; these are documented fail-closed limits in docs/launch/reviews/reviewer-01.json.",
+    "The gate coordinates current NativeProcessSession groups rather than unrelated native group creation. No same-UID arbitrary-code compromise is asserted as a new vulnerability."
+  ],
+  "coverage_gaps": [
+    "The exited-leader fixture explicitly invokes cancel after detecting leader death; it covers cancel-driven orphan cleanup but does not independently establish bounded normal completion when an inherited output pipe remains open. This is a test-evidence gap, not a proven additional defect.",
+    "Existing registration stress coverage uses a fake Process; the source-reviewed native fixtures are not a device stress result for simultaneous main-thread cancellation, IO finalization, and bootstrap publication."
+  ],
+  "verification": {
+    "mode": "Static read-only source review",
+    "tests_run": [],
+    "builds_run": [],
+    "devices_used": [],
+    "source_edits": false,
+    "publication": false
+  }
+}

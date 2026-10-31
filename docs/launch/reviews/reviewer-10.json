@@ -1,0 +1,19 @@
+{
+  "reviewer_id": "10/60",
+  "scope": "Baseline b89b957b32b2c9d73bfff505fecdf0abfadd5cf7; full static reading of AppUi.kt, NeonTheme.kt, BrandGeometry.kt and AppResourcesTest.kt; Home, formats, layout, contrast and 200% font.",
+  "findings": [
+    {
+      "severity": "P2",
+      "file": "app/src/main/java/com/os73/dosos73/AppUi.kt",
+      "line": 394,
+      "evidence": "At a narrow English configuration (300dp viewport, Android API 26-33 with fontScale=2.0), Page horizontal padding leaves 260dp for this single non-scrolling Row. Its five children are unweighted Columns. The 11sp source captions become 22dp; advance widths from the shipped Tajawal regular font are approximately YouTube 80.54dp, TikTok 59.60dp and Instagram 94.67dp, totaling 234.81dp before the 49dp X circle and the final 48dp More action. Compose measures these unweighted children sequentially against remaining width, so X consumes the remaining approximately 25dp and the final More Column receives zero width. The same row also lacks enough natural width at 320dp/200%. This makes More unavailable or clipped for large-font users. This is a source/constraint finding; no device screenshot or visual run was performed.",
+      "recommendation": "Use a wrapping FlowRow or a horizontally scrollable Row, or constrain each source to a shared adaptive cell while preserving at least 48dp interactive width and allowing captions to wrap."
+    }
+  ],
+  "test_gaps": [
+    "AppResourcesTest only checks splash color, adaptive icon intrinsic width and declared locale names; it does not exercise Home composition, narrow screens, 200% fonts, source action bounds, format selectors or visual contrast.",
+    "No build, emulator, instrumented test or visual rendering was run, as instructed. Confirm source-row action bounds and visibility with English and Arabic at 300/320/360dp and 200% font, including pre-Android-14 linear scaling.",
+    "Static contrast calculations for main pairs passed: white/ActionBlue 6.28:1, white/Purple 6.06:1, Secondary/Surface 8.44:1 and Muted/Background 6.94:1. These calculations do not substitute for a rendered gradient/disabled-state audit.",
+    "No additional proven defect was found in the format controls or shared brand geometry from static reading. Font shaping and Android 14+ nonlinear scaling were not rendered or measured."
+  ]
+}

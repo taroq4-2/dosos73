@@ -1,0 +1,95 @@
+{
+  "version": "8.3.6",
+  "recipe_commit": "d005fcc8961ca61cd3715555526c324e3d0e68e4",
+  "status": "candidate; static acceptance passed; runtime acceptance pending",
+  "abis": [
+    {
+      "abi": "arm64-v8a",
+      "url": "https://packages.termux.dev/apt/termux-main/pool/main/r/readline/readline_8.3.6_aarch64.deb",
+      "sha256": "616cc73009bc0223f61caed8dd09455714455aa5ea5e180126e2f69c4c775136",
+      "bytes": 294164,
+      "files": [
+        {
+          "relative_path": "usr/lib/libhistory.so.8.3",
+          "deb_member": "./data/data/com.termux/files/usr/lib/libhistory.so.8.3",
+          "sha256": "0ea447b1a5f23879ea2d814523b1d897f7a87a4fe03a2244c79d55de18437409",
+          "bytes": 38368,
+          "soname": "libhistory.so.8"
+        },
+        {
+          "relative_path": "usr/lib/libreadline.so.8.3",
+          "deb_member": "./data/data/com.termux/files/usr/lib/libreadline.so.8.3",
+          "sha256": "7437d5e30e2a326f3000286295cb9ba30a2e45f9ca5a91feba9ec12d0f1a161d",
+          "bytes": 321912,
+          "soname": "libreadline.so.8"
+        }
+      ]
+    },
+    {
+      "abi": "armeabi-v7a",
+      "url": "https://packages.termux.dev/apt/termux-main/pool/main/r/readline/readline_8.3.6_arm.deb",
+      "sha256": "4b3bdacdbee97503a9062a81e5e460ff5c4f3b35fed4b1cb3a612c5b8c79e64f",
+      "bytes": 283896,
+      "files": [
+        {
+          "relative_path": "usr/lib/libhistory.so.8.3",
+          "deb_member": "./data/data/com.termux/files/usr/lib/libhistory.so.8.3",
+          "sha256": "de26911532d82a39f574445146b8f389bed4140069588fc9d23640e5e5a48e21",
+          "bytes": 26864,
+          "soname": "libhistory.so.8"
+        },
+        {
+          "relative_path": "usr/lib/libreadline.so.8.3",
+          "deb_member": "./data/data/com.termux/files/usr/lib/libreadline.so.8.3",
+          "sha256": "9151947397181668cc3cf5bdb9560f0e1b299d7b43bf2b5b65fc236de081c5b8",
+          "bytes": 206236,
+          "soname": "libreadline.so.8"
+        }
+      ]
+    },
+    {
+      "abi": "x86",
+      "url": "https://packages.termux.dev/apt/termux-main/pool/main/r/readline/readline_8.3.6_i686.deb",
+      "sha256": "137aa813623a11717f19b32c24fce0f2d016b12a440bc52ab8b5f3f7c55c6363",
+      "bytes": 298300,
+      "files": [
+        {
+          "relative_path": "usr/lib/libhistory.so.8.3",
+          "deb_member": "./data/data/com.termux/files/usr/lib/libhistory.so.8.3",
+          "sha256": "7db0811802c70eaf5e3dcca6b84eb4118947f4411adb96d0856551e6029b4387",
+          "bytes": 36036,
+          "soname": "libhistory.so.8"
+        },
+        {
+          "relative_path": "usr/lib/libreadline.so.8.3",
+          "deb_member": "./data/data/com.termux/files/usr/lib/libreadline.so.8.3",
+          "sha256": "026876da62e303293d2ea3e33f14231964a02a12a93b076938d9589392323b73",
+          "bytes": 268876,
+          "soname": "libreadline.so.8"
+        }
+      ]
+    },
+    {
+      "abi": "x86_64",
+      "url": "https://packages.termux.dev/apt/termux-main/pool/main/r/readline/readline_8.3.6_x86_64.deb",
+      "sha256": "e9684798d13ede05f785315f68d3ff739563db2abef0e73db4dc9b8e17ded368",
+      "bytes": 302176,
+      "files": [
+        {
+          "relative_path": "usr/lib/libhistory.so.8.3",
+          "deb_member": "./data/data/com.termux/files/usr/lib/libhistory.so.8.3",
+          "sha256": "f7be72df4348fc0d42686765062881270762c3c09aa14b1a45c270132768e2e4",
+          "bytes": 37712,
+          "soname": "libhistory.so.8"
+        },
+        {
+          "relative_path": "usr/lib/libreadline.so.8.3",
+          "deb_member": "./data/data/com.termux/files/usr/lib/libreadline.so.8.3",
+          "sha256": "f8b0eb7ef121241c400824c0cc59e1eb2c02ca8901d526d428d41ee20fc40a13",
+          "bytes": 308584,
+          "soname": "libreadline.so.8"
+        }
+      ]
+    }
+  ]
+}

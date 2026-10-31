@@ -12,6 +12,8 @@ import android.util.Size
 import androidx.documentfile.provider.DocumentFile
 import java.io.File
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.sync.Mutex
@@ -78,6 +80,7 @@ internal object LibraryRepository {
     }
 
     private fun write(context: Context, files: List<SavedFile>) {
+        if (BuildConfig.DEBUG) beforeIndexWriteForTests?.invoke()
         val atomic = index(context)
         val output = atomic.startWrite()
         try {
@@ -92,11 +95,58 @@ internal object LibraryRepository {
         } catch (error: Exception) { atomic.failWrite(output); throw error }
     }
 
+    @Volatile internal var beforeIndexWriteForTests: (() -> Unit)? = null
+
+    // All callers hold the library lock. Only recovery consumes the transition.
+    private suspend fun recoverRename(context: Context): List<SavedFile> {
+        val recovery = RenameRecovery(context)
+        val plan = recovery.pending() ?: return read(context)
+        val changed = recovery.resolve(plan)
+        val saved = read(context)
+        if (changed == null) { recovery.forget(); return saved }
+        val next = saved.filterNot { it.uri == plan.original.uri || it.uri == changed.uri } + changed
+        mutable.value = next
+        cache.remove(plan.original.uri)
+        write(context, next)
+        val currentHidden = hidden(context)
+        check(context.getSharedPreferences("library", Context.MODE_PRIVATE).edit()
+            .putStringSet("hidden_history", (currentHidden - plan.original.uri).let {
+                if (plan.hidden || plan.original.uri in currentHidden) it + changed.uri else it
+            }).commit())
+        if (plan.original.uri != changed.uri) {
+            val controls = context.getSharedPreferences("library_controls", Context.MODE_PRIVATE)
+            val collection = LibraryPreferences.collection(context, plan.original.uri).ifEmpty { plan.collection }
+            check(controls.edit().remove("collection:${plan.original.uri}").apply {
+                if (collection.isNotEmpty() && LibraryPreferences.collection(context, changed.uri).isEmpty())
+                    putString("collection:${changed.uri}", collection)
+            }.commit())
+        }
+        recovery.forget()
+        return next
+    }
+
+    private fun readForMutation(context: Context, uri: String): List<SavedFile> {
+        val plan = RenameRecovery(context).pending()
+        check(plan == null || (uri != plan.original.uri && uri != plan.returned)) {
+            "This file still needs rename recovery"
+        }
+        return read(context)
+    }
+
     suspend fun refresh(context: Context) =
         withContext(Dispatchers.IO) {
             lock.withLock {
                 // A revoked grant or offline provider must not erase the durable SAF index.
-                val saved = read(context)
+                var recoveryError: Exception? = null
+                val saved = try { recoverRename(context) }
+                catch (error: CancellationException) { throw error }
+                catch (error: Exception) {
+                    recoveryError = error
+                    read(context)
+                }
+                // Preserve usable unrelated rows even on a cold process with an
+                // offline or ambiguous pending rename; report the error after refresh.
+                mutable.value = saved
                 val discovered = mutableListOf<SavedFile>()
                 context.contentResolver
                     .query(
@@ -130,18 +180,21 @@ internal object LibraryRepository {
                 val next = (discovered + saved).distinctBy { it.uri }.sortedByDescending { it.date }
                 if (next != saved) write(context, next)
                 mutable.value = next
+                recoveryError?.let { throw it }
             }
         }
 
     suspend fun remember(context: Context, uri: Uri, mime: String, fallback: String, bytes: Long) =
         withContext(Dispatchers.IO) {
             lock.withLock {
+                // Adding publication metadata cannot consume/replace a pending rename.
+                val saved = read(context)
                 var name = fallback
                 context.contentResolver
                     .query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)
                     ?.use { if (it.moveToFirst()) name = it.getString(0) ?: fallback }
                 val entry = SavedFile(uri.toString(), name, mime, bytes, System.currentTimeMillis())
-                val next = (listOf(entry) + read(context)).distinctBy { it.uri }
+                val next = (listOf(entry) + saved).distinctBy { it.uri }
                 write(context, next)
                 mutable.value = next
             }
@@ -150,60 +203,77 @@ internal object LibraryRepository {
     suspend fun rename(context: Context, item: SavedFile, title: String) =
         withContext(Dispatchers.IO) {
             lock.withLock {
+                val saved = recoverRename(context)
                 val clean = Safety.requireFilename(title)
+                check(saved.any { it.uri == item.uri }) { "File reference changed; refresh the library" }
                 val uri = Uri.parse(item.uri)
-                val newUri =
-                    if (uri.authority == MediaStore.AUTHORITY) {
-                        check(
-                            context.contentResolver.update(
-                                uri,
-                                ContentValues().apply {
-                                    put(MediaStore.MediaColumns.DISPLAY_NAME, clean)
-                                },
-                                null,
-                                null,
-                            ) == 1
-                        )
-                        uri
-                    } else {
-                        android.provider.DocumentsContract.renameDocument(context.contentResolver, uri, clean)
-                            ?: error("Document rename unavailable")
-                    }
-                val actualName = context.contentResolver.query(newUri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)
-                    ?.use { if (it.moveToFirst()) it.getString(0) else null } ?: clean
+                if (uri.authority != MediaStore.AUTHORITY) {
+                    val recovery = RenameRecovery(context)
+                    val plan = recovery.prepare(item, clean, item.uri in hidden(context),
+                        LibraryPreferences.collection(context, item.uri))
+                    kotlinx.coroutines.currentCoroutineContext().ensureActive()
+                    val returned = android.provider.DocumentsContract.renameDocument(context.contentResolver, uri, clean)
+                        ?: error("Document rename unavailable")
+                    recovery.validateReturned(plan, returned)
+                    // Keep the provider-returned identity usable even if the immediate receipt write fails.
+                    val changed = item.copy(uri = returned.toString(), name = clean)
+                    mutable.value = saved.map { if (it.uri == item.uri) changed else it }
+                    cache.remove(item.uri)
+                    recovery.recordReturned(plan, returned)
+                    recoverRename(context)
+                    return@withLock
+                }
+                check(context.contentResolver.update(uri, ContentValues().apply {
+                    put(MediaStore.MediaColumns.DISPLAY_NAME, clean)
+                }, null, null) == 1)
+                val newUri = uri
+                // The rename already happened. Optional metadata must not discard its returned URI.
+                val actualName = try {
+                    context.contentResolver.query(newUri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)
+                        ?.use { if (it.moveToFirst()) it.getString(0) else null }
+                } catch (_: Exception) { null } ?: clean
                 val changed = item.copy(uri = newUri.toString(), name = actualName)
-                LibraryPreferences.migrateUri(context, item.uri, newUri.toString())
-                val next = mutable.value.map { if (it.uri == item.uri) changed else it }
-                write(context, next)
+                val next = saved.map { if (it.uri == item.uri) changed else it }
+                // Keep the usable reference in this session even if the following disk write fails.
+                // Provider rename and this private index are not one durable transaction.
                 mutable.value = next
                 cache.remove(item.uri)
+                write(context, next)
+                migrateHiddenUri(context, item.uri, newUri.toString())
+                LibraryPreferences.migrateUri(context, item.uri, newUri.toString())
             }
         }
 
     suspend fun delete(context: Context, item: SavedFile) =
         withContext(Dispatchers.IO) {
             lock.withLock {
+                val saved = readForMutation(context, item.uri)
                 val uri = Uri.parse(item.uri)
                 check(
                     if (uri.authority == MediaStore.AUTHORITY)
                         context.contentResolver.delete(uri, null, null) > 0
                     else DocumentFile.fromSingleUri(context, uri)?.delete() == true
                 )
-                val next = mutable.value.filterNot { it.uri == item.uri }
+                val next = saved.filterNot { it.uri == item.uri }
                 write(context, next)
                 mutable.value = next
                 cache.remove(item.uri)
+                LibraryPreferences.clearUri(context, item.uri)
+                removeHiddenUri(context, item.uri)
             }
         }
 
     /** Explicitly remove metadata only after a fresh, confident local-missing result. */
     suspend fun forgetMissing(context: Context, item: SavedFile) = withContext(Dispatchers.IO) {
         lock.withLock {
+            val saved = readForMutation(context, item.uri)
             check(FileAccess.inspect(context, Uri.parse(item.uri)) == FileAvailability.MISSING)
-            val next = read(context).filterNot { it.uri == item.uri }
+            val next = saved.filterNot { it.uri == item.uri }
             write(context, next)
             mutable.value = next
             cache.remove(item.uri)
+            LibraryPreferences.clearUri(context, item.uri)
+            removeHiddenUri(context, item.uri)
         }
     }
 
@@ -214,27 +284,50 @@ internal object LibraryRepository {
             .orEmpty()
             .toSet()
 
+    // Called only while holding lock, just like hideHistory and clearHistory.
+    private fun removeHiddenUri(context: Context, uri: String) {
+        val current = hidden(context)
+        if (uri !in current) return
+        check(context.getSharedPreferences("library", Context.MODE_PRIVATE).edit()
+            .putStringSet("hidden_history", current - uri).commit())
+    }
+
+    private fun migrateHiddenUri(context: Context, previous: String, next: String) {
+        if (previous == next) return
+        val current = hidden(context)
+        if (previous !in current) return
+        check(
+            context.getSharedPreferences("library", Context.MODE_PRIVATE).edit()
+                .putStringSet("hidden_history", current - previous + next)
+                .commit()
+        )
+    }
+
     suspend fun hideHistory(context: Context, item: SavedFile) =
         withContext(Dispatchers.IO) {
-            check(
-                context
-                    .getSharedPreferences("library", Context.MODE_PRIVATE)
-                    .edit()
-                    .putStringSet("hidden_history", hidden(context) + item.uri)
-                    .commit()
-            )
+            lock.withLock {
+                readForMutation(context, item.uri)
+                check(
+                    context
+                        .getSharedPreferences("library", Context.MODE_PRIVATE)
+                        .edit()
+                        .putStringSet("hidden_history", hidden(context) + item.uri)
+                        .commit()
+                )
+            }
         }
 
     suspend fun clearHistory(context: Context) =
         withContext(Dispatchers.IO) {
             lock.withLock {
+                val saved = read(context)
                 check(
                     context
                         .getSharedPreferences("library", Context.MODE_PRIVATE)
                         .edit()
                         .putStringSet(
                             "hidden_history",
-                            hidden(context) + mutable.value.map { it.uri },
+                            hidden(context) + saved.map { it.uri },
                         )
                         .commit()
                 )

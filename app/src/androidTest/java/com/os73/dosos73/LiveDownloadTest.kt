@@ -115,7 +115,10 @@ class LiveDownloadTest {
         val engine = MediaEngine(context)
         val analysis = engine.analyze(url)
         assertTrue(analysis.choices.isNotEmpty())
-        val choice = analysis.choices.first { it.kind == Kind.VIDEO }
+        val height = InstrumentationRegistry.getArguments().getString("mediaHeight")?.toIntOrNull()
+        val kind = if (InstrumentationRegistry.getArguments().getString("mediaKind") == "audio") Kind.AUDIO else Kind.VIDEO
+        val choice = analysis.choices.first { it.kind == kind && (height == null || it.expectedHeight == height) }
+        println("Native acceptance choice=${choice.id} height=${choice.expectedHeight} kind=${choice.kind}")
         val directory = File(context.cacheDir, "live-media-test").apply { mkdirs() }
         try {
             val output =
@@ -123,6 +126,10 @@ class LiveDownloadTest {
             OutputStore(context)
                 .validate(output, choice.kind, choice.expectedHeight, choice.expectsAudio)
             assertTrue(output.length() > 0)
+            val digest = output.inputStream().use { StreamIntegrity.fingerprint(it) }
+            val folder = File(context.getExternalFilesDir(null), "evidence").apply { mkdirs() }
+            File(folder, "native-acceptance-${kind.name.lowercase()}.txt").writeText(
+                "kind=$kind\nchoice=${choice.id}\nheight=${choice.expectedHeight}\nextension=${choice.extension}\nbytes=${output.length()}\nsha256=${digest.sha256.joinToString("") { "%02x".format(it) }}\n")
         } finally {
             directory.deleteRecursively()
         }

@@ -1,0 +1,30 @@
+{
+  "reviewer_id": "36",
+  "scope": ["BatchDraft.kt", "MainViewModel.kt draft actor and snapshot CAS", "DownloadQueue.kt scheduling and batch receipt protocol", "BatchHandoffTest.kt", "BatchChoiceUiTest.kt", "DownloadService.kt queue scheduling call sites", "AppRoot.kt batch submission"],
+  "findings": [],
+  "positive_observations": [
+    "Batch acceptance receipt and stable task identity are committed atomically in waiting-tasks.json; finish/remove retain the receipt until the durable draft no longer contains the identity.",
+    "Protocol mutex consistently precedes queue mutex in MainViewModel init/write/handoff paths, and network/retry waits occur outside that mutex.",
+    "Draft snapshot token compares complete serialized contents, so concurrent selection/format/destination changes with identical delivery IDs are detected; adoptLatestDraft invalidates buffered older revisions.",
+    "take selects FIFO among equal priorities after excluding paused/deferred waiting tasks. Strict cross-priority preference and blocking a paused active lease are explicit behavior, including LibraryQueueTest assertions, so neither was reported as an unsupported fairness defect."
+  ],
+  "integration_issue": {
+    "file": "app/src/androidTest/java/com/os73/dosos73/BatchChoiceUiTest.kt",
+    "line": 67,
+    "evidence": "model.removeBatch(first) references an API no longer present in MainViewModel; source search finds no remaining definition. This is an Android test compile error, independently of runtime behavior.",
+    "correct_replacement": "Await suspend MainViewModel.queueBatch(entry, DownloadTask(analysis, selectedChoice, destination)) on Main after the entry and its edits are durable. There is no synchronous removal-only replacement: queueBatch performs durable acceptance before removing the row.",
+    "required_fixture_changes": [
+      "withModel currently invokes the entire block before waiting for initial batchSaving=false, so draftReady=false can cause prepareBatch to be ignored. Wait for initial restore before invoking mutations.",
+      "Wait for batchSaving=false and batchStorageError=false between prepare/select/destination/choice mutations; those methods now ignore changes while saving.",
+      "Provide an analyzed row with a valid Choice in isolated BatchDraft storage, or otherwise finish analysis before submitting; the existing first row obtained directly from prepareBatch has analysis=null.",
+      "Make the helper suspend-aware so queueBatch can await its IO-backed actor without blocking Compose Main. BatchHandoffTest ready/close/task fixtures provide the applicable pattern.",
+      "Clean up the stable deliveryId queue task after the test because the replacement now commits actual queue work (without starting the service)."
+    ]
+  },
+  "validation": {
+    "method": "Read-only source/control-flow review against the current working tree; no production defect with a concrete violating execution was established.",
+    "builds_or_tests_executed": false,
+    "emulator_or_publish_actions": false,
+    "source_changes": "none"
+  }
+}

@@ -165,6 +165,7 @@ internal fun SavedFileRow(
                                     menu = false
                                     onAction(item, if (key == "open") previewAction() else key)
                                 },
+                                enabled = availability != FileAvailability.MISSING || key in setOf("info", "collection"),
                             )
                         }
                     if (history)
@@ -182,6 +183,7 @@ internal fun SavedFileRow(
                                 menu = false
                                 onAction(item, "rename")
                             },
+                            enabled = availability != FileAvailability.MISSING,
                         )
                         DropdownMenuItem(
                             {
@@ -194,6 +196,7 @@ internal fun SavedFileRow(
                                 menu = false
                                 onAction(item, "delete")
                             },
+                            enabled = availability != FileAvailability.MISSING,
                         )
                     }
                     if (availability == FileAvailability.MISSING) {
@@ -223,7 +226,12 @@ internal fun FileLibraryScreen(
     var selectedCollection by rememberSaveable { mutableStateOf("") }
     var largeOnly by rememberSaveable { mutableStateOf(false) }
     val memberships = remember(files) { LibraryPreferences.collections(context) }
-    val collections = remember(memberships) { memberships.values.distinct().sorted() }
+    val collections = remember(memberships, files) {
+        files.mapNotNull { memberships[it.uri] }.distinct().sorted()
+    }
+    LaunchedEffect(collections) {
+        if (selectedCollection.isNotEmpty() && selectedCollection !in collections) selectedCollection = ""
+    }
     val filtered =
         remember(files, query, category, sort, ascending, selectedCollection, largeOnly, memberships) {
             val rows =
@@ -330,7 +338,7 @@ internal fun FileLibraryScreen(
             EmptyState(
                 Glyph.FOLDER,
                 R.string.no_files,
-                if (query.isBlank()) R.string.files_empty_body else R.string.no_search_results,
+                if (files.isEmpty() && query.isBlank()) R.string.files_empty_body else R.string.no_search_results,
             )
         else
             LazyColumn(

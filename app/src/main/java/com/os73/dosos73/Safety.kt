@@ -12,14 +12,28 @@ object Safety {
         require(u.userInfo == null && !u.host.isNullOrBlank())
         require(u.port == -1 || u.port in listOf(80, 443))
         require(!u.host.equals("localhost", true) && !u.host.endsWith(".local", true))
-        return u.toASCIIString()
+        return u.toASCIIString().let { u.scheme.lowercase() + it.substring(u.scheme.length) }
     }
 
     fun shared(text: String): String {
         require(text.length <= 32768)
         val matches = Regex("https?://[^\\s<>\"]+", RegexOption.IGNORE_CASE).findAll(text).toList()
         require(matches.size == 1) { "Choose one URL" }
-        return url(matches.single().value)
+        val candidate = matches.single().value.trimEnd('،', '؛', '؟')
+        // Remove only unmatched prose delimiters; retain balanced parentheses in real URLs.
+        var end = candidate.length
+        for ((open, close) in listOf('(' to ')', '[' to ']', '{' to '}')) {
+            var balance = 0
+            for (index in 0 until end) {
+                if (candidate[index] == open) balance--
+                if (candidate[index] == close) balance++
+            }
+            while (end > 0 && candidate[end - 1] == close && balance > 0) {
+                end--
+                balance--
+            }
+        }
+        return url(candidate.substring(0, end))
     }
 
     fun publicAddress(address: InetAddress): Boolean {
@@ -60,6 +74,31 @@ object Safety {
     }
 
     private val NAT64 = byteArrayOf(0, 0x64, 0xff.toByte(), 0x9b.toByte(), 0, 0, 0, 0, 0, 0, 0, 0)
+
+    /** OkHttp bypasses Dns.lookup for numeric hosts. Validate literals independently,
+     * without resolving ordinary hostnames while the user edits a URL. Ambiguous
+     * abbreviated/integer IPv4 forms are rejected rather than delegated to a resolver.
+     */
+    fun requirePublicLiteral(host: String) {
+        val literal = host.removePrefix("[").removeSuffix("]")
+        val address = when {
+            ':' in literal -> {
+                require('%' !in literal) { "Scoped network address" }
+                InetAddress.getByName(literal) // IPv6 syntax cannot be a DNS hostname.
+            }
+            literal.isNotEmpty() && literal.all { it in '0'..'9' || it == '.' } -> {
+                val parts = literal.split('.')
+                require(parts.size == 4 && parts.all { part ->
+                    part.isNotEmpty() && part.length <= 3 &&
+                        (part.length == 1 || part.first() != '0') &&
+                        part.toIntOrNull()?.let { it in 0..255 } == true
+                }) { "Ambiguous network address" }
+                InetAddress.getByAddress(parts.map { it.toInt().toByte() }.toByteArray())
+            }
+            else -> return
+        }
+        require(publicAddress(address)) { "Non-public network address" }
+    }
 
     fun checkedAddresses(addresses: List<InetAddress>): List<InetAddress> = addresses.also {
         require(it.isNotEmpty() && it.all(::publicAddress)) { "Non-public network address" }

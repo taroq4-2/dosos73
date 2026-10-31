@@ -1,0 +1,52 @@
+{
+  "reviewer_id": "32",
+  "reviewed_tree": "Current working tree including uncommitted changes; not HEAD alone",
+  "repository": "[workspace]/outputs/dosos73",
+  "head": "b89b957b32b2c9d73bfff505fecdf0abfadd5cf7",
+  "scope": [
+    "app/src/main/java/com/os73/dosos73/NativeProcessSession.kt",
+    "app/src/main/java/com/os73/dosos73/FileDigest.kt",
+    "app/src/main/java/com/os73/dosos73/DownloadService.kt",
+    "app/build.gradle.kts and AndroidManifest.xml compatibility declarations"
+  ],
+  "configuration": {
+    "compileSdk": 35,
+    "minSdk": 29,
+    "targetSdk": 35
+  },
+  "findings": [],
+  "conclusion": "No source-proven unavailable API or missing SDK guard found in the three reviewed files for Android 10-16. This is a source/API review, not device compatibility certification.",
+  "compatibility_observations": [
+    "NativeProcessSession uses Os.stat/Os.kill (API 21), Process.isAlive/destroyForcibly (API 26), and java.nio.file directory enumeration (API 26), all below minSdk 29. The previously invalid Os.getpgid call is absent; group/session identity is parsed from /proc stat.",
+    "DownloadService startForeground(id, notification, type) was added in API 29 and is valid at this minimum. Manifest declares dataSync and both foreground service permissions; notification PendingIntents specify FLAG_IMMUTABLE.",
+    "onTimeout(int,int) is an API 35 callback override without a super call or an invocation on old devices. Merely declaring this override does not require a runtime guard. The handler cancels work and calls stopSelf, which is one of the documented timeout termination paths.",
+    "FileDigest uses ContentResolver asset-descriptor cancellation and streams through runInterruptible; no platform call above API 29 was identified."
+  ],
+  "limitations": [
+    "No build, emulator, test device, installation, or publication was performed.",
+    "/proc permissions, kernel behavior and OEM process controls were not exercised. Denied identity reads fail closed; helper-environment access after leader death remains an explicitly acknowledged cleanup limitation, not a newly proven Android-version regression.",
+    "Native executable/binary ABI and 16 KB page-size compatibility on Android 15/16 cannot be established by these three Kotlin files; binary/runtime validation remains outside this review.",
+    "No source-proven background FGS start failure path was established from the inspected callers; generic platform restrictions are not reported as defects."
+  ],
+  "official_sources": [
+    "https://developer.android.com/reference/android/app/Service#startForeground(int,%20android.app.Notification,%20int)",
+    "https://developer.android.com/reference/android/app/Service#onTimeout(int,%20int)",
+    "https://developer.android.com/reference/android/system/Os",
+    "https://developer.android.com/reference/java/lang/Process",
+    "https://developer.android.com/reference/java/nio/file/Files"
+  ],
+  "source_sha256": [
+    {
+      "sha256": "66eda9f229cb3179187472b6c7fa4baaa222d612f2901425e7a698b6d17e25bf",
+      "path": "C:\\Users\\Taroq\\Documents\\Codex\\2026-10-25\\new-chat\\outputs\\dosos73\\app\\src\\main\\java\\com\\os73\\dosos73\\NativeProcessSession.kt"
+    },
+    {
+      "sha256": "30bfc3bb0d0ed01eec8e2b5451935273cea79ed3c0e4f71105a504cbf3fca75d",
+      "path": "C:\\Users\\Taroq\\Documents\\Codex\\2026-10-25\\new-chat\\outputs\\dosos73\\app\\src\\main\\java\\com\\os73\\dosos73\\FileDigest.kt"
+    },
+    {
+      "sha256": "bc73208e434624c916ea42cb014633cf8ee02a38e78eb24f186f1d7718457233",
+      "path": "C:\\Users\\Taroq\\Documents\\Codex\\2026-10-25\\new-chat\\outputs\\dosos73\\app\\src\\main\\java\\com\\os73\\dosos73\\DownloadService.kt"
+    }
+  ]
+}

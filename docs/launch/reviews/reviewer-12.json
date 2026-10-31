@@ -1,0 +1,46 @@
+{
+  "reviewer_id": 12,
+  "scope": {
+    "baseline": "b89b957b32b2c9d73bfff505fecdf0abfadd5cf7",
+    "method": "Static source inspection only",
+    "files": [
+      "app/src/main/java/com/os73/dosos73/AppUi.kt",
+      "app/src/main/java/com/os73/dosos73/NeonTheme.kt"
+    ],
+    "focus": "Semantics, click targets, input labels, typography, RTL",
+    "positive_evidence": [
+      "IconAction enforces 48dp minimum and exposes a localized label through Symbol (AppUi.kt:102-103). GradientButton has minimum height 48dp (118). Source circles are 49dp with Button role and name (398-402). FilterChip retains Material selected semantics (713-718).",
+      "NeonTheme typography uses sp sizes and explicit line heights with Tajawal Arabic font; no static typography blocker found (44-49, 74-106). URL content explicitly uses LTR, which is appropriate for URIs (AppUi.kt:245)."
+    ]
+  },
+  "findings": [
+    {
+      "severity": "P2",
+      "file": "app/src/main/java/com/os73/dosos73/AppUi.kt",
+      "line": 238,
+      "evidence": "BasicTextField has testTag but no persistent accessible label. Its only explanatory text is url_placeholder inside decorationBox, conditional on screen.url.isEmpty() (251-259). Once a URL is pasted or entered, that label is removed and no label/contentDescription remains identifying the purpose of the editable field. Static finding; the exact announcement was not tested with TalkBack.",
+      "recommendation": "Give the editable field a persistent localized URL label, preferably a Material text field label or equivalent associated semantics. Preserve EditableText and editing actions; verify the label with both an empty and populated URL."
+    },
+    {
+      "severity": "P3",
+      "file": "app/src/main/java/com/os73/dosos73/AppUi.kt",
+      "line": 537,
+      "evidence": "ToolTile uses Column.clickable(onClick = onClick) without a semantic role. Its title/subtitle are merged by clickable, but no Button role is supplied; this differs from the source buttons at line 401 which explicitly set Role.Button. All four quick-tool tiles use this component (479-513).",
+      "recommendation": "Set role = Role.Button in ToolTile.clickable so assistive technologies receive the control type along with its title and action."
+    },
+    {
+      "severity": "P2",
+      "file": "app/src/main/java/com/os73/dosos73/AppUi.kt",
+      "line": 681,
+      "evidence": "TransferCard renders phaseText(state.phase) as plain Text (681-685) and state.error as plain Text (695-700). Neither the status/error node nor the enclosing Panel (593) is a live region. Therefore the app does not explicitly expose asynchronous completion/failure messages as live announcements, unlike the analysis error at 291 which uses LiveRegionMode.Polite. This is a source-level gap, not a claim about observed TalkBack behavior or system notifications.",
+      "recommendation": "Expose a concise phase/error status live region for significant transitions such as complete/failed/paused. Avoid marking the changing speed or every progress tick as live. Verify announcements while accessibility focus stays elsewhere."
+    }
+  ],
+  "test_gaps": [
+    "No app build, emulator/device run, screenshot inspection, or actual TalkBack exercise was performed. Findings are static only.",
+    "Verify a populated URL retains an accessible purpose label and editing actions; inspect merged/unmerged semantics and quick-tool roles.",
+    "Verify significant transfer status/error announcements and focus retention using TalkBack; confirm progress updates do not create excessive speech.",
+    "RTL direction is explicitly overridden for branding, URI entry, sources, and transfer content. Mixed Arabic/Latin filenames, title alignment, focus traversal, and large-font wrapping still require runtime checks; no additional RTL failure is asserted from source alone.",
+    "The previously reported sources-row issue at 320dp/200% is deliberately excluded. No other measured touch-target or font-clipping failure is claimed."
+  ]
+}

@@ -1,0 +1,49 @@
+{
+  "reviewer_id": "28",
+  "commit": "b89b957",
+  "scope": ["tools/assemble_compact_experiment.py", "tools/trim_universal_apk.py", "app/src/main/java/com/os73/dosos73/PythonCommonRuntime.kt"],
+  "method": "Read-only git show at the requested commit; no source edit, build, emulator, APK mutation, signing or publication.",
+  "findings": [
+    {
+      "severity": "P2",
+      "file": "tools/assemble_compact_experiment.py",
+      "line": 23,
+      "title": "Four ABI labels are accepted without validating their ELF architecture",
+      "evidence": "The input check only compares the first four bytes of each ffmpeg/ffprobe to ELF magic. It never checks ELF class or e_machine against the abi directory, and shared libraries at lines 29-37 are only required to exist. The final seen-count check proves that twelve APK names were replaced, not that those names contain the correct architectures. Therefore an arm64 engine accidentally copied into an x86_64 input directory passes these checks and replaces that APK ABI's runnable binaries. This is source-proven conditional acceptance, not evidence that the pinned release actually has mismatched ABI payloads.",
+      "recommendation": "Before opening the output APK, inspect ELF class/machine for both executables and each shared library, match the four ABI definitions, and validate each engine's required shared-library names against its bundled closure. Preserve all four ABIs. Treat failure as a hard packaging error."
+    }
+  ],
+  "positive_observations": [
+    "trim_runtime rejects duplicate embedded ZIP names, removes exactly usr/lib/quickjs/libquickjs.a, then verifies every retained file's bytes. ZipInfo copies preserve the original attributes.",
+    "The shared Python split requires regular files with identical contents and full external_attr across all four ABIs. It proves reconstruction of each runtime's name set, bytes and POSIX attributes; ABI native binaries and ZIP symlinks remain in the per-ABI archive.",
+    "PythonCommonRuntime bounds metadata and individual file sizes, requires usr/ entries and metadata membership, rejects duplicate ZIP entry names, checks canonical containment before and after creating parents, verifies file digests and the complete shared-asset digest, writes through temporary files, restores modes and commits the completion marker last.",
+    "EngineRuntime.initialize is synchronized and invokes the shared installer after wrapper initialization, before setting ready. No concurrent-installer defect was proven in current call paths. No ZIP traversal escape was proven in the reviewed extractor.",
+    "All proposed packaging changes remain offline and retain embedded runtimes; no runtime download is required."
+  ],
+  "size_evidence": {
+    "classification": "Existing repository report, not independently remeasured by this reviewer",
+    "source": "docs/audit/artifact-static.json and docs/VERIFICATION.md at b89b957",
+    "rc4_bytes": 72758008,
+    "rc5_bytes": 61944601,
+    "reported_reduction_bytes": 10813407,
+    "reported_identical_native_elf_files": 608,
+    "limits": "The reported final APK difference is not a measured saving attributable solely to any one script operation. Identical ELF hashes do not establish full protocol/codec equivalence with the original upstream FFmpeg; docs/COMPACT_ENGINE.md explicitly records disabled native networking. The compact engine remains unsuitable as a claim of zero functional loss against upstream solely on these proofs."
+  },
+  "zero_loss_size_proposals": [
+    {
+      "proposal": "Measure a compression-only variant using explicit DEFLATE level 9 when rewriting retained per-ABI and common ZIP entries, while preserving name sets, content hashes, modes and symlink attributes. Keep every native payload and ABI unchanged; run the same reconstruction proof and Android ZIP extraction checks before adoption.",
+      "status": "Expected opportunity only; no measured additional saving. Current writestr(copy.copy(info), data) inherits compression type but does not explicitly select the highest DEFLATE level. Some source entries may already have equivalent compression and nested compression may yield little benefit.",
+      "runtime_download": false
+    },
+    {
+      "proposal": "Keep the existing identical-regular-file sharing and build-time-static-archive removal as the low-risk size mechanism. Require preservation proofs for every dependency update and retain symlinks/native entries per ABI. Do not remove codecs, protocols or ABI directories to meet a size target.",
+      "status": "Mechanism verified statically; independent before/after APK size measurement was outside this review.",
+      "runtime_download": false
+    }
+  ],
+  "test_gaps": [
+    "Need a negative packaging fixture with a valid ELF for the wrong ABI and a non-ELF shared library; this reviewer did not execute it.",
+    "Reconstruction is byte/attribute equivalence of the trimmed Python runtimes, not executable compatibility certification of replacement FFmpeg or transitive library closure.",
+    "No independent all-ABI runtime validation or new APK byte measurement performed."
+  ]
+}

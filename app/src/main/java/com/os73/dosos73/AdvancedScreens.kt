@@ -38,6 +38,7 @@ internal data class BatchEntry(
     val choice: Choice? = null,
     val destination: String? = null,
     val destinationOverride: Boolean = false,
+    val deliveryId: String = java.util.UUID.randomUUID().toString(),
 )
 
 internal object BatchInput {
@@ -69,6 +70,10 @@ internal object LibraryPreferences {
 
     fun setCollection(context: Context, uri: String, value: String) {
         prefs(context).edit().putString("collection:$uri", value.trim().take(40)).apply()
+    }
+
+    fun clearUri(context: Context, uri: String) {
+        prefs(context).edit().remove("collection:$uri").apply()
     }
 
     fun collections(context: Context): Map<String, String> = prefs(context).all.entries

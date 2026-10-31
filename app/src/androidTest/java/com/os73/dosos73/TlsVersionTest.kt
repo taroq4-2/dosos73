@@ -35,7 +35,7 @@ class TlsVersionTest {
                                 if not chunk: break
                                 n+=len(chunk); h.update(chunk)
                         print(mode,attempt,n,h.hexdigest(),flush=True)
-                    except Exception as e: print(mode,attempt,type(e).__name__,flush=True)
+                    except Exception as e: print(mode,attempt,type(e).__name__,str(e)[:300],flush=True)
         """
                 .trimIndent()
         PublicProxy().use { p ->
@@ -57,11 +57,15 @@ class TlsVersionTest {
                             "$python/lib:$base/packages/ffmpeg/usr/lib"
                         environment()["PYTHONHOME"] = python.absolutePath
                         environment()["SSL_CERT_FILE"] = "$python/etc/tls/cert.pem"
+                        if (InstrumentationRegistry.getArguments().getString("emptyConfig") == "true") {
+                            environment()["OPENSSL_CONF"] = "/dev/null"
+                            environment()["OPENSSL_MODULES"] = "$python/lib/ossl-modules"
+                        }
                         if (
                             InstrumentationRegistry.getArguments().getString("softwareCrypto") ==
                                 "true"
                         )
-                            environment()["OPENSSL_ia32cap"] = "0"
+                            environment()["OPENSSL_ia32cap"] = "0:0:0:0:0"
                     }
                     .start()
             try {

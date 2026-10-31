@@ -33,3 +33,7 @@ The compact candidate replaces the wrapper FFmpeg binaries with FFmpeg 9.0.2 (co
 ## Artifact-bound inventory
 
 RC5 release assets include a CycloneDX 1.6 SBOM with resolved Maven build-input hashes and every ELF hash from the actual APK. Unknown/inherited/native license correspondence is explicitly marked. The corresponding FFmpeg and LAME source archive, per-ABI configurations, notices and pinned recipe are supplied separately from the APK. No native codecs, CPU targets or source restrictions are changed by sharing 642 identical regular Python files; per-ABI symlinks and ELF payloads are preserved.
+
+## 1.2.0 preparation: Python native correspondence
+
+The next universal candidate replaces Readline/History with pinned8.3.6 official packages. GDBM1.26-1 ELF and Mutagen1.47.0 Python sources were matched byte for byte to official package/source inputs. Readline/History and GDBM are GPL-3.0-or-later; Mutagen is GPL-2.0-or-later. Source-only archives, licenses, pinned recipes, patches and limits are described in [native evidence](docs/launch/NATIVE_SOURCES.md). CPython producer build provenance remains incomplete. These materials are distributed separately and add no APK download size. The source-only archive must accompany an official replacement release.

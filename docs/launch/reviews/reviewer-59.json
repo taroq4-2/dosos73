@@ -1,0 +1,117 @@
+{
+  "reviewer_id": 59,
+  "role": "Feature acceptance consistency: implementation versus public README claims and requirements ledger",
+  "scope": {
+    "application_commit_reviewed": "e625ee7 with concurrent working-tree fixes; audit distinguishes public RC5 snapshot from unreleased code12 preparation",
+    "documents_read_complete": [
+      "README.md",
+      "README-ar.md",
+      "docs/REMAINING_REQUIREMENTS.md",
+      "docs/MP3_ACCEPTANCE.md",
+      "docs/VERIFICATION.md",
+      "docs/SECURITY.md",
+      "docs/launch/CHECKPOINT.md"
+    ],
+    "files_read_complete": [
+      "LibraryScreens.kt",
+      "FileAvailability.kt",
+      "StreamIntegrity.kt",
+      "StoragePolicy.kt",
+      "ChoiceSelection.kt",
+      "NeonTheme.kt",
+      "EngineRuntime.kt"
+    ],
+    "additional_read": [
+      "AdvancedScreens.kt BatchEntry/BatchInput, complete LibraryPreferences, complete OfflinePreview and PrivacyScreen composables",
+      "Previously completed full reads of MainActivity/MainViewModel/Models, DirectDownloader/ParallelDownloader/MediaEngine/NativeProcessSession, DownloadService/DownloadQueue, BatchDraft/PrivateJournal/TaskTimeline, OutputStore/TransferProcessor/PublicationReceipt, LibraryRepository, manifests and app Gradle config",
+      "AppRoot startup, paste/share, enqueue/queue, destination picker and library action wiring"
+    ],
+    "method": "Read-only source/document consistency audit, not end-to-end product acceptance. No source/test/build edits, builds, test execution, device interaction or publication."
+  },
+  "findings": [],
+  "claim_checks": [
+    {
+      "claim": "Paste/share public links and choose actual available formats",
+      "assessment": "Source implemented; source availability remains conditional",
+      "evidence": [
+        "MainActivity receives SEND text/plain, MainViewModel validates/analyzes links and retains incoming shares while busy.",
+        "MediaEngine filters metadata formats and DRM, returns source-derived choices and uses literal format IDs. ChoiceSelection preserves selected container/language while changing quality."
+      ]
+    },
+    {
+      "claim": "MP3 V0 extraction and compatible video merging",
+      "assessment": "Source implemented with explicit conversion/original distinction",
+      "evidence": [
+        "MediaEngine requests extract-audio/audio-format mp3/audio-quality 0 for MP3 audio choices and merge-output-format for paired formats.",
+        "Converted audio choices omit estimated output size/bitrate; unchanged MP3 uses Original labeling. MP3_ACCEPTANCE explicitly avoids promising improved source quality or fixed bitrate/size."
+      ]
+    },
+    {
+      "claim": "Direct files without a fixed size cap; validator-bound resume",
+      "assessment": "Source implemented; storage/source restrictions retained",
+      "evidence": [
+        "DirectDownloader uses Long counters and strong validator/target/Content-Range checks for append; StoragePolicy reserves space without a media-size ceiling.",
+        "README and ledger distinguish direct validated resume from native extraction restart."
+      ]
+    },
+    {
+      "claim": "Durable queue, priorities, retry, up to20 links with per-row format/folder and encrypted draft recovery",
+      "assessment": "Source implemented; one active-file ownership is deliberate",
+      "evidence": [
+        "DownloadQueue journals waiting/active tasks and uses priority ordering; BatchInput caps20 rows and BatchDraft persists encrypted row/choice/destination/delivery identities.",
+        "MainViewModel serializes draft handoff with durable queue acceptance receipts; source has explicit retry/storage-error gates."
+      ]
+    },
+    {
+      "claim": "Hash-verified publication and recovery across supported destination interruptions",
+      "assessment": "Source implemented with recovery limits disclosed",
+      "evidence": [
+        "OutputStore compares source/destination fingerprints; PublicationReceipt records a plan before creation and verified state before publish.",
+        "README/ledger qualify supported interruptions/providers and instruct same-task retry; they do not claim all-provider transactionality. Existing reviewer08 rename-durability residual is not duplicated here."
+      ]
+    },
+    {
+      "claim": "Search/filter/preview library and distinguish missing/denied/unavailable storage",
+      "assessment": "Source implemented; codec/provider matrix remains open",
+      "evidence": [
+        "LibraryScreens filters name/MIME/category/group/size and sorts; FileAccess maps permission failures separately and treats ambiguous remote emptiness as unavailable.",
+        "OfflinePreview opens content URIs and pauses on lifecycle PAUSE/STOP; ledger explicitly leaves codec/corrupt-media/physical-provider matrices open."
+      ]
+    },
+    {
+      "claim": "Bounded encrypted task timeline with no source names/credentials",
+      "assessment": "Source implemented",
+      "evidence": [
+        "TaskTimeline accepts typed IDs/stages/results/bytes/codes, bounds32 tasks and24 events/task, and writes through PrivateJournal.",
+        "Retention is applied when timeline is used; ledger separately labels ordinary completed-history duration as a display filter."
+      ]
+    },
+    {
+      "claim": "Arabic RTL, English, Tajawal, dark UI; no ads/analytics/background clipboard monitor",
+      "assessment": "Source supports selected claims; no external certification inferred",
+      "evidence": [
+        "Arabic/English resources, MainActivity locale handling, manifest supportsRtl and Tajawal fonts/dark scheme are present.",
+        "Read source/dependency wiring contains explicit user-driven Paste and clipboard-write actions; no account/ad/analytics flow is exposed in the inspected app sources."
+      ]
+    },
+    {
+      "claim": "Single universal Android10+ artifact and no first-use engine download",
+      "assessment": "Source configuration supports minSdk29/four ABIs and bundled initialization; exact release artifact requires separate verification",
+      "evidence": [
+        "app Gradle minSdk29 and default ARM32/ARM64/x86/x86_64 filters support the documented target.",
+        "EngineRuntime installs bundled components; CHECKPOINT marks code12 unreleased and keeps public RC5 as a separately verified historical artifact. This review did not inspect/re-download or run the final APK."
+      ]
+    }
+  ],
+  "explicitly_open_requirements": [
+    "OS-backed deferred scheduling, multiple simultaneous active files and subtitle selection are expressly listed as unimplemented in both READMEs/ledger/checkpoint; their absence is not a new defect.",
+    "Physical Samsung/other-device behavior, long idle/battery/CPU/memory measurements, actual Wi-Fi/cellular handover, real ENOSPC and broad storage-provider/codec coverage remain unverified.",
+    "Exact native/transitive source correspondence and physical16KB execution remain bounded evidence questions; source-level features do not close them."
+  ],
+  "limitations": [
+    "No README historical test result or public artifact hash was independently reproduced in this review.",
+    "Current README/VERIFICATION describe RC5 while CHECKPOINT explicitly describes the unreleased code12 branch; this separation is not treated as a stale-version defect.",
+    "Feature presence is supported by source paths, not a claim that every endpoint/device/provider passes acceptance.",
+    "Maximum-two finding cap yielded zero new proven actionable claim/implementation mismatches. Concurrent edits may change the final tree."
+  ]
+}

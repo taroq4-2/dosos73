@@ -1,0 +1,49 @@
+{
+  "reviewer_id": "25",
+  "scope": {
+    "baseline": "b89b957",
+    "repository": "[workspace]/outputs/dosos73",
+    "review": "Read-only license and corresponding-source evidence review: THIRD_PARTY_NOTICES.md, compact FFmpeg/LAME build recipe, docs/licenses, artifact-static evidence, final RC5 source archives, SBOM and nested APK payloads. No source edits, build, emulator or publication.",
+    "artifact": "dosos73-1.2.0-rc.5-universal.apk",
+    "artifact_sha256": "8d5e740f09d8a60becc74c202738699c27029458184d86680b0016cfb0cc31eb",
+    "limitations": "Distribution evidence assessment, not legal certification. The reviewed notice/build files have no diff against b89b957. No license inferred solely from a binary filename. FFmpeg source/configuration and LAME source are present; absence of CONFIG_GPL/CONFIG_NONFREE is not treated as a license clearance for the Python runtime."
+  },
+  "findings": [
+    {
+      "id": "R25-01",
+      "priority": "P1",
+      "title": "Close native Python corresponding-source evidence before clearing distribution",
+      "file": "THIRD_PARTY_NOTICES.md",
+      "line": 12,
+      "distribution_gate": "unresolved corresponding-source evidence",
+      "description": "The release explicitly leaves Python/QuickJS native-source correspondence under review, while the actual APK includes GNU Readline/History payloads. The SBOM supplies their binary hashes but no source, patch or build correspondence. The supplied application-source archive contains project source plus the wrapper dependency coordinates/link; the separately supplied native corresponding-source ZIP contains FFmpeg/LAME upstream archives, recipes and configurations, with no Python/Readline/History source package or artifact-specific directions to one. The generic yt-dlp PyInstaller notice is not evidence of the Android wrapper runtime's exact corresponding source. This leaves a concrete source-delivery gap for an actually shipped GPL component; the notice's admission and ELF count do not close it.",
+      "evidence": [
+        "THIRD_PARTY_NOTICES.md:9 correctly declares the wrapper GPL-3.0 and links its 0.18.1 tag; first-party source is offered under GPL-3.0-or-later. No incompatible first-party license finding was made.",
+        "THIRD_PARTY_NOTICES.md:12,21 explicitly leaves native/transitive source correspondence incomplete; :35 limits the supplied corresponding-source archive to FFmpeg/LAME.",
+        "Final APK nested entry lib/x86_64/libpython.zip.so!/usr/lib/libreadline.so.8.3 is a real ELF, SHA256 6652004dcf7c606b885b7877203c11e4f1f48e93e8063ef13dff6285eb5d9252. Static contents include rl_gnu_readline_p, rl_readline_version and GNU Readline symbols, beyond the filename alone. libhistory.so.8.3 and the Python readline module are also present; equivalent entries exist for all four ABIs.",
+        "outputs/dosos73-release/final/dosos73-1.2.0-rc.5-sbom.cdx.json marks native entries 'Binary inventory only; source and component correspondence are separate evidence.' tools/generate_sbom.py:43 implements this explicit limitation.",
+        "outputs/dosos73-release/final/dosos73-rc5-ffmpeg-lame-corresponding-source.zip contains upstream/ffmpeg-946fcce-source.tar.gz, upstream/lame-official.tar.gz, build recipes and four per-ABI config/license directories, with no Python/Readline/History sources.",
+        "docs/licenses/yt-dlp-2026.10.21.txt:3 identifies its inventory as PyInstaller-bundled executables; its GNU Readline notice around :1026 says 'Only included in Linux builds'. It does not bind those upstream notices/source directions to the Android runtime ELF hashes."
+      ],
+      "requested_evidence": "Provide a release-bound native provenance table mapping the shipped Readline/History ELF hashes and their Python integration to exact upstream release/commit, downstream patches, build/install scripts and license/copyright notices. Supply or clearly direct recipients beside the APK to equivalent access to that complete corresponding source, and record retrieval/hash checks. Extend the table to the remaining native runtime without assigning licenses by filename. An exact upstream source package plus downstream recipe and patches can establish this without requiring byte-identical reproducible builds.",
+      "official_sources": [
+        {
+          "url": "https://tiswww.case.edu/php/chet/readline/rltop.html",
+          "supports": "Readline maintainer identifies Readline and its separate History library and states GPL version 3 distribution terms; the observed GNU-specific symbols support component identity."
+        },
+        {
+          "url": "https://raw.githubusercontent.com/yausername/youtubedl-android/0.18.1/LICENSE",
+          "supports": "Official wrapper GPLv3 text, section 1 defines corresponding source including controlling scripts and required linked libraries; section 6(d) describes equivalent source access and clear directions alongside object code."
+        }
+      ],
+      "confidence": "high for missing release-bound evidence; no conclusion about undiscovered upstream compliance material or legal violation"
+    }
+  ],
+  "test_gaps": [
+    {
+      "related_finding": "R25-01",
+      "gap": "No delivered release-bound manifest/check closes the native Python source-and-notice mapping; 608 ELF hashes, 642 identical Python files and alignment checks prove inventory/reconstruction properties only.",
+      "proposed_check": "Statically verify each native component's ELF hashes against a manifest containing exact source/patch/build inputs and applicable notices, and verify public source URLs from the release download instructions. Include wrapper GPL sources and all four ABI runtime inputs in that evidence. This review did not build, execute native binaries or publish anything."
+    }
+  ]
+}

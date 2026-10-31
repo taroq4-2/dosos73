@@ -16,6 +16,10 @@ class RecoveryTestDocumentsProvider : DocumentsProvider() {
     companion object {
         val entries = java.util.concurrent.ConcurrentHashMap<String, Entry>()
         var failAfterRename = false
+        @Volatile var onRead: (() -> Unit)? = null
+        @Volatile var afterRename: (() -> Unit)? = null
+        var rootWritable = true
+        @Volatile var rootFlagsOverride: Int? = null
         var rejectRename = false
         var unknownSize = false
         var denyRead = false
@@ -25,6 +29,7 @@ class RecoveryTestDocumentsProvider : DocumentsProvider() {
         var renames = 0
         fun reset() {
             entries.values.forEach { it.file.delete() }; entries.clear()
+            afterRename = null; onRead = null; rootWritable = true; rootFlagsOverride = null
             failAfterRename = false; rejectRename = false; unknownSize = false; denyRead = false; denyQuery = false; emptyQuery = false; deletes = 0; renames = 0
         }
     }
@@ -40,7 +45,7 @@ class RecoveryTestDocumentsProvider : DocumentsProvider() {
             Document.COLUMN_DISPLAY_NAME -> entry?.name ?: "root"
             Document.COLUMN_MIME_TYPE -> if (id == "root") Document.MIME_TYPE_DIR else "application/octet-stream"
             Document.COLUMN_SIZE -> if (unknownSize) null else entry?.file?.length() ?: 0L
-            Document.COLUMN_FLAGS -> if (id == "root") Document.FLAG_DIR_SUPPORTS_CREATE else Document.FLAG_SUPPORTS_WRITE or Document.FLAG_SUPPORTS_RENAME or Document.FLAG_SUPPORTS_DELETE
+            Document.COLUMN_FLAGS -> if (id == "root") (rootFlagsOverride ?: if (rootWritable) Document.FLAG_DIR_SUPPORTS_CREATE else 0) else Document.FLAG_SUPPORTS_WRITE or Document.FLAG_SUPPORTS_RENAME or Document.FLAG_SUPPORTS_DELETE
             else -> null
         } }.toTypedArray())
     }
@@ -58,6 +63,7 @@ class RecoveryTestDocumentsProvider : DocumentsProvider() {
     }
     override fun openDocument(documentId: String, mode: String, signal: CancellationSignal?): ParcelFileDescriptor {
         val entry = entries[documentId] ?: throw FileNotFoundException()
+        if (mode == "r") onRead?.invoke()
         if (mode == "r" && denyRead) throw FileNotFoundException("Storage offline")
         if (mode == "r" && unknownSize) {
             val bytes = entry.file.readBytes()
@@ -75,6 +81,7 @@ class RecoveryTestDocumentsProvider : DocumentsProvider() {
         entries[next] = entry.copy(name = displayName)
         renames++
         if (failAfterRename) throw FileNotFoundException("Interrupted after rename")
+        afterRename?.invoke()
         return next
     }
     override fun deleteDocument(documentId: String) {

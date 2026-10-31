@@ -200,6 +200,7 @@ internal fun HomeScreen(
 ) {
     val locale = LocalConfiguration.current.locales[0]
     val compactHeader = LocalConfiguration.current.screenHeightDp < 420
+    val urlLabel = stringResource(R.string.url)
     Page {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End,
             verticalAlignment = Alignment.CenterVertically) {
@@ -235,7 +236,8 @@ internal fun HomeScreen(
                 BasicTextField(
                     screen.url,
                     onEdit,
-                    modifier = Modifier.weight(1f).padding(horizontal = 5.dp).testTag("url"),
+                    modifier = Modifier.weight(1f).padding(horizontal = 5.dp).testTag("url")
+                        .semantics { contentDescription = urlLabel },
                     singleLine = true,
                     enabled = !screen.busy,
                     textStyle =
@@ -391,7 +393,9 @@ internal fun HomeScreen(
             }
         }
         CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            BoxWithConstraints(Modifier.fillMaxWidth()) {
+            Row(Modifier.horizontalScroll(rememberScrollState()).widthIn(min = maxWidth).testTag("source_shortcuts"),
+                horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterHorizontally)) {
                 listOf("YouTube", "TikTok", "Instagram", "X").forEach { name ->
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Box(
@@ -469,6 +473,7 @@ internal fun HomeScreen(
                 }
             }
         }
+        }
         Spacer(Modifier.height(6.dp))
         Text(
             stringResource(R.string.quick_tools),
@@ -534,7 +539,7 @@ private fun ToolTile(
             .heightIn(min = 115.dp)
             .clip(Neon.Radius)
             .background(Brush.linearGradient(listOf(tint.copy(alpha = 0.23f), Neon.Surface)))
-            .clickable(onClick = onClick)
+            .clickable(role = androidx.compose.ui.semantics.Role.Button, onClick = onClick)
             .padding(14.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
@@ -621,9 +626,9 @@ internal fun TransferCard(
                         style = MaterialTheme.typography.titleSmall,
                     )
                     if (state.active) {
-                        if (state.percent != null)
+                        if (state.percent != null || state.phase in setOf(Phase.PAUSED, Phase.WAITING))
                             LinearProgressIndicator(
-                                progress = { state.percent },
+                                progress = { state.percent ?: 0f },
                                 modifier = Modifier.fillMaxWidth().height(7.dp).clip(CircleShape),
                                 color = Neon.Cyan,
                                 trackColor = Neon.Raised,
@@ -650,7 +655,7 @@ internal fun TransferCard(
                             style = MaterialTheme.typography.labelSmall,
                         )
                         state.bytesPerSecond
-                            ?.takeIf { it > 0 && state.phase != Phase.PAUSED }
+                            ?.takeIf { it > 0 && state.phase !in setOf(Phase.PAUSED, Phase.WAITING) }
                             ?.let {
                                 Text(
                                     stringResource(R.string.speed_value, bytesLabel(it, locale)),
@@ -661,13 +666,13 @@ internal fun TransferCard(
                     }
                 }
                 if (
-                    state.phase in setOf(Phase.DOWNLOADING, Phase.PAUSED) &&
-                        Transfers.currentTask?.analysis?.direct == true
+                    state.phase in setOf(Phase.PAUSED, Phase.WAITING) ||
+                        (state.phase == Phase.DOWNLOADING && Transfers.currentTask?.analysis?.direct == true)
                 )
                     IconAction(
-                        if (state.phase == Phase.PAUSED) Glyph.PLAY else Glyph.PAUSE,
+                        if (state.phase in setOf(Phase.PAUSED, Phase.WAITING)) Glyph.PLAY else Glyph.PAUSE,
                         stringResource(
-                            if (state.phase == Phase.PAUSED) R.string.resume else R.string.pause
+                            if (state.phase in setOf(Phase.PAUSED, Phase.WAITING)) R.string.resume else R.string.pause
                         ),
                         onPause,
                     )
@@ -680,6 +685,7 @@ internal fun TransferCard(
         ) {
             Text(
                 stringResource(phaseText(state.phase)),
+                modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
                 style = MaterialTheme.typography.bodySmall,
                 color = if (state.phase == Phase.COMPLETE) Color(0xFF25D6A2) else Neon.Secondary,
             )

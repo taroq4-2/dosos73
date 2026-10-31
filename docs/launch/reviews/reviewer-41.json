@@ -1,0 +1,40 @@
+{
+  "reviewer_id": "41",
+  "source_revision": "e625ee7",
+  "scope": [
+    "PublicProxy.kt: connection admission, header bounds, tunnel lifecycle, cancellation and socket ownership",
+    "MediaEngine.kt and NativeProcessSession.kt proxy timeout/cancellation call sites",
+    "PublicProxyTest.kt"
+  ],
+  "findings": [
+    {
+      "severity": "P2",
+      "file": "app/src/main/java/com/os73/dosos73/PublicProxy.kt",
+      "line": 102,
+      "title": "Release a tunnel when the native client disconnects",
+      "trigger": "An origin accepts CONNECT/TLS, stays silent, and keeps its TCP output open after the native client times out and closes its proxy socket.",
+      "evidence": "The upstream pump observes client EOF but its finally block only calls remote.shutdownOutput(). The downstream pump remains blocked in remote.getInputStream().copyTo() at line 106 because remote.soTimeout was set to zero at line 96. The remote.use cleanup and the outer slots.release() cannot run until that read completes. Thus the native client's 25-second socket timeout does not reclaim this proxy tunnel: the client and remote descriptors and one tunnel slot remain held until the origin closes or the entire proxy is closed. Repeating this for eight abandoned connections during a still-active extraction/download exhausts all slots and causes subsequent connections to be closed at lines 37-39.",
+      "recommendation": "Make loss of the native client terminate the paired origin socket, or impose a bounded post-client-EOF drain that closes it. Preserve session-wide close cancellation and verify that timed-out client connections release their permits even when the origin never sends EOF."
+    },
+    {
+      "severity": "P2",
+      "file": "app/src/main/java/com/os73/dosos73/PublicProxy.kt",
+      "line": 68,
+      "title": "Apply an absolute deadline to unauthenticated CONNECT headers",
+      "trigger": "A local process opens eight proxy connections and sends an incomplete header one byte every 29 seconds, without valid credentials.",
+      "evidence": "A permit is acquired at line 37 before header parsing/authentication. The 30-second SO_TIMEOUT at line 63 applies separately to each input.read() at line 68; every received byte restarts that wait. The 8192-character cap bounds bytes but permits each unauthenticated connection to retain its slot for roughly 66 hours under this trickle. Authentication is not evaluated until the full header terminator arrives. All eight slots can therefore be retained without knowing the per-session credential, and the legitimate native client is immediately disconnected when it tries to connect.",
+      "recommendation": "Enforce a monotonic absolute deadline for reading the entire CONNECT header, in addition to the byte cap and per-read timeout, so incomplete unauthenticated connections promptly release their permits."
+    }
+  ],
+  "positive_observations": [
+    "At most eight accepted clients enter processing, with one acceptor plus two directions per established tunnel fitting the 18-worker pool.",
+    "Connection attempts use validated numeric addresses, a 20-second aggregate connect deadline and at most five seconds per address.",
+    "Session-wide close closes the server and all tracked client/origin sockets before shutting down workers; the late-origin creation check handles close during factory creation.",
+    "Tunnel copying uses fixed 32 KiB buffers and the header is capped at 8192 characters. A global encrypted body-size limit would conflict with intentionally large media downloads, so absence of one is not reported as a defect."
+  ],
+  "runtime_execution": "Source review only. No build, tests, emulator, device, external network request, publishing, or source edits performed. Both findings are conditional control-flow defects established from the inspected current source; they were not reproduced at runtime.",
+  "limitations": [
+    "Initial inspection was interrupted by an automatic approval review usage-limit failure; the resumed read succeeded and confirmed source revision e625ee7.",
+    "No permanent DNS-thread leak is asserted: the resolver call is synchronous and outside the connect deadline, but platform DNS completion behavior was not measured."
+  ]
+}
