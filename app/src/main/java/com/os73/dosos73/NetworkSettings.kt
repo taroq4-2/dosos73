@@ -53,7 +53,7 @@ internal object NetworkSettings {
             (!unmeteredOnly(context) || caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED))
     }
 
-    fun client(context: Context, network: Network): okhttp3.OkHttpClient =
+    fun client(context: Context, network: Network, stage: Stage = Stage.TRANSFER): okhttp3.OkHttpClient =
         DirectDownloader.secureClient { allowCleartext(context) }.newBuilder()
             .socketFactory(network.socketFactory)
             .dns(object : okhttp3.Dns {
@@ -63,7 +63,7 @@ internal object NetworkSettings {
                 }
             })
             .addInterceptor { chain ->
-                if (!permitted(context, network)) throw PipelineException(Stage.TRANSFER, FailureCode.NETWORK_UNAVAILABLE)
+                if (!permitted(context, network)) throw PipelineException(stage, FailureCode.NETWORK_UNAVAILABLE)
                 chain.proceed(chain.request())
             }
             .build()

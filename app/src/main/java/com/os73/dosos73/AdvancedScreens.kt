@@ -72,6 +72,10 @@ internal object LibraryPreferences {
         prefs(context).edit().putString("collection:$uri", value.trim().take(40)).apply()
     }
 
+    fun clearUri(context: Context, uri: String) {
+        prefs(context).edit().remove("collection:$uri").apply()
+    }
+
     fun collections(context: Context): Map<String, String> = prefs(context).all.entries
         .mapNotNull { (key, value) ->
             if (key.startsWith("collection:") && value is String && value.isNotBlank()) key.removePrefix("collection:") to value else null

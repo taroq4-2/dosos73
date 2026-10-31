@@ -181,7 +181,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     private fun directForNetwork(): DirectDownloader {
         val app = getApplication<Application>()
-        return DirectDownloader(NetworkSettings.client(app, NetworkSettings.requireNetwork(app, Stage.EXTRACT)))
+        return DirectDownloader(NetworkSettings.client(app, NetworkSettings.requireNetwork(app, Stage.EXTRACT), Stage.EXTRACT))
             .also { direct = it }
     }
 

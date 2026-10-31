@@ -11,8 +11,12 @@ class MediaEngine(
     private val context: Context,
     private val networkProvider: () -> android.net.Network = { NetworkSettings.requireNetwork(context) },
 ) {
-    private fun publicProxy(): PublicProxy {
-        val network = networkProvider()
+    private fun publicProxy(stage: Stage): PublicProxy {
+        val network = try { networkProvider() } catch (error: PipelineException) {
+            if (error.code == FailureCode.NETWORK_UNAVAILABLE)
+                throw PipelineException(stage, error.code, error)
+            throw error
+        }
         return PublicProxy(
             resolve = { host ->
                 if (!NetworkSettings.permitted(context, network)) throw java.io.IOException("Network policy unavailable")
@@ -80,7 +84,7 @@ class MediaEngine(
             initialize()
             val dir = File(context.cacheDir, "analysis-${active.id}").apply { mkdirs() }
             try {
-                publicProxy().use { p ->
+                publicProxy(Stage.EXTRACT).use { p ->
                     active.attachProxy(p)
                     val request =
                         request(url, p).apply {
@@ -122,7 +126,7 @@ class MediaEngine(
     ): File =
         invocation { active ->
             initialize()
-            publicProxy().use { p ->
+            publicProxy(Stage.TRANSFER).use { p ->
                 active.attachProxy(p)
                 val request =
                     request(task.analysis.url, p).apply {

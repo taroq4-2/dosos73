@@ -199,6 +199,7 @@ internal object LibraryRepository {
                 write(context, next)
                 mutable.value = next
                 cache.remove(item.uri)
+                LibraryPreferences.clearUri(context, item.uri)
             }
         }
 
@@ -210,6 +211,7 @@ internal object LibraryRepository {
             write(context, next)
             mutable.value = next
             cache.remove(item.uri)
+            LibraryPreferences.clearUri(context, item.uri)
         }
     }
 

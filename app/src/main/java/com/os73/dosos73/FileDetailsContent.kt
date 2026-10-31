@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalConfiguration
@@ -27,7 +28,10 @@ import java.util.Date
 internal fun FileDetailsContent(item: SavedFile) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    var digest by remember(item.uri) { mutableStateOf<FileDigest.Result?>(null) }
+    var digest by rememberSaveable(item.uri, stateSaver = listSaver<FileDigest.Result?, Any>(
+        save = { result -> result?.let { listOf(it.bytes, it.sha256) } ?: emptyList() },
+        restore = { if (it.isEmpty()) null else FileDigest.Result(it[0] as Long, it[1] as String) },
+    )) { mutableStateOf(null) }
     var expected by rememberSaveable(item.uri) { mutableStateOf("") }
     var running by remember(item.uri) { mutableStateOf<Job?>(null) }
     var hashing by remember(item.uri) { mutableStateOf(false) }

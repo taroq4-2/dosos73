@@ -38,6 +38,28 @@ class FileDigestUiTest {
             compose.onNodeWithText(context.getString(R.string.sha256_invalid)).assertExists()
         } finally { RecoveryTestDocumentsProvider.reset() }
     }
+    @Test fun digestAndComparisonSurviveRestorationWithoutReadingTheFileAgain() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        RecoveryTestDocumentsProvider.reset()
+        val tree = DocumentsContract.buildTreeDocumentUri("com.os73.dosos73.recovery-tests", "root")
+        val root = DocumentsContract.buildDocumentUriUsingTree(tree, "root")
+        val uri = DocumentsContract.createDocument(context.contentResolver, root, "application/octet-stream", "digest-state.bin")!!
+        try {
+            context.contentResolver.openOutputStream(uri)!!.use { it.write("abc".toByteArray()) }
+            val item = SavedFile(uri.toString(), "digest-state.bin", "application/octet-stream", 3L, 0L)
+            val restoration = androidx.compose.ui.test.junit4.StateRestorationTester(compose)
+            restoration.setContent { DososTheme { FileDetailsContent(item) } }
+            compose.onNodeWithTag("calculate_hash").performScrollTo().performClick()
+            compose.waitUntil(15000) { compose.onAllNodesWithTag("file_sha256").fetchSemanticsNodes().isNotEmpty() }
+            val sha = "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+            compose.onNodeWithTag("expected_hash").performScrollTo().performTextInput(sha)
+            RecoveryTestDocumentsProvider.denyRead = true
+            restoration.emulateSavedInstanceStateRestore()
+            compose.onNodeWithTag("file_sha256").assertTextContains(sha)
+            compose.onNodeWithText(context.getString(R.string.sha256_matches)).assertExists()
+        } finally { RecoveryTestDocumentsProvider.reset() }
+    }
+
     @Test fun charSequenceShareIsDeliveredInsteadOfSilentlyDiscarded() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val intent = Intent(context, MainActivity::class.java).setAction(Intent.ACTION_SEND).setType("text/plain")
