@@ -64,6 +64,7 @@ jobs:
         with:
           api-level: ${{ matrix.api }}
           arch: x86_64
+          disk-size: 4096M
           script: |
             ./gradlew assembleDebug assembleDebugAndroidTest --console=plain
             python3 tools/fetch_runtime_overrides.py /tmp/runtime-overrides
@@ -75,6 +76,7 @@ jobs:
             "$ANDROID_HOME/build-tools/35.0.0/apksigner" sign --ks /tmp/dosos-ci.jks --ks-key-alias androiddebugkey --ks-pass pass:android --out /tmp/shared-tests.apk app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
             adb install -t /tmp/shared-tests.apk
             mkdir -p app/build/reports/shared-device
+            adb shell df -h /data | tee app/build/reports/shared-device/storage.txt
             adb shell am instrument -w com.os73.dosos73.test/androidx.test.runner.AndroidJUnitRunner | tee app/build/reports/shared-device/instrumentation.txt
             test "$(tail -n 6 app/build/reports/shared-device/instrumentation.txt | tr -d '\r' | grep -E '^OK \([0-9]+ tests?\)$')" != ""
       - uses: actions/upload-artifact@v4
