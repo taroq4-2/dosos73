@@ -12,6 +12,10 @@ class ReviewInputRegressionTest {
         assertEquals("https://example.com/a(b)", Safety.shared("https://example.com/a(b)"))
         assertEquals("https://example.com/a", Safety.shared("https://example.com/a،"))
     }
+    @Test fun terminalFormatErrorIsNotMaskedByAnEarlierRecoveredTlsWarning() {
+        val error = java.io.IOException("WARNING: [SSL] record layer failure\nERROR: Requested format is not available")
+        assertEquals(FailureCode.FORMAT_UNAVAILABLE, FailureClassifier.classify(Stage.TRANSFER, error).code)
+    }
     @Test fun callDeadlineIsTimeoutButOrdinaryInterruptionIsNot() {
         assertEquals(FailureCode.NETWORK_TIMEOUT, FailureClassifier.classify(Stage.TRANSFER,
             java.io.InterruptedIOException("timeout")).code)

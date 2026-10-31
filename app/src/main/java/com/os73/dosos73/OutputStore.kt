@@ -37,7 +37,22 @@ class OutputStore(
         if (tree == null) return
         val folder =
             DocumentFile.fromTreeUri(context, tree) ?: throw IOException("Destination unavailable")
-        if (!folder.isDirectory || !folder.canWrite()) throw IOException("Destination is read-only")
+        // API29 may deny an explicit URI-grant lookup for a provider owned by this
+        // UID even though same-UID provider access is allowed. Retain both ownership
+        // and declared directory-create capability; external providers still need a grant.
+        val ownsProvider = runCatching {
+            context.packageManager.resolveContentProvider(folder.uri.authority!!, 0)
+                ?.applicationInfo?.uid == android.os.Process.myUid()
+        }.getOrDefault(false)
+        val ownedCreate = ownsProvider && runCatching {
+            context.contentResolver.query(folder.uri,
+                arrayOf(android.provider.DocumentsContract.Document.COLUMN_FLAGS), null, null, null)
+                ?.use { cursor -> cursor.moveToFirst() &&
+                    (cursor.getInt(0) and android.provider.DocumentsContract.Document.FLAG_DIR_SUPPORTS_CREATE) != 0 }
+                ?: false
+        }.getOrDefault(false)
+        if (!folder.isDirectory || (!folder.canWrite() && !ownedCreate))
+            throw PipelineException(Stage.PUBLISH, FailureCode.STORAGE_PERMISSION_DENIED)
         // Actual creation is covered by the durable publication plan in save().
     }
 

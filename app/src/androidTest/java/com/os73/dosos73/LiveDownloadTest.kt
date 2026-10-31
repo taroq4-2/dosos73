@@ -117,6 +117,7 @@ class LiveDownloadTest {
         assertTrue(analysis.choices.isNotEmpty())
         val height = InstrumentationRegistry.getArguments().getString("mediaHeight")?.toIntOrNull()
         val choice = analysis.choices.first { it.kind == Kind.VIDEO && (height == null || it.expectedHeight == height) }
+        println("Native acceptance choice=${choice.id} height=${choice.expectedHeight} kind=${choice.kind}")
         val directory = File(context.cacheDir, "live-media-test").apply { mkdirs() }
         try {
             val output =

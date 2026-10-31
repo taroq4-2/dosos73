@@ -55,6 +55,9 @@ class MediaEngine(
         require(Safety.url(url).startsWith("https://"))
         return YoutubeDLRequest(url).apply {
             addOption("--ignore-config")
+            // Prefer the bundled urllib handler; other handlers remain available when needed.
+            // Both routes retain origin certificate verification and the checked CONNECT proxy.
+            addOption("--compat-options", "prefer-legacy-http-handler")
             addOption("--no-colors")
             addOption("--js-runtimes", "quickjs:${context.applicationInfo.nativeLibraryDir}/libqjs.so")
             addOption("--ffmpeg-location", "${context.applicationInfo.nativeLibraryDir}/libffmpeg.so")
