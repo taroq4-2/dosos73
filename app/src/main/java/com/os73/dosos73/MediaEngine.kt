@@ -170,7 +170,11 @@ class MediaEngine(
             require(components.size in 1..2 && components.all { it.matches(Regex("[a-zA-Z0-9_.-]{1,80}")) })
             // Extractor IDs such as "all" or "best" must remain literal field values.
             // "all" also admits an exact audio-only or video-only match.
-            return components.joinToString("+") { "all[format_id=$it]" }
+            return components.joinToString("+") {
+                // Numeric selector tokens are literal IDs in yt-dlp. Keep their normal
+                // extractor hints; arbitrary/reserved names require a field filter.
+                if (it.all { character -> character in '0'..'9' }) it else "all[format_id=$it]"
+            }
         }
 
         internal fun audioChoice(

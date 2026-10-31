@@ -7,6 +7,8 @@ class FormatSelectorTest {
     @Test fun reservedWordsAreLiteralFormatIdsForEveryCodecKind() {
         // Verified with the bundled yt-dlp, offline: "all" audio and "best" video
         // each select only that ID; their pair returns requested_formats=[best, all].
+        assertEquals("136+140", MediaEngine.formatSelector("136+140"))
+        assertEquals("18", MediaEngine.formatSelector("18"))
         assertEquals("all[format_id=all]", MediaEngine.formatSelector("all"))
         assertEquals("all[format_id=best]", MediaEngine.formatSelector("best"))
         assertEquals("all[format_id=worst]", MediaEngine.formatSelector("worst"))
