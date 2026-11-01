@@ -20,6 +20,8 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.listSaver
@@ -43,7 +45,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 @Composable
-internal fun MainActivity.AppScreen(model: MainViewModel, sharedGeneration: Int) {
+internal fun MainActivity.AppScreen(model: MainViewModel, sharedGeneration: Int, quickSettingsGeneration: Int = 0) {
     val focus = androidx.compose.ui.platform.LocalFocusManager.current
     val keyboard = androidx.compose.ui.platform.LocalSoftwareKeyboardController.current
     val screen by model.state.collectAsStateWithLifecycle()
@@ -66,6 +68,11 @@ internal fun MainActivity.AppScreen(model: MainViewModel, sharedGeneration: Int)
             query = ""
         }
     }
+    LaunchedEffect(quickSettingsGeneration) {
+        if (quickSettingsGeneration > 0) page = "quick"
+    }
+    var quickEnabled by remember { mutableStateOf(QuickLaunch.enabled(this)) }
+    var launcherPaste by remember { mutableStateOf(QuickLaunch.launcherPaste(this)) }
     var submitting by remember { mutableStateOf(false) }
     var requestingNotifications by remember { mutableStateOf(false) }
     var details by remember { mutableStateOf(false) }
@@ -187,6 +194,7 @@ internal fun MainActivity.AppScreen(model: MainViewModel, sharedGeneration: Int)
                 retryOf?.let {
                     FailureJournal.remove(this@AppScreen, it, discardPartial = false)
                 }
+                model.closeQuick()
                 page = "downloads"
                 query = ""
                 runQueue()
@@ -207,6 +215,15 @@ internal fun MainActivity.AppScreen(model: MainViewModel, sharedGeneration: Int)
             requestingNotifications = false
             start()
         }
+    fun requestStart() {
+        if (submitting || requestingNotifications) return
+        if (Build.VERSION.SDK_INT >= 33 && ContextCompat.checkSelfPermission(
+                this@AppScreen, Manifest.permission.POST_NOTIFICATIONS) !=
+            android.content.pm.PackageManager.PERMISSION_GRANTED) {
+            requestingNotifications = true
+            notifications.launch(Manifest.permission.POST_NOTIFICATIONS)
+        } else start()
+    }
     fun command(action: String) {
         try {
             startService(Intent(this, DownloadService::class.java).setAction(action))
@@ -378,24 +395,7 @@ internal fun MainActivity.AppScreen(model: MainViewModel, sharedGeneration: Int)
                                     tree = null
                                 preferences.edit().remove("tree").apply()
                             },
-                            onStart = {
-                                if (!submitting && !requestingNotifications) {
-                                    if (
-                                        Build.VERSION.SDK_INT >= 33 &&
-                                            ContextCompat.checkSelfPermission(
-                                                this@AppScreen,
-                                                Manifest.permission.POST_NOTIFICATIONS,
-                                            ) !=
-                                                android.content.pm.PackageManager
-                                                    .PERMISSION_GRANTED
-                                    ) {
-                                        requestingNotifications = true
-                                        notifications.launch(
-                                            Manifest.permission.POST_NOTIFICATIONS
-                                        )
-                                    } else start()
-                                }
-                            },
+                            onStart = ::requestStart,
                             onSource = { source = it },
                         )
                     "downloads" ->
@@ -507,12 +507,64 @@ internal fun MainActivity.AppScreen(model: MainViewModel, sharedGeneration: Int)
                         ::setLanguage, { picker.launch(tree) }, {
                             tree = null
                             preferences.edit().remove("tree").apply()
-                        }, { page = "privacy" }, { page = "batch" }, { page = "about" })
+                        }, { page = "privacy" }, { page = "batch" }, { page = "about" }, { page = "quick" })
+                    "quick" -> QuickLaunchScreen(quickEnabled, launcherPaste,
+                        onEnabled = { value ->
+                            try {
+                                QuickLaunch.setEnabled(this@AppScreen, value)
+                                quickEnabled = value
+                                launcherPaste = QuickLaunch.launcherPaste(this@AppScreen)
+                            } catch (_: RuntimeException) { message(R.string.error_storage) }
+                        },
+                        onLauncherPaste = { value ->
+                            try {
+                                QuickLaunch.setLauncherPaste(this@AppScreen, value)
+                                launcherPaste = value
+                            } catch (_: RuntimeException) { message(R.string.error_storage) }
+                        },
+                        onSetup = {
+                            try { QuickLaunch.setup(this@AppScreen) }
+                            catch (_: RuntimeException) { message(R.string.quick_setup_unavailable) }
+                        },
+                        onPin = {
+                            if (!runCatching { QuickLaunch.pin(this@AppScreen) }.getOrDefault(false))
+                                message(R.string.quick_pin_unavailable)
+                        },
+                        onTry = { startActivity(QuickLaunch.intent(this@AppScreen)) })
                     else -> MoreScreen { page = it }
 
                 }
             }
         }
+    }
+    if (screen.quick) {
+        AlertDialog(
+            modifier = Modifier.testTag("quick_dialog"),
+            onDismissRequest = model::closeQuick,
+            title = { Text(stringResource(R.string.quick_entry_label)) },
+            text = {
+                Column(Modifier.heightIn(max = 460.dp).verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text(screen.url, maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                        style = MaterialTheme.typography.bodySmall, color = Neon.Secondary)
+                    if (screen.busy) LinearProgressIndicator(Modifier.fillMaxWidth())
+                    screen.error?.let { Text(stringResource(it), color = MaterialTheme.colorScheme.error) }
+                    AnalysisOptions(screen, tree != null, model::select, { picker.launch(tree) }, {
+                        tree = null
+                        preferences.edit().remove("tree").apply()
+                    })
+                }
+            },
+            confirmButton = {
+                TextButton(::requestStart, enabled = !screen.busy && screen.selected != null &&
+                    !submitting && !requestingNotifications, modifier = Modifier.testTag("quick_start")) {
+                    Symbol(Glyph.DOWNLOAD)
+                    Spacer(Modifier.width(8.dp))
+                    Text(stringResource(R.string.start_short))
+                }
+            },
+            dismissButton = { TextButton(model::closeQuick, Modifier.testTag("quick_close")) { Text(stringResource(R.string.cancel)) } },
+        )
     }
     preview?.let { item ->
         OfflinePreview(
@@ -524,7 +576,7 @@ internal fun MainActivity.AppScreen(model: MainViewModel, sharedGeneration: Int)
             },
         )
     }
-    if (screen.pendingShared != null && !screen.busy && !batchBusy)
+    if (screen.pendingShared != null && !screen.quick && !screen.busy && !batchBusy) {
         AlertDialog(
             onDismissRequest = {},
             title = { Text(stringResource(R.string.pending_link)) },
@@ -533,6 +585,7 @@ internal fun MainActivity.AppScreen(model: MainViewModel, sharedGeneration: Int)
                 TextButton(model::acceptPending) { Text(stringResource(R.string.batch_review)) }
             },
         )
+    }
     if (source != null)
         AlertDialog(
             onDismissRequest = { source = null },

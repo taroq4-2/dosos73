@@ -213,5 +213,27 @@
     <string name="sha256_invalid">أدخل 64 محرفًا بالنظام الست عشري.</string>
     <string name="sha256_matches">البصمتان متطابقتان.</string>
     <string name="sha256_differs">البصمتان مختلفتان.</string>
+    <string name="quick_title">تنزيل سريع</string>
+    <string name="quick_entry_label">تنزيل الرابط المنسوخ</string>
+    <string name="quick_enable">تفعيل إجراء الرابط المنسوخ</string>
+    <string name="quick_explanation">معطّل افتراضيًا. عند استخدام الاختصار، يقرأ dosos73 الرابط المنسوخ مرة واحدة ويتصل بموقعه لجلب خيارات التنزيل. اختر النوع والجودة والصيغة قبل بدء التنزيل. لا تُراقَب الحافظة في الخلفية.</string>
+    <string name="quick_setup_title">إعداد لمرة واحدة على هاتفك</string>
+    <string name="quick_fallback">قراءة الرابط أيضًا عند فتح التطبيق</string>
+    <string name="quick_fallback_hint">خيار إضافي معطّل افتراضيًا. استخدمه فقط إذا كان هاتفك يفتح التطبيق الرئيسي ولا يتيح اختيار إجراء الرابط المنسوخ. عند تفعيله، تؤدي مرات فتح التطبيق العادية أيضًا إلى قراءة الرابط المنسوخ مرة واحدة والاتصال بموقعه لتحليله.</string>
+    <string name="quick_setup">فتح إعدادات إيماءات الهاتف</string>
+    <string name="quick_pin">إضافة اختصار إلى الشاشة الرئيسية</string>
+    <string name="quick_try">تجربة الرابط المنسوخ</string>
+    <string name="quick_oem_hint">يعتمد دعم النقر الخلفي على الهاتف والنظام والمنطقة. يجب أن تختار الإجراء بنفسك من إعدادات الهاتف؛ لا يستطيع dosos73 تعيينه تلقائيًا.</string>
+    <string name="quick_step_one">١. فعّل إجراء الرابط المنسوخ أعلاه.</string>
+    <string name="quick_step_two">٢. في أجهزة Galaxy المدعومة: افتح Good Lock ← RegiStar ← إجراء النقر الخلفي ← النقر مرتين. في أجهزة Pixel المدعومة: افتح الإعدادات ← النظام ← الإيماءات ← النقر السريع ← فتح تطبيق. اختر «تنزيل الرابط المنسوخ» إذا ظهر ضمن الخيارات.</string>
+    <string name="quick_step_three">٣. انسخ رابط وسائط، وافتح قفل الهاتف، وجرّب الإجراء الذي عيّنته. راجع خيارات التنزيل قبل البدء.</string>
+    <string name="quick_pin_hint">يوفر اختصار الشاشة الرئيسية الإجراء نفسه على الهواتف التي لا تدعم النقر الخلفي. يعتمد توفره على مشغّل الشاشة الرئيسية.</string>
+    <string name="quick_try_hint">فعّل الإجراء وانسخ رابطًا أولًا. تقرأ التجربة الحافظة وتحلّل الرابط، ويظل بدء التنزيل بحاجة إلى تأكيدك.</string>
+    <string name="quick_disabled">فعّل إجراء الرابط المنسوخ من إعدادات التنزيل السريع أولًا.</string>
+    <string name="quick_busy">أكمل المهمة الحالية أو ألغها، ثم جرّب الرابط المنسوخ مجددًا.</string>
+    <string name="quick_clipboard_error">تعذرت قراءة الحافظة. افتح قفل الهاتف وانسخ الرابط مجددًا ثم أعد المحاولة.</string>
+    <string name="quick_sensitive">محتوى الحافظة محدد على أنه حساس. الصق الرابط يدويًا إذا أردت استخدامه.</string>
+    <string name="quick_pin_unavailable">تعذرت إضافة الاختصار عبر مشغّل الشاشة الرئيسية. يمكنك استخدام زر اللصق داخل dosos73.</string>
+    <string name="quick_setup_unavailable">تعذر فتح إعدادات الإيماءات. اتبع الخطوات الخاصة بهاتفك في هذه الصفحة.</string>
 </resources>
 

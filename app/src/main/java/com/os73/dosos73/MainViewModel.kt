@@ -16,12 +16,14 @@ data class ScreenState(
     val selected: Choice? = null,
     val error: Int? = null,
     val pendingShared: String? = null,
+    val quick: Boolean = false,
 )
 
 class MainViewModel(app: Application) : AndroidViewModel(app) {
     private val mutable = MutableStateFlow(ScreenState())
     val state = mutable.asStateFlow()
     private var job: Job? = null
+    private var analysisGeneration = 0L
     private val batchMutable = MutableStateFlow<List<BatchEntry>>(emptyList())
     internal val batch = batchMutable.asStateFlow()
     private val batchRequestedMutable = MutableStateFlow(false)
@@ -295,7 +297,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun analyzeBatch() {
-        if (batchBusyMutable.value || mutable.value.busy || !draftReady || savingMutable.value || draftErrorMutable.value) return
+        if (batchBusyMutable.value || mutable.value.busy || job?.isCompleted == false || !draftReady || savingMutable.value || draftErrorMutable.value) return
         batchBusyMutable.value = true
         job =
             viewModelScope.launch {
@@ -353,11 +355,31 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun invalidateFormats() {
+        // A transfer failure is independent of a new link currently being reviewed.
+        if (mutable.value.quick) return
         mutable.value = mutable.value.copy(analysis = null, selected = null)
     }
 
+    internal fun quickInitializing() = !draftReady && !draftErrorMutable.value
+
+    internal fun quickAvailable() = draftReady && !savingMutable.value && !draftErrorMutable.value &&
+        !batchBusyMutable.value && job?.isCompleted != false && !mutable.value.busy && !mutable.value.quick &&
+        mutable.value.url.isBlank() && mutable.value.pendingShared == null
+
+    internal fun openQuick(url: String) {
+        check(quickAvailable())
+        mutable.value = ScreenState(url = QuickLink.parse(url), quick = true)
+        analyze()
+    }
+
+    internal fun closeQuick() {
+        if (!mutable.value.quick) return
+        cancelAnalysis()
+        mutable.value = ScreenState(busy = job?.isCompleted == false, pendingShared = mutable.value.pendingShared)
+    }
+
     fun analyze() {
-        if (mutable.value.busy || batchBusyMutable.value) return
+        if (mutable.value.busy || batchBusyMutable.value || job?.isCompleted == false) return
         val url =
             try {
                 Safety.url(mutable.value.url)
@@ -367,14 +389,18 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             }
         mutable.value =
             mutable.value.copy(busy = true, error = null, analysis = null, selected = null)
+        val generation = ++analysisGeneration
         job =
             viewModelScope.launch {
                 try {
                     val analysis =
                         analyzeSource(url)
+                    if (generation != analysisGeneration) return@launch
                     mutable.value =
-                        ScreenState(
-                            url,
+                        mutable.value.copy(
+                            url = url,
+                            busy = false,
+                            error = null,
                             pendingShared = mutable.value.pendingShared,
                             analysis = analysis,
                             selected =
@@ -382,12 +408,14 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                                     ?: analysis.choices.first(),
                         )
                 } catch (_: TimeoutCancellationException) {
+                    if (generation != analysisGeneration) return@launch
                     direct.cancel()
                     media.cancel()
                     mutable.value = mutable.value.copy(busy = false, error = R.string.error_timeout)
                 } catch (_: CancellationException) {
-                    mutable.value = mutable.value.copy(busy = false)
+                    if (generation == analysisGeneration) mutable.value = mutable.value.copy(busy = false)
                 } catch (error: Exception) {
+                    if (generation != analysisGeneration) return@launch
                     val failure = FailureClassifier.classify(Stage.EXTRACT, error)
                     Diagnostics.event(failure.stage, "failed", code = failure.code)
                     mutable.value =
@@ -402,9 +430,16 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun cancelAnalysis() {
+        val cancelled = job
+        val generation = ++analysisGeneration
         direct.cancel()
         media.cancel()
-        job?.cancel()
+        cancelled?.cancel()
+        // Engines are shared by single/batch analysis; keep the gate closed until cleanup ends.
+        viewModelScope.launch {
+            cancelled?.join()
+            if (generation == analysisGeneration) mutable.value = mutable.value.copy(busy = false)
+        }
     }
 
     override fun onCleared() {

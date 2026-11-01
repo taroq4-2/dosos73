@@ -11,7 +11,7 @@ import androidx.compose.ui.unit.dp
 @Composable
 internal fun SettingsScreen(customFolder: Boolean, onLanguage: (String) -> Unit,
     onFolder: () -> Unit, onDefaultFolder: () -> Unit,
-    onPrivacy: () -> Unit, onBatch: () -> Unit, onAbout: () -> Unit) {
+    onPrivacy: () -> Unit, onBatch: () -> Unit, onAbout: () -> Unit, onQuick: () -> Unit) {
     Page {
         Brand(true)
         Text(stringResource(R.string.settings), style = MaterialTheme.typography.headlineMedium)
@@ -27,6 +27,9 @@ internal fun SettingsScreen(customFolder: Boolean, onLanguage: (String) -> Unit,
             Text(stringResource(if (customFolder) R.string.custom_folder else R.string.default_folder), color = Neon.Secondary)
             OutlinedButton(onFolder, Modifier.fillMaxWidth()) { Text(stringResource(R.string.change)) }
             if (customFolder) TextButton(onDefaultFolder) { Text(stringResource(R.string.default_folder)) }
+        }
+        OutlinedButton(onQuick, Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag("quick_settings")) {
+            Symbol(Glyph.LINK); Spacer(Modifier.width(8.dp)); Text(stringResource(R.string.quick_title))
         }
         NetworkControls()
         OutlinedButton(onPrivacy, Modifier.fillMaxWidth()) { Text(stringResource(R.string.privacy_title)) }

@@ -295,103 +295,7 @@ internal fun HomeScreen(
                 style = MaterialTheme.typography.bodySmall,
             )
         }
-        screen.analysis?.let { analysis ->
-            Panel {
-                Text(
-                    analysis.title,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                    style = MaterialTheme.typography.titleMedium,
-                )
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    listOf(Kind.VIDEO, Kind.AUDIO, Kind.FILE)
-                        .filter { kind -> analysis.choices.any { it.kind == kind } }
-                        .forEach { kind ->
-                            NeonChip(
-                                selected = screen.selected?.kind == kind,
-                                onClick = {
-                                    analysis.choices.firstOrNull { it.kind == kind }?.let(onSelect)
-                                },
-                                label = {
-                                    Text(
-                                        stringResource(
-                                            when (kind) {
-                                                Kind.VIDEO -> R.string.video
-                                                Kind.AUDIO -> R.string.audio
-                                                else -> R.string.file
-                                            }
-                                        )
-                                    )
-                                },
-                            )
-                        }
-                }
-                ChoiceMenu(
-                    stringResource(R.string.quality),
-                    screen.selected
-                        ?.quality
-                        ?.let { if (it == "Original") stringResource(R.string.original) else it }
-                        .orEmpty(),
-                ) { close ->
-                    qualityChoices(analysis.choices, screen.selected)
-                        .forEach { choice ->
-                            DropdownMenuItem(
-                                {
-                                    Text(
-                                        if (choice.quality == "Original")
-                                            stringResource(R.string.original)
-                                        else choice.quality
-                                    )
-                                },
-                                {
-                                    onSelect(choice)
-                                    close()
-                                },
-                            )
-                        }
-                }
-                ChoiceMenu(
-                    stringResource(R.string.format),
-                    screen.selected?.extension?.uppercase().orEmpty(),
-                ) { close ->
-                    analysis.choices
-                        .filter {
-                            it.kind == screen.selected?.kind &&
-                                it.quality == screen.selected.quality
-                        }
-                        .forEach { choice ->
-                            DropdownMenuItem(
-                                { Text(choice.extension.uppercase()) },
-                                {
-                                    onSelect(choice)
-                                    close()
-                                },
-                            )
-                        }
-                }
-                Text(
-                    stringResource(
-                        R.string.file_size_value,
-                        (screen.selected?.estimatedBytes ?: analysis.sizeBytes)?.let {
-                            bytesLabel(it, locale)
-                        } ?: stringResource(R.string.unknown_size),
-                    ),
-                    color = Neon.Secondary,
-                    style = MaterialTheme.typography.bodySmall,
-                )
-                TextButton(onFolder) {
-                    Symbol(Glyph.FOLDER)
-                    Spacer(Modifier.width(8.dp))
-                    Text(
-                        stringResource(
-                            if (customFolder) R.string.custom_folder else R.string.default_folder
-                        )
-                    )
-                }
-                if (customFolder)
-                    TextButton(onDefaultFolder) { Text(stringResource(R.string.default_folder)) }
-            }
-        }
+        AnalysisOptions(screen, customFolder, onSelect, onFolder, onDefaultFolder)
         CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
             BoxWithConstraints(Modifier.fillMaxWidth()) {
             val sourceWidth = (60 * LocalConfiguration.current.fontScale.coerceAtLeast(1f)).dp
@@ -735,4 +639,107 @@ internal fun NeonChip(
                 selectedLeadingIconColor = Color.White,
             ),
     )
+}
+
+@Composable
+internal fun AnalysisOptions(screen: ScreenState, customFolder: Boolean, onSelect: (Choice) -> Unit,
+    onFolder: () -> Unit, onDefaultFolder: () -> Unit) {
+    val locale = LocalConfiguration.current.locales[0]
+    screen.analysis?.let { analysis ->
+        Panel {
+            Text(
+                analysis.title,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                style = MaterialTheme.typography.titleMedium,
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf(Kind.VIDEO, Kind.AUDIO, Kind.FILE)
+                    .filter { kind -> analysis.choices.any { it.kind == kind } }
+                    .forEach { kind ->
+                        NeonChip(
+                            selected = screen.selected?.kind == kind,
+                            onClick = {
+                                analysis.choices.firstOrNull { it.kind == kind }?.let(onSelect)
+                            },
+                            label = {
+                                Text(
+                                    stringResource(
+                                        when (kind) {
+                                            Kind.VIDEO -> R.string.video
+                                            Kind.AUDIO -> R.string.audio
+                                            else -> R.string.file
+                                        }
+                                    )
+                                )
+                            },
+                        )
+                    }
+            }
+            ChoiceMenu(
+                stringResource(R.string.quality),
+                screen.selected
+                    ?.quality
+                    ?.let { if (it == "Original") stringResource(R.string.original) else it }
+                    .orEmpty(),
+            ) { close ->
+                qualityChoices(analysis.choices, screen.selected)
+                    .forEach { choice ->
+                        DropdownMenuItem(
+                            {
+                                Text(
+                                    if (choice.quality == "Original")
+                                        stringResource(R.string.original)
+                                    else choice.quality
+                                )
+                            },
+                            {
+                                onSelect(choice)
+                                close()
+                            },
+                        )
+                    }
+            }
+            ChoiceMenu(
+                stringResource(R.string.format),
+                screen.selected?.extension?.uppercase().orEmpty(),
+            ) { close ->
+                analysis.choices
+                    .filter {
+                        it.kind == screen.selected?.kind &&
+                            it.quality == screen.selected.quality
+                    }
+                    .forEach { choice ->
+                        DropdownMenuItem(
+                            { Text(choice.extension.uppercase()) },
+                            {
+                                onSelect(choice)
+                                close()
+                            },
+                        )
+                    }
+            }
+            Text(
+                stringResource(
+                    R.string.file_size_value,
+                    (screen.selected?.estimatedBytes ?: analysis.sizeBytes)?.let {
+                        bytesLabel(it, locale)
+                    } ?: stringResource(R.string.unknown_size),
+                ),
+                color = Neon.Secondary,
+                style = MaterialTheme.typography.bodySmall,
+            )
+            TextButton(onFolder) {
+                Symbol(Glyph.FOLDER)
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    stringResource(
+                        if (customFolder) R.string.custom_folder else R.string.default_folder
+                    )
+                )
+            }
+            if (customFolder)
+                TextButton(onDefaultFolder) { Text(stringResource(R.string.default_folder)) }
+        }
+    }
 }
