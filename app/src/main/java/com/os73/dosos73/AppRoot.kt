@@ -538,14 +538,20 @@ internal fun MainActivity.AppScreen(model: MainViewModel, sharedGeneration: Int,
         }
     }
     if (screen.quick) {
+        val compactQuick = LocalConfiguration.current.screenHeightDp < 420
         AlertDialog(
-            modifier = Modifier.testTag("quick_dialog"),
+            modifier = (if (compactQuick) Modifier.widthIn(max = 640.dp).fillMaxWidth() else Modifier)
+                .testTag("quick_dialog"),
+            properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = !compactQuick),
             onDismissRequest = model::closeQuick,
-            title = { Text(stringResource(R.string.quick_entry_label)) },
+            title = {
+                Text(stringResource(R.string.quick_entry_label), maxLines = if (compactQuick) 1 else Int.MAX_VALUE,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+            },
             text = {
                 Column(Modifier.heightIn(max = 460.dp).verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text(screen.url, maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                    Text(screen.url, maxLines = if (compactQuick) 1 else 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                         style = MaterialTheme.typography.bodySmall, color = Neon.Secondary)
                     if (screen.busy) LinearProgressIndicator(Modifier.fillMaxWidth())
                     screen.error?.let { Text(stringResource(it), color = MaterialTheme.colorScheme.error) }
