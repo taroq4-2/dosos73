@@ -269,10 +269,38 @@ class MediaToolsFlowTest {
         ownPresets += preset.id
         compose.onNodeWithTag("preset_list").performScrollTo().performClick()
         // The modal opens before its fresh encrypted read completes; wait for that exact snapshot.
-        compose.waitUntil(10000) {
-            compose.onAllNodesWithTag("preset_list_dialog").fetchSemanticsNodes().size == 1 &&
-                compose.onAllNodesWithTag("preset_loading").fetchSemanticsNodes().isEmpty() &&
-                compose.onAllNodesWithTag("preset_row_${preset.id}").fetchSemanticsNodes().size == 1
+        try {
+            compose.waitUntil(10000) {
+                compose.onAllNodesWithTag("preset_list_dialog").fetchSemanticsNodes().size == 1 &&
+                    compose.onAllNodesWithTag("preset_loading").fetchSemanticsNodes().isEmpty() &&
+                    compose.onAllNodesWithTag("preset_row_${preset.id}").fetchSemanticsNodes().size == 1
+            }
+        } catch (error: Throwable) {
+            // Preserve the failing state before @After removes the owned fixture.
+            val diagnostic = buildString {
+                appendLine("Preset modal did not expose the freshly committed row ${preset.id} / $name")
+                appendLine("model=${model.state.value}")
+                appendLine("configuration=${context.resources.configuration}")
+                appendLine("filesDir=${context.filesDir.absolutePath}; noBackupFilesDir=${context.noBackupFilesDir.absolutePath}; cacheDir=${context.cacheDir.absolutePath}")
+                val journal = File(context.filesDir, DownloadPresets.FILE_NAME)
+                appendLine("presetJournal=${journal.absolutePath}; exists=${journal.exists()}; bytes=${journal.length()}")
+                appendLine("committedPresets=" + runCatching { DownloadPresets(context).read().map { it.id to it.name } })
+                compose.runOnUiThread {
+                    val decor = context.window.decorView
+                    val visible = android.graphics.Rect().also(decor::getWindowVisibleDisplayFrame)
+                    val insets = androidx.core.view.ViewCompat.getRootWindowInsets(decor)
+                    appendLine("windowFocus=${context.hasWindowFocus()}; focusedView=${context.currentFocus}; visibleFrame=$visible; imeVisible=${insets?.isVisible(androidx.core.view.WindowInsetsCompat.Type.ime())}")
+                }
+                val trees = runCatching {
+                    val roots = compose.onAllNodes(isRoot(), useUnmergedTree = true)
+                    roots.fetchSemanticsNodes().indices.joinToString("\n") { index ->
+                        "ROOT $index\n" + roots[index].printToString(maxDepth = Int.MAX_VALUE)
+                    }
+                }
+                appendLine("allUnmergedRoots=$trees")
+            }
+            android.util.Log.e("MediaToolsFlowTest", diagnostic, error)
+            throw AssertionError(diagnostic, error)
         }
         compose.onNodeWithText(name).assertExists()
         compose.onNode(hasText(context.getString(R.string.preset_apply)) and hasClickAction() and
