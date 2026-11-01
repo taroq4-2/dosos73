@@ -28,7 +28,7 @@ Install the APK and allow installation from your chosen browser or file manager 
 
 - **Video and MP3:** analyze a public link, select an available quality, and save compatible video or MP3 V0 audio.
 - **Direct files:** stream large files without a fixed app size limit, with validated byte-range resume and optional two-connection transfer.
-- **A durable queue:** priorities, pause/resume, retry and a reviewable batch of up to20 links with individual formats and folders.
+- **A durable queue:** priorities, pause/resume, retry and a reviewable batch of up to 20 links with individual formats and folders.
 - **Verified saving:** content fingerprints, recoverable publication and a write-ahead record for supported file renames.
 - **Your file library:** search, filters, collections, preview, sharing and on-demand SHA-256 comparison.
 - **Quiet when waiting:** after a bounded network wait the transfer service stops; Android can present a Resume reminder when network/time conditions allow it. Tap Resume to continue.
@@ -54,7 +54,7 @@ Audio conversion cannot improve the quality of the source. Native media extracti
 
 ## Small package, local processing
 
-The universal APK stores642 identical Python files once and keeps the ABI-specific native engines in the same download. No remote processing server or delayed library download is required. A pinned compact media build, R8 and resource shrinking reduce delivery size. Native component hashes and licenses accompany the release.
+The universal APK stores 642 identical Python files once and keeps the ABI-specific native engines in the same download. No remote processing server or delayed library download is required. A pinned compact media build, R8 and resource shrinking reduce delivery size. Native component hashes and licenses accompany the release.
 
 ## Verification and source
 
@@ -64,7 +64,7 @@ The release contains a signed APK, SHA-256 checksums, CycloneDX SBOM, applicatio
 ./gradlew testDebugUnitTest lintDebug lintRelease assembleDebug assembleRelease
 ```
 
-Use JDK17/21 and Android SDK35. Windows uses `gradlew.bat`. Gradle builds the base APK; follow [universal packaging](docs/COMPACT_ENGINE.md) for the tested compact delivery. Never commit signing keys or passwords.
+Use JDK 17/21 and Android SDK 35. Windows uses `gradlew.bat`. Gradle builds the base APK; follow [universal packaging](docs/COMPACT_ENGINE.md) for the tested compact delivery. Never commit signing keys or passwords.
 
 ## Privacy and licensing
 
