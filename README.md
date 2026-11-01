@@ -2,95 +2,74 @@
 <img src="branding/repository-banner.svg" width="100%" alt="dosos73 — Download open-source OS73" />
 
 # dosos73
-**Download open-source OS73**
+### Your media. One place.
+An open-source Android downloader, designed for Arabic and English.
 
-[![Android verification](https://github.com/taroq4-2/dosos73/actions/workflows/android.yml/badge.svg)](https://github.com/taroq4-2/dosos73/actions/workflows/android.yml)
+[**Download the universal APK**](https://github.com/taroq4-2/dosos73/releases/download/v1.2.0/dosos73-1.2.0-universal.apk) · [العربية](README-ar.md) · [Release notes](https://github.com/taroq4-2/dosos73/releases/latest)
 
-An open-source Android media downloader with an Arabic-first interface and English support.
-
-[Download universal APK](https://github.com/taroq4-2/dosos73/releases/download/v1.2.0-rc.5/dosos73-1.2.0-rc.5-universal.apk) · [Releases](https://github.com/taroq4-2/dosos73/releases) · [العربية](README-ar.md)
+![Android](https://img.shields.io/badge/Android-10%2B-19D7F5?style=flat-square)
+![License](https://img.shields.io/badge/License-GPL--3.0--or--later-7044D4?style=flat-square)
+[![Verification](https://github.com/taroq4-2/dosos73/actions/workflows/android.yml/badge.svg)](https://github.com/taroq4-2/dosos73/actions/workflows/android.yml)
 </div>
 
-## Download and compatibility
+## Download
 
-**1.2.0-rc.5** is a release candidate delivered as **one APK for Android 10+**, containing ARM32, ARM64, x86 and x86_64. No phone-specific package selection is required. Published checksums identify the exact artifact.
-
-Official updates retain the existing signing certificate. Allow installation from your chosen browser/file manager when Android requests it. Pasting a link does not download additional runtime libraries.
-
-| Package | Details |
+| Version | One package for supported Android devices |
 |---|---|
-| Current download | **1.2.0-rc.5** · release candidate |
-| APK size | **61.94 MB** (59.07 MiB) |
-| Supported Android | **10+** (API 29+) |
-| Architectures | ARM32 · ARM64 · x86 · x86_64, in one file |
-| Audio output | **MP3 V0** |
+| **1.2.0** | Official release · Android **10 and newer** |
+| **62.06 MB** | One universal APK · ARM32, ARM64, x86 and x86_64 |
+| **MP3 V0** | Local audio conversion · no first-use engine download |
 
-[SHA-256 checksums](https://github.com/taroq4-2/dosos73/releases/download/v1.2.0-rc.5/SHA256SUMS.txt) · [Verification](docs/VERIFICATION.md) · [Report a bug](https://github.com/taroq4-2/dosos73/issues/new/choose)
+[Download APK](https://github.com/taroq4-2/dosos73/releases/download/v1.2.0/dosos73-1.2.0-universal.apk) · [Verify SHA-256](https://github.com/taroq4-2/dosos73/releases/download/v1.2.0/SHA256SUMS.txt) · [Test results](docs/VERIFICATION.md)
 
-## Features
+Install the APK and allow installation from your chosen browser or file manager when Android asks. Updates keep the existing signing identity. No phone-specific edition is needed.
 
-- Paste or share a public link and select actual available formats and qualities.
-- Video downloads, **MP3 V0** audio extraction and compatible stream merging.
-- Direct files without a fixed size cap; available storage and source restrictions apply.
-- Validator-bound direct resume, a durable queue, priorities and retry.
-- Review up to 20 links with per-link format/folder choices and encrypted draft recovery.
-- Hash-verified publication and recovery across supported destination-creation/rename interruptions.
-- Search, filter and preview saved files; distinguish confirmed local absence, denied access and unavailable storage.
-- A bounded encrypted task timeline without source URLs, filenames or credentials.
-- Arabic RTL, English, Tajawal typography and a dark interface, without ads or analytics.
+## Built for everyday downloads
 
-## Use
+- **Video and MP3:** analyze a public link, select an available quality, and save compatible video or MP3 V0 audio.
+- **Direct files:** stream large files without a fixed app size limit, with validated byte-range resume and optional two-connection transfer.
+- **A durable queue:** priorities, pause/resume, retry and a reviewable batch of up to20 links with individual formats and folders.
+- **Verified saving:** content fingerprints, recoverable publication and a write-ahead record for supported file renames.
+- **Your file library:** search, filters, collections, preview, sharing and on-demand SHA-256 comparison.
+- **Quiet when waiting:** after a bounded network wait the transfer service stops; Android can present a Resume reminder when network/time conditions allow it. Tap Resume to continue.
+- **Arabic and English:** right-to-left layouts, Tajawal typography and a dark cyan/blue/violet identity.
+- **No accounts, ads or analytics.** Clipboard reading happens when you tap Paste.
 
-1. Paste a public URL or share it to dosos73.
-2. After analysis, select the media type, quality, format and destination.
-3. Start the download and follow its real progress in Downloads/the notification.
-4. Open the verified saved file from the library.
+## See the app
 
-If publication needs recovery, reconnect storage and retry **the same task**. Recovery checks existing output before transferring again. Native extraction may restart after interruption; byte-range resume applies only to direct sources whose representation can be validated.
+<img src="screenshots/home-ar.png" width="230" alt="Arabic Home" /> <img src="screenshots/downloads-ar.png" width="230" alt="Actual media download" /> <img src="screenshots/media-library-ar.png" width="230" alt="Saved files" />
 
-## Authentic screenshots
+<img src="screenshots/home-en.png" width="230" alt="English Home" /> <img src="screenshots/settings-ar.png" width="230" alt="Settings" />
 
-<img src="screenshots/home-ar.png" width="230" alt="Arabic Home" /> <img src="screenshots/downloads-ar.png" width="230" alt="Downloads" /> <img src="screenshots/media-library-ar.png" width="230" alt="Files" />
+These images come from the signed release on an Android emulator. [Capture details](screenshots/README.md).
 
-<img src="screenshots/charter-task-timeline-ar.png" width="230" alt="Actual task timeline with a successful transfer and controlled failure cases" />
+## From a link to a saved file
 
-Home, Downloads, Files and Settings are authentic signed RC5 captures on an Android 15 emulator. Timeline/batch/privacy captures retain their documented earlier instrumentation provenance; see [image provenance](screenshots/README.md).
+1. Paste a URL or share it from another app.
+2. Choose media type, available quality and destination.
+3. Start the download and follow its progress.
+4. Open, share or verify the saved file from Files.
 
-<img src="screenshots/home-en.png" width="230" alt="English Home" /> <img src="screenshots/settings-ar.png" width="230" alt="Arabic Settings" />
+Audio conversion cannot improve the quality of the source. Native media extraction may restart after an interruption; verified byte-range resume is for compatible direct-file sources. Available space and source restrictions apply. Private/login-only content, DRM and regional restrictions are not bypassed.
 
-## Audit and verification
+## Small package, local processing
 
-The [30-item audit](docs/audit/REVIEW_2026-10-30.md) records completed fixes, measurements and unresolved checks. See the [repository mind map](docs/REPOSITORY_MAP.md), [device matrix](docs/audit/device-matrix.json) and release SBOM/source assets. Source checks passed on APIs29–36; physical-device coverage remains separate.
+The universal APK stores642 identical Python files once and keeps the ABI-specific native engines in the same download. No remote processing server or delayed library download is required. A pinned compact media build, R8 and resource shrinking reduce delivery size. Native component hashes and licenses accompany the release.
 
-## Release status
+## Verification and source
 
-RC5 is a candidate. OS-backed scheduling, multiple active files, subtitle selection and the complete physical-device/provider matrix remain open. Emulator checks do not certify every device, codec or website.
-
-[Remaining requirements](docs/REMAINING_REQUIREMENTS.md) · [Publication recovery](docs/PUBLICATION_RECOVERY.md) · [Task timeline](docs/TASK_TIMELINE.md) · [File availability](docs/FILE_AVAILABILITY.md)
-
-## Questions
-
-**Why four architectures?** Android runs on different processor families. One universal APK includes the native engines for each, and Android uses the matching set. It is not a separate edition for a phone model.
-
-**How did the APK get smaller?** The APK shares 642 identical Python files across its four CPU targets, draws the brand as a vector and removes unnecessary retained code. All 608 native ELF payloads match RC4. Engines remain bundled; no first-use network download is required.
-
-**Can every video be downloaded?** Availability depends on the source. Login, private content, DRM and regional/source restrictions are not bypassed. A source error is shown without marking an incomplete file successful.
-
-## Build and contribute
-
-Use JDK 17/21, Android SDK 35 and a local SDK path that is not committed.
+The release contains a signed APK, SHA-256 checksums, CycloneDX SBOM, application sources and separate native source/notice archives. See [verification](docs/VERIFICATION.md), [architecture](docs/REPOSITORY_MAP.md) and [review dispositions](docs/launch/REVIEW_DISPOSITIONS.md) for the measured scope and remaining limits. Emulator tests do not certify every physical device, provider, codec or website.
 
 ```sh
 ./gradlew testDebugUnitTest lintDebug lintRelease assembleDebug assembleRelease
-./gradlew connectedDebugAndroidTest
 ```
 
-Windows uses `gradlew.bat`. Ordinary Gradle builds produce the base APK. The [pinned compact-engine workflow](.github/workflows/compact-engine.yml) and `tools/` scripts build all four native targets and assemble the universal delivery. Align, sign and verify the assembled APK before publication. Signing keys/password files are excluded from the repository and source archive.
+Use JDK17/21 and Android SDK35. Windows uses `gradlew.bat`. Gradle builds the base APK; follow [universal packaging](docs/COMPACT_ENGINE.md) for the tested compact delivery. Never commit signing keys or passwords.
 
-## Privacy and license
+## Privacy and licensing
 
-No in-app accounts, ads or analytics. Clipboard access occurs on Paste. Private task journals are encrypted on-device and backup is disabled. Downloads and library metadata follow the user's selected storage. External sources see network requests and IP addresses.
+Private task records are encrypted on-device and app backup is disabled. Saved media remains in your selected destination. External sources receive the requests needed for downloads.
 
-First-party code is **GPL-3.0-or-later**. Dependencies, fonts and artwork retain their own terms. Download only content you are allowed to save.
+First-party code is **GPL-3.0-or-later**. Dependencies, fonts and owner-supplied artwork retain their own terms. Source and notice downloads are available beside the APK.
 
-[License](LICENSE) · [Third-party notices](THIRD_PARTY_NOTICES.md) · [Privacy](PRIVACY.md) · [Contributing](CONTRIBUTING.md)
+[License](LICENSE) · [Third-party notices](THIRD_PARTY_NOTICES.md) · [Privacy](PRIVACY.md) · [Contributing](CONTRIBUTING.md) · [Report a problem](https://github.com/taroq4-2/dosos73/issues/new/choose)

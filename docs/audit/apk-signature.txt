@@ -16,8 +16,8 @@ Signer #1 public key SHA-256 digest: 991e32e2d2727bb6d08f78869e359f0a3941b231a04
 Signer #1 public key SHA-1 digest: 188cb9968b85f65e0eab1d45cc771a068d52ef21
 Signer #1 public key MD5 digest: eed91ffa1b40be69b29f2c1aeda3e47d
 
-Name                               Length
-----                               ------
-dosos73-1.2.0-rc.5-universal.apk 61944601
-                                        1
+Name                        Length
+----                        ------
+dosos73-1.2.0-72783e3.apk 62059289
+                                 1
 

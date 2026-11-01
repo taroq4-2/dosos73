@@ -1,8 +1,6 @@
 # Compact universal delivery
 
-The public RC5 universal APK is **61,944,601 bytes**. The previously accepted 1.2.0 launch candidate measured **62,018,329 bytes**; newer source changes require a fresh artifact measurement and acceptance before publication. All four supported ABIs remain in one APK. Extraction and MP3 conversion run locally without a remote processing service or first-use native download.
-
-The earlier unoptimized universal measured 204,892,299 bytes. The accepted 1.2.0 candidate was about 69.7% smaller by file length, while retaining the application features exercised in its acceptance tests. Public RC5 evidence is recorded in [VERIFICATION.md](VERIFICATION.md); in-progress launch evidence is separate in [the checkpoint](launch/CHECKPOINT.md). This does not prove equivalence for every old codec/protocol path.
+Release1.2.0 is one **62,059,289-byte** signed APK for all four supported ABIs. Engines run locally; no remote processing service or first-use native download is introduced. Compared with the earlier unoptimized204,892,299-byte universal build, delivery is about69.7% smaller by file length. This preserves the features exercised by [current verification](VERIFICATION.md), without claiming equivalence for every historical codec/protocol path.
 
 ## Composition
 

@@ -1,18 +1,17 @@
-# Security review
+# Security model and verification scope
 
-Threat model: untrusted URL/share text, remote metadata, remote file contents and unreliable storage providers. No local network access is intended. Only public HTTP/HTTPS direct URLs and HTTPS extractor URLs are accepted. Credentials in URLs, arbitrary ports, local DNS answers and common reserved ranges are rejected. Redirects are bounded; HTTPS downgrade is rejected for direct requests. Native HTTPS requests use public-only CONNECT tunnels authenticated with random per-session credentials. Handshakes have bounded size and duration.
+Untrusted inputs include shared URLs, DNS answers, redirects, headers, filenames, extractor metadata, remote bytes and unreliable storage providers. Direct transport defaults to HTTPS; public HTTP requires explicit opt-in. Credential-bearing URLs, arbitrary ports, ambiguous numeric addresses and non-public targets are rejected before connection. Redirects retain target checks and reject HTTPS downgrade.
 
-No shell command string is constructed from user input. Native requests use structured wrapper options, fixed output paths and allowlisted format IDs. No cookies, credentials, DRM bypass, Accessibility, overlays, all-files permission or background clipboard monitoring.
+Native HTTPS uses a randomly authenticated loopback CONNECT proxy. Every tunnel connects to a checked public IP; TLS remains end-to-end. Headers have an absolute deadline and origin inactivity is bounded. No trust-all verifier, cookie/login import or DRM bypass is installed. Native requests use structured arguments and fixed output paths rather than a user-built shell command.
 
-Cleartext is enabled to support explicitly supplied public HTTP files and the loopback proxy. Do not transmit secrets in HTTP URLs. No trust-all TLS verifier is installed. Media downloads have no fixed size cap. Metadata parsing remains limited to 4 MiB / 1000 formats; these are metadata protections, not video-size limits.
+Direct append requires a matching validated representation, range and strong validator. Conflicting encoding/length/range/ETag headers are rejected. Media files have no fixed application size ceiling; metadata has separate allocation guards. Storage reserve calculations use Long counters and checked arithmetic.
 
-## Remaining hardening and verification work
+Private queue, failure, batch, publication and timeline records use device-bound AES-GCM. Only the two journals that historically existed as plaintext can migrate once, with authenticated pending/sealed markers bound to the filename. Established records reject plaintext replacement. Initial migration and simultaneous deletion/replay of both private data and marker are local trust boundaries, not hardware antirollback protection. Reads and encoded writes are bounded.
 
-- Wrapper stdout buffering and metadata file production occur upstream before application size validation; malicious extractor responses may still exhaust resources.
-- Confirm that every extractor/helper and FFmpeg request honors the configured proxy; current proxy code alone is not proof of full native isolation.
-- Native cancellation race between process registration and cancellation requires stress tests.
-- Native/transitive advisory scan, exact binary license inventory and 16 KB verification are pending.
-- Encrypted pre-creation publication plans now recover known MediaStore/SAF interruptions and changed rename URIs. Provider normalization, inaccessible storage and ambiguous listings remain bounded recovery limits; see PUBLICATION_RECOVERY.md.
-- Android service lifecycle and OS stop behavior require tests beyond normal cancellation.
+Publication verifies bytes and records a plan before changing destinations. Library rename recovery preserves evidence and refuses ambiguous identities. Filename/path policies exclude separators, controls and dangerous path components. Debug fault providers/hooks are excluded from minified Release. Backup is disabled; the app requests no all-files permission, accessibility service or clipboard monitor.
 
-This is a living hardening list, including limitations carried forward from release 1.0.0. The release is not security certified or fully MASVS compliant. No raw URLs or native error strings are logged by first-party code. Inspection of individual packaged ELF files is narrower than a complete 16 KB audit of the extracted Python/FFmpeg runtime and real-device behavior.
+## Evidence and limits
+
+See [the30-item audit](audit/REVIEW.md), [review dispositions](launch/REVIEW_DISPOSITIONS.md) and [verification](VERIFICATION.md). Current Maven coordinates are queried against OSV; this is narrower than native/Python advisory coverage or a proof of no vulnerabilities. SBOM engine correspondence does not make Maven input hashes independent DEX attestation.
+
+Scoped deterministic tests cover network boundaries, resume, cancellation, queue durability, storage fault recovery and journal downgrade. Native helper isolation, every extractor/provider/codec, physical DNS/network changes, real ENOSPC and every OEM power policy remain broader acceptance areas. A compromised private app directory can invalidate local persistence assumptions. No security certification or all-device guarantee is claimed.

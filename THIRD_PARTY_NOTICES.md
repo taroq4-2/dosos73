@@ -26,14 +26,14 @@ The current neon artwork was supplied by the project owner. The source image is 
 
 Tajawal (Regular/Medium/Bold), copyright 2018 Boutros International, SIL Open Font License 1.1. Unmodified fonts from https://github.com/google/fonts/tree/main/ofl/tajawal ; full license in docs/licenses/Tajawal-OFL.txt and the APK raw resources.
 
-## Compact engine candidate with MP3
+## Universal engine with MP3
 
-The compact candidate replaces the wrapper FFmpeg binaries with FFmpeg 9.0.2 (commit 946fcce07b6dcd0331c8cc609192aeff5e1924f8), LGPL-2.1-or-later configuration, and LAME 3.100, LGPL-2.0-or-later. The pinned source URLs, SHA256 and cross-build recipe are in tools/build_compact_ffmpeg.sh. LAME license: docs/licenses/LAME-3.100.txt. Official source: https://downloads.sourceforge.net/project/lame/lame/3.100/lame-3.100.tar.gz . Native build artifacts retain configurations and licenses. This candidate remains subject to the documented acceptance gates.
+The universal delivery replaces the wrapper FFmpeg binaries with FFmpeg 9.0.2 (commit 946fcce07b6dcd0331c8cc609192aeff5e1924f8), LGPL-2.1-or-later configuration, and LAME 3.100, LGPL-2.0-or-later. The pinned source URLs, SHA256 and cross-build recipe are in tools/build_compact_ffmpeg.sh. LAME license: docs/licenses/LAME-3.100.txt. Official source: https://downloads.sourceforge.net/project/lame/lame/3.100/lame-3.100.tar.gz . Native build artifacts retain configurations and licenses. Artifact identity and measured acceptance are recorded in docs/VERIFICATION.md.
 
 ## Artifact-bound inventory
 
-RC5 release assets include a CycloneDX 1.6 SBOM with resolved Maven build-input hashes and every ELF hash from the actual APK. Unknown/inherited/native license correspondence is explicitly marked. The corresponding FFmpeg and LAME source archive, per-ABI configurations, notices and pinned recipe are supplied separately from the APK. No native codecs, CPU targets or source restrictions are changed by sharing 642 identical regular Python files; per-ABI symlinks and ELF payloads are preserved.
+The1.2.0 release assets include a CycloneDX 1.6 SBOM with resolved Maven build-input hashes and every ELF hash from the actual APK. Unknown/inherited/native license correspondence is explicitly marked. The corresponding FFmpeg and LAME source archive, per-ABI configurations, notices and pinned recipe are supplied separately from the APK. No native codecs, CPU targets or source restrictions are changed by sharing 642 identical regular Python files; per-ABI symlinks and ELF payloads are preserved.
 
-## 1.2.0 preparation: Python native correspondence
+## Python native correspondence
 
-The next universal candidate replaces Readline/History with pinned8.3.6 official packages. GDBM1.26-1 ELF and Mutagen1.47.0 Python sources were matched byte for byte to official package/source inputs. Readline/History and GDBM are GPL-3.0-or-later; Mutagen is GPL-2.0-or-later. Source-only archives, licenses, pinned recipes, patches and limits are described in [native evidence](docs/launch/NATIVE_SOURCES.md). CPython producer build provenance remains incomplete. These materials are distributed separately and add no APK download size. The source-only archive must accompany an official replacement release.
+The1.2.0 universal delivery replaces Readline/History with pinned8.3.6 official packages. GDBM1.26-1 ELF and Mutagen1.47.0 Python sources were matched byte for byte to official package/source inputs. Readline/History and GDBM are GPL-3.0-or-later; Mutagen is GPL-2.0-or-later. Source-only archives, licenses, pinned recipes, patches and limits are described in [native evidence](docs/launch/NATIVE_SOURCES.md). CPython producer build provenance remains incomplete. These materials are distributed separately and add no APK download size. Source-only archives accompany the APK; download directions are provided on its release page.

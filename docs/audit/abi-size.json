@@ -1,0 +1,12 @@
+{
+  "apk_sha256": "278c1cdeb6c65ad18180ddeef1fa39f9b024bede0109c6ee1ed78132dcf5402a",
+  "apk_bytes": 62059289,
+  "native_entries_compressed_bytes": {
+    "armeabi-v7a": 11905425,
+    "arm64-v8a": 13490029,
+    "x86": 13315063,
+    "x86_64": 13631362
+  },
+  "shared_python_compressed_bytes": 2870754,
+  "scope": "Compressed ZIP entry contributions, not separate APK editions; ZIP/signing overhead and common UI code are outside ABI totals."
+}

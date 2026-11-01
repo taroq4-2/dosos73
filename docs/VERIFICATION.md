@@ -1,46 +1,57 @@
-# RC5 verification / التحقق من RC5
+# dosos731.2.0 — release verification
 
-Date: **2026-10-30**. Application code: **fe09629**; subsequent commits change documentation and screenshots only.
+Prepared1November2026. One signed universal APK for Android10+; this record binds measured checks to the exact delivery rather than to a previous candidate.
 
-| Property | Verified value |
+## Identity
+
+| Field | Value |
 |---|---|
-| Artifact | `dosos73-1.2.0-rc.5-universal.apk` |
-| Bytes | **61,944,601** (61.94 MB; 59.07 MiB) |
-| SHA-256 | `8d5e740f09d8a60becc74c202738699c27029458184d86680b0016cfb0cc31eb` |
+| Application | `com.os73.dosos73` ·1.2.0 / versionCode12 |
+| Application source | `72783e39d2704f18722a91040443a51f88adb245` |
+| Package | `dosos73-1.2.0-universal.apk` |
+| Length | **62,059,289bytes** ·62.06MB /59.18MiB |
+| APK SHA-256 | `278c1cdeb6c65ad18180ddeef1fa39f9b024bede0109c6ee1ed78132dcf5402a` |
 | Certificate SHA-256 | `bf0bcb1ba4d282b2e38f75be6220ad4b06902f96b47bbe68d67a51bfeb6e0ca9` |
-| Package/version | `com.os73.dosos73`, **1.2.0-rc.5 / 11** |
-| Support | Android10+, min API29, target35; four CPU architectures in one APK |
-| Release properties | R8 minified/resource shrunk; DEBUGGABLE absent; backup disabled; debug fault provider absent; APK v3 signature verified |
+| Android / CPU | API29+; ARM32, ARM64, x86 and x86_64 in one APK |
 
-## Source and runtime checks
+The certificate is retained for update compatibility. The APK is not debuggable, backup is disabled, and Debug-only providers/fault hooks are absent. No additional runtime download is required on paste.
 
-- 72 JVM cases passed, zero failures/errors/skips; debug/release lint and builds passed.
-- Local Android15 compact instrumentation: `OK (64 tests)` = **59 executed passes and 5 opt-in network cases skipped**.
-- [CI41006565578](https://github.com/taroq4-2/dosos73/actions/runs/41006565578): build and APIs29,30,31,32,33,34,35,36 passed. APIs29/30:58 passes +6 skips each; APIs31–36:59 passes +5 skips each. The additional old-API skip concerns an Android12 resource.
-- CI uses actual shared Python packaging with upstream FFmpeg. The compact signed Release is accepted separately on API35 x86_64. These are emulator results, not all-device or all-ABI runtime certification.
-- 642 shared regular Python files: all restored bytes/modes verified. Reconstruction of each ABI reproduces its original runtime file set, contents and attributes. Per-ABI symlinks stay in their original ZIPs. Partial-install recovery and idempotence passed.
-- All608 native ELF payloads equal RC4 by SHA-256. Zero64-bit PT_LOAD16KB alignment/congruence failures;286 smaller-aligned32-bit entries remain informational. No physical16KB-page device was tested.
-- CycloneDX1.6 SBOM validates against the official schema, with unique component references and the exact APK hash. Maven coordinate lookup returned zero OSV advisories at query time; native/Python coverage is explicitly outside that lookup.
+## Source and device checks
 
-## Signed Release acceptance
+- **106 JVM tests**, zero failures/errors/skips; Debug/Release lint and minified Release assembly passed.
+- [Final source CI](https://github.com/taroq4-2/dosos73/actions/runs/41263479501) passed build and device jobs for **every API29–36**. Each runner reports145 cases; optional external-network and SDK-conditioned skips are included in runner totals. This CI uses x86_64 Debug with shared Python and upstream FFmpeg; final compact media-engine acceptance is separate below.
+- Local compact-Debug full run before the last layout-only source change reported145 cases: **140 passed,5 optional cases skipped,0 failures**. The final layout source subsequently passed the full CI matrix. The39 focused durable-rename/journal/deferred-service regressions passed.
+- Android10 stress retains105 observer subscriptions and verifies that system-owned request IDs return to a stable baseline. An earlier unpaced burst exhausted the asynchronous system quota; its failure was preserved and the corrected drain-observing test passed across the matrix.
+- The60 distinct AI review reports and scoped dispositions are preserved in [review dispositions](launch/REVIEW_DISPOSITIONS.md). They are engineering reviews, not60 human certifications or a promise of zero defects.
 
-An independent emulator and test profiles were used; existing profiles/data were not cleared.
+[Device matrix](audit/device-matrix.json) · [30-item audit](audit/REVIEW.md) · [remaining requirements](REMAINING_REQUIREMENTS.md)
 
-- A fresh-profile candidate initialized its bundled runtime, analyzed the user's YouTube link, downloaded and played a720p video and genuine MP3. Direct W3C trailer bytes matched their independent reference.
-- The final APK additionally downloaded and saved a **3840×2160 YouTube video,353,323,072bytes**, and an MP3 of7,809,318bytes. This confirms a real large-file path; it is not a universal website guarantee.
-- Final4K SHA-256: `974b52f153dbd510dfabbef2d39febe2a316ccddee0615ace0dc675bb46f3517`.
-- Final MP3 SHA-256: `bba662231ad690482a525892f95916b988a7d218e16ec724b8d221bb31543ddb`.
-- Prior720p SHA-256: `8be0a7bf298a7ac0ee2dea26713a4fca8d8465513779655132ae9d9f974eb4b6` (30,812,514bytes).
-- Direct trailer SHA-256: `b670602fa00934ca27c4351bb0efe7ea7a07fae57284e44226025eeed7c51254` (4,372,373bytes).
-- Screenshot review covered Arabic/English, portrait, landscape and200% text. The short-screen header keeps link controls visible. Font/orientation settings were restored afterward.
-- Same-certificate updates retained the existing profiles, language/library data and saved media. The public redownload receipt is supplied as `PUBLIC-DOWNLOAD-VERIFICATION.json` in the release assets after publication.
+## Actual signed-APK acceptance
 
-## Evidence and limits / الأدلة والحدود
+The exact APK above was installed on a **clean API35 x86_64 emulator**, without prior application data. Through its real UI it analyzed/selected/downloaded YouTube720p MP4, converted YouTube audio to MP3V0, and saved a W3C direct MP4. MediaStore publication, file lengths and SHA-256 were read from the resulting files.
 
-[30-item Arabic audit](audit/REVIEW_2026-10-30.md) · [Mind map](REPOSITORY_MAP.md) · [Machine-readable evidence](audit/artifact-static.json) · [Raw device outputs](audit/device-matrix.json).
+| Saved output | Bytes | SHA-256 |
+|---|---:|---|
+| YouTube720p MP4 |30,812,514|`9b42c9c2785deffc14f4b75edab52fe62a84d4777830525f7fa997051e143af2`|
+| YouTube MP3 |7,809,318|`bba662231ad690482a525892f95916b988a7d218e16ec724b8d221bb31543ddb`|
+| W3C direct MP4 |4,372,373|`b670602fa00934ca27c4351bb0efe7ea7a07fae57284e44226025eeed7c51254`|
 
-The APK is smaller without removing ABI/native payloads or adding a first-use engine download. Small startup/memory samples do not establish better battery or memory use; PSS/RSS results are mixed and retained in the audit. Physical Samsung/power-saving/network handover/real ENOSPC, exhaustive SAF-provider coverage and full transitive native-source/license correspondence remain open. TalkBack was not certified on a physical device. OS scheduling, multiple active files and subtitle selection remain in [the requirements ledger](REMAINING_REQUIREMENTS.md).
+Actual video playback was observed in the local preview with different frames and an active/unpaused Android renderer. On a separate update profile, **all6 previously saved media files retained their exact byte counts and hashes** after installing this APK. See [signed acceptance](audit/signed-acceptance.json). The first notification prompt was allowed during clean acceptance; permission-denied task preservation also has scoped service-test coverage.
 
-The unavailable `BaW_jenozKc` fixture timed out and was not counted as success. Earlier CI setup/result-gate failures and one transient draft-navigation test failure were corrected and followed by a successful full matrix; details are retained in the audit.
+Large-font navigation/source spacing was inspected at200% on the signed APK and corrected before this delivery. Current screenshots are [documented here](../screenshots/README.md). This visual check is not full TalkBack certification.
 
-[Historical RC4 evidence](https://github.com/taroq4-2/dosos73/blob/42c911ec47369113b872c896e1656e5579eba113/docs/VERIFICATION.md) remains available in Git history.
+## Package and source integrity
+
+The final SBOM validates against CycloneDX1.6 schema:699components, including608ELF records and85Maven build inputs. Assembly checks every CPU target, exactly8Readline/History8.3.6 replacements and642 shared Python files. Repeated unsigned payload assembly from the same inputs is byte-identical. SBOM generation rejects the untransformed APK against the final runtime proof. Debug fault-hook names are absent from Release DEX.
+
+All64-bit ELF PT_LOAD segments meet the checked16KB alignment/congruence gate.32-bit non16KB findings are informational, not hidden; actual physical16KB runtime coverage remains separate. [Artifact checks](audit/artifact-static.json) · [ABI contributions](audit/abi-size.json) · [signature](audit/apk-signature.txt)
+
+The release offers application sources, FFmpeg/LAME sources/configuration and Python native sources/notices separately beside the APK. Exact Readline/GDBM/Mutagen correspondence is checked; inherited CPython producer build-lock provenance remains explicitly limited. Maven archive hashes describe build inputs, not independent attestation of deployed DEX. See [native provenance](launch/NATIVE_SOURCES.md). The Maven OSV coordinate lookup reported no matches at the recorded check time; it does not cover every native/Python advisory or prove absence of vulnerabilities.
+
+## Publication
+
+The release page supplies one universal APK, checksums, source archives, SBOM, runtime/ELF evidence and this record. A **PUBLIC-DOWNLOAD-VERIFICATION.json** receipt is added after downloading the public replacement and checking its exact hash. Older packages are removed only after that check; Git source history is retained.
+
+## Coverage limits
+
+Physical S23Ultra/other ARM/OEM power behavior is left to owner testing, as agreed. Every cloud/removable provider, real ENOSPC, long battery/CPU/heap benchmarks, every codec/source and full assistive-technology coverage are not certified. OS eligibility reminders are inexact and open the app for resume; they do not guarantee silent timed downloads. Multiple simultaneous active files and subtitle selection remain future features. Ambiguous SAF rename responses preserve evidence instead of guessing.

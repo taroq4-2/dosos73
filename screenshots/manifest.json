@@ -1,0 +1,36 @@
+{
+  "release": "1.2.0",
+  "apk_sha256": "278c1cdeb6c65ad18180ddeef1fa39f9b024bede0109c6ee1ed78132dcf5402a",
+  "source_commit": "72783e39d2704f18722a91040443a51f88adb245",
+  "capture": "Actual signed minified APK. Core screenshots from clean API35 x86_64 DososRelease120 AVD; font200 from update profile on same APK. No synthetic file rows or simulated progress.",
+  "files": [
+    {
+      "file": "home-ar.png",
+      "sha256": "04d6b70bc00293d15a93c14ef0c45dbd0c268170db2a1bc1ff2c093b24924a0a"
+    },
+    {
+      "file": "home-en.png",
+      "sha256": "536c702f6a1cf9707730be6836c3b58a9dd5eac0e0328e48f3fc7103895c70e2"
+    },
+    {
+      "file": "downloads-ar.png",
+      "sha256": "d34c3146921406e664e52c69224bdc339180d2eb9e95b57aed6d49ab92bbacbc"
+    },
+    {
+      "file": "media-library-ar.png",
+      "sha256": "179804be64b48780e89426f18a79963510d6f41aa6790bcde14443d11c2ff33a"
+    },
+    {
+      "file": "settings-ar.png",
+      "sha256": "c91abdaa06d11c9b0ebd4dc8c96d9080f8d939dfa51c09c2c0f177b2e136dd6d"
+    },
+    {
+      "file": "playback-ar.png",
+      "sha256": "52d620517c22425bc5ec6e56a0015a9b0627d9831266740e84c8f5e83151c967"
+    },
+    {
+      "file": "font200-en.png",
+      "sha256": "ab849549fa58c2054e066e31ea584612a64c49663548422b5fc6548e67276c1f"
+    }
+  ]
+}

@@ -1,26 +1,9 @@
-# Direct transfer integrity
+# Network execution
 
-Current status: [remaining requirements](REMAINING_REQUIREMENTS.md); signed release evidence: [verification](VERIFICATION.md).
+Direct traffic uses checked public addresses, network-bound DNS/socket factories, bounded manual redirects, representation validation and explicit cleartext opt-in. Native HTTPS tunnels use random session authentication and public-IP pinning without replacing TLS certificates.
 
-## Safe resume contract
+NetworkRecovery registers all observers before opening transport and observes the original bound network after default-route handover. Registration failures clean up prior callbacks. Only acquisition/policy interruptions receive the bounded retry; user cancellation, authentication and storage failures are not silently retried.
 
-The downloader preserves its public function signature. The service must pass the same private destination for the same task UUID on retry. The sidecars are `<destination>.resume` and `<destination>.resume.tmp`. They contain version, SHA-256 source/final-target URL bindings, strong ETag, total length and durable offset, never raw URLs. Data is synchronized before an atomically replaced checkpoint. Any tail after the committed offset is truncated before append. Checkpoints occur at 4 MiB or 2 seconds, plus completion/failure; the buffer is 64 KiB. This is not a measured power-consumption claim.
+After15seconds without a permitted network the foreground worker stops, preserving the exact unpaused lease and partial. One persisted JobScheduler request follows selected network/time conditions. Its short job can post a Resume reminder that opens the app; it never starts a foreground-service transfer from a background job. Android controls timing. Notification denial preserves the task and in-app resume; force-stop requires opening the app.
 
-Resume is enabled only with a strong ETag and known positive total. Weak/missing ETag or date-only validators restart safely; Last-Modified alone is not assumed strong. A 206 must match original final-target hash, ETag, exact requested start, original total, and expected terminal byte; nonidentity encoding, multipart or incorrect content length is rejected before append. A 200 after Range replaces the partial body, never appends. A 416 triggers at most one full request and never marks a partial file complete solely from local size. Changed or malformed 206 responses fail safely and retain the original checkpoint for explicit retry or cancellation. Success removes the sidecar; explicit user cancellation can delete the stable task directory; transient errors/system interruption should retain it.
-
-The implementation follows [RFC 9110 If-Range](https://www.rfc-editor.org/rfc/rfc9110.html#name-if-range) and [Content-Range](https://www.rfc-editor.org/rfc/rfc9110.html#name-content-range): weak validators and invalid ranges cannot be used to combine representations.
-
-## Acceptance cases added
-
-- Disconnect midbody, instantiate a new downloader, resume and compare SHA-256 with fixture.
-- Commit prefix plus uncommitted tail, then resume exactly at durable offset.
-- Ignored Range / changed representation 200 replaces without duplicated bytes.
-- 416 restarts once; never accepts the local file as completed.
-- Wrong range start/end/total, overflow, unknown total, weak/changed/missing validator reject append.
-- Wrong range Content-Length, gzip response and URL-binding mismatch.
-- Corrupt sidecar is rejected; journal roundtrip does not expose raw secret query.
-- Existing unknown-length, >2 GiB advertisement, truncation, HTML, unsafe redirect and pause tests retained.
-
-## Optional parallel transfer
-
-Two independently validated byte ranges may be used on compatible sources. Failure/cancellation prevents unsafe merging, and sequential fallback is bounded. Parts currently restart after interruption. Adaptive measured selection, durable segment journals and a broader resource comparison remain open; do not describe this as complete adaptive acceleration.
+The callback stress regression retains105subscriptions in seven batches and observes the actual ConnectivityService-owned UID request IDs returning to a stable baseline. Android10 unregister posts asynchronous service work, so a return alone is not a server-side cleanup acknowledgement. No registration error is skipped or retried by the test. All API29–36 source results are recorded in [verification](VERIFICATION.md); real OEM/Wi-Fi/cellular transitions remain separate from deterministic guard tests.

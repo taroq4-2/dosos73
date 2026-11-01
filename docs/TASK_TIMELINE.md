@@ -14,4 +14,4 @@ Evidence:
 
 Compatibility follow-up: the prior publication commit passed CI device suites on API35 and36, but API29 exposed an owner-provider permission precheck and API33 exposed a batch-navigation test timing/visibility issue. Recovery now relies on real provider queries rather than the redundant canRead check. Batch model tests have isolated storage and proper lifecycle cleanup; navigation clears keyboard focus and the regression test scrolls the actual lazy list. The corrected implementation passed the complete CI matrix on API29/33/35/36 in run40942151899 (commit6ee7bff). Later explicit Main/Snapshot UI-publication and loading assertions passed local UI tests and the full API29/33/35/36 matrix in run40945911520 (commit162b2be).
 
-![Actual timeline, including a successful live transfer and controlled failed service tests](../screenshots/charter-task-timeline-ar.png)
+[Current release screenshots](../screenshots/README.md)

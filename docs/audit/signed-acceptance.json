@@ -1,0 +1,63 @@
+{
+  "fresh_install": {
+    "apk_sha256": "278c1cdeb6c65ad18180ddeef1fa39f9b024bede0109c6ee1ed78132dcf5402a",
+    "source_commit": "72783e39d2704f18722a91040443a51f88adb245",
+    "device": "Clean API35 x86_64 AVD DososRelease120",
+    "video_choice": "720p MP4",
+    "files": [
+      {
+        "id": 1000000020,
+        "bytes": 30812514,
+        "sha256": "9b42c9c2785deffc14f4b75edab52fe62a84d4777830525f7fa997051e143af2"
+      },
+      {
+        "id": 1000000021,
+        "bytes": 7809318,
+        "sha256": "bba662231ad690482a525892f95916b988a7d218e16ec724b8d221bb31543ddb"
+      },
+      {
+        "id": 1000000022,
+        "bytes": 4372373,
+        "sha256": "b670602fa00934ca27c4351bb0efe7ea7a07fae57284e44226025eeed7c51254"
+      }
+    ],
+    "video_playback": "Actual video frames and unpaused renderer/state5 captured",
+    "fresh_install": true,
+    "notifications_prompt": "Allowed on first Start; download completed"
+  },
+  "update_preservation": {
+    "apk_sha256": "278c1cdeb6c65ad18180ddeef1fa39f9b024bede0109c6ee1ed78132dcf5402a",
+    "preserved_files": [
+      {
+        "id": 1000000019,
+        "bytes": 30812514,
+        "sha256": "8dc5062ab63a03639708dced93ea539075de747056f9b0bd60bcfe31bc45eb61"
+      },
+      {
+        "id": 1000000020,
+        "bytes": 7809318,
+        "sha256": "bba662231ad690482a525892f95916b988a7d218e16ec724b8d221bb31543ddb"
+      },
+      {
+        "id": 1000000021,
+        "bytes": 4372373,
+        "sha256": "b670602fa00934ca27c4351bb0efe7ea7a07fae57284e44226025eeed7c51254"
+      },
+      {
+        "id": 1000000022,
+        "bytes": 30812514,
+        "sha256": "ab4cb55743021297024352d525f4df94d79142055215abdc8f8bd44033d9625a"
+      },
+      {
+        "id": 1000000023,
+        "bytes": 7809318,
+        "sha256": "bba662231ad690482a525892f95916b988a7d218e16ec724b8d221bb31543ddb"
+      },
+      {
+        "id": 1000000024,
+        "bytes": 4372373,
+        "sha256": "b670602fa00934ca27c4351bb0efe7ea7a07fae57284e44226025eeed7c51254"
+      }
+    ]
+  }
+}
