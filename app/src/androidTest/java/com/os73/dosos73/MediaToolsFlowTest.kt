@@ -261,15 +261,22 @@ class MediaToolsFlowTest {
         compose.waitUntil(10000) { !model.batchSaving.value && context.hasWindowFocus() }
         val name = "Flow ${UUID.randomUUID()}"
         assumeTrue("The test does not evict existing presets", DownloadPresets(context).read().size < DownloadPresets.MAX_PRESETS)
-        val preset = DownloadPresets(context).save(name, saved, null).single { it.name == name }
-        ownPresets += preset.id
         openHome(analysis)
         compose.runOnIdle { assertEquals(original, model.state.value.selected) }
         compose.waitUntil(10000) { runCatching { compose.onNodeWithTag("preset_list").assertIsEnabled(); true }.getOrDefault(false) }
+        // Commit after Home has loaded its first snapshot, as another quick/Home instance can do.
+        val preset = DownloadPresets(context).save(name, saved, null).single { it.name == name }
+        ownPresets += preset.id
         compose.onNodeWithTag("preset_list").performScrollTo().performClick()
+        // The modal opens before its fresh encrypted read completes; wait for that exact snapshot.
+        compose.waitUntil(10000) {
+            compose.onAllNodesWithTag("preset_list_dialog").fetchSemanticsNodes().size == 1 &&
+                compose.onAllNodesWithTag("preset_loading").fetchSemanticsNodes().isEmpty() &&
+                compose.onAllNodesWithTag("preset_row_${preset.id}").fetchSemanticsNodes().size == 1
+        }
         compose.onNodeWithText(name).assertExists()
-        // New presets append; select only this test-owned final row, preserving existing entries.
-        compose.onAllNodesWithText(context.getString(R.string.preset_apply)).onLast().performScrollTo().performClick()
+        compose.onNode(hasText(context.getString(R.string.preset_apply)) and hasClickAction() and
+            hasAnyAncestor(hasTestTag("preset_row_${preset.id}"))).performScrollTo().performClick()
         compose.waitUntil(10000) { model.state.value.selected == saved && !destination.contains("tree") }
         compose.runOnIdle { assertEquals(saved, model.state.value.selected); assertFalse(destination.contains("tree")) }
         startAndAwaitDuplicate(quick = false)

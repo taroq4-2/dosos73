@@ -674,11 +674,16 @@ internal fun MainActivity.AppScreen(model: MainViewModel, sharedGeneration: Int,
         )
     }
     duplicate?.let { (item, answer) ->
+        val compactHistory = LocalConfiguration.current.screenHeightDp < 420
         AlertDialog(
-            modifier = Modifier.testTag("history_dialog"),
+            modifier = (if (compactHistory) Modifier.widthIn(max = 640.dp).fillMaxWidth()
+                .padding(vertical = 24.dp) else Modifier).testTag("history_dialog"),
+            properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = !compactHistory),
             onDismissRequest = { answer.complete(0) },
-            title = { Text(stringResource(R.string.history_downloaded_before)) },
-            text = { Column {
+            title = { Text(stringResource(R.string.history_downloaded_before),
+                maxLines = if (compactHistory) 1 else Int.MAX_VALUE,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis) },
+            text = { Column(Modifier.heightIn(max = 460.dp).verticalScroll(rememberScrollState())) {
                 Text(stringResource(R.string.history_downloaded_before_message))
                 Text(item.name, maxLines = 3, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
                 TextButton({ answer.complete(2) }, Modifier.testTag("history_open")) {

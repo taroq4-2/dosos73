@@ -10,12 +10,15 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.window.DialogProperties
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -23,6 +26,8 @@ import kotlinx.coroutines.withContext
 @Composable
 internal fun PresetControls(analysis: Analysis, selected: Choice?, onApply: (Choice, String?) -> Unit) {
     val context = LocalContext.current
+    val compact = LocalConfiguration.current.screenHeightDp < 420
+    val dialogModifier = if (compact) Modifier.widthIn(max = 640.dp).fillMaxWidth().padding(vertical = 24.dp) else Modifier
     val store = remember(context) { DownloadPresets(context) }
     val scope = rememberCoroutineScope()
     var rows by remember { mutableStateOf<List<DownloadPreset>>(emptyList()) }
@@ -33,6 +38,8 @@ internal fun PresetControls(analysis: Analysis, selected: Choice?, onApply: (Cho
     var name by rememberSaveable { mutableStateOf("") }
 
     fun load() {
+        // Another visible Home/quick instance can save or delete presets after this instance loaded.
+        loaded = false
         busy = true
         scope.launch {
             val result = withContext(Dispatchers.IO) { runCatching { store.read() } }
@@ -50,7 +57,7 @@ internal fun PresetControls(analysis: Analysis, selected: Choice?, onApply: (Cho
                 enabled = loaded && !busy && selected != null, modifier = Modifier.testTag("preset_save")) {
                 Text(stringResource(R.string.preset_save))
             }
-            OutlinedButton(onClick = { notice = null; dialog = "list" }, enabled = loaded && !busy,
+            OutlinedButton(onClick = { notice = null; dialog = "list"; load() }, enabled = loaded && !busy,
                 modifier = Modifier.testTag("preset_list")) {
                 Text(stringResource(R.string.preset_manage))
             }
@@ -63,10 +70,13 @@ internal fun PresetControls(analysis: Analysis, selected: Choice?, onApply: (Cho
     }
 
     if (dialog == "save") AlertDialog(
+        modifier = dialogModifier.testTag("preset_save_dialog"),
+        properties = DialogProperties(usePlatformDefaultWidth = !compact),
         onDismissRequest = { if (!busy) dialog = "" },
-        title = { Text(stringResource(R.string.preset_save)) },
+        title = { Text(stringResource(R.string.preset_save), maxLines = if (compact) 1 else Int.MAX_VALUE, overflow = TextOverflow.Ellipsis) },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (busy) LinearProgressIndicator(Modifier.fillMaxWidth().testTag("preset_loading"))
                 OutlinedTextField(name, { name = it.take(DownloadPresets.MAX_NAME) },
                     label = { Text(stringResource(R.string.preset_name)) },
                     singleLine = true, enabled = !busy, modifier = Modifier.fillMaxWidth().testTag("preset_name"))
@@ -75,7 +85,7 @@ internal fun PresetControls(analysis: Analysis, selected: Choice?, onApply: (Cho
             }
         },
         confirmButton = {
-            TextButton(enabled = !busy && selected != null && DownloadPresets.validName(name.trim()), onClick = {
+            TextButton(enabled = loaded && !busy && selected != null && DownloadPresets.validName(name.trim()), onClick = {
                 val choice = selected ?: return@TextButton
                 if (rows.size >= DownloadPresets.MAX_PRESETS && rows.none { it.name.equals(name.trim(), true) }) {
                     notice = R.string.preset_limit
@@ -97,15 +107,18 @@ internal fun PresetControls(analysis: Analysis, selected: Choice?, onApply: (Cho
     )
 
     if (dialog == "list") AlertDialog(
+        modifier = dialogModifier.testTag("preset_list_dialog"),
+        properties = DialogProperties(usePlatformDefaultWidth = !compact),
         onDismissRequest = { if (!busy) dialog = "" },
-        title = { Text(stringResource(R.string.preset_title)) },
+        title = { Text(stringResource(R.string.preset_title), maxLines = if (compact) 1 else Int.MAX_VALUE, overflow = TextOverflow.Ellipsis) },
         text = {
             Column(Modifier.fillMaxWidth().heightIn(max = 420.dp).verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                if (rows.isEmpty()) Text(stringResource(R.string.preset_empty))
+                if (busy) LinearProgressIndicator(Modifier.fillMaxWidth().testTag("preset_loading"))
+                if (loaded && rows.isEmpty()) Text(stringResource(R.string.preset_empty))
                 notice?.let { Text(stringResource(it), Modifier.semantics { liveRegion = LiveRegionMode.Polite }) }
-                rows.forEach { preset ->
-                    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                if (loaded) rows.forEach { preset ->
+                    Column(Modifier.fillMaxWidth().testTag("preset_row_${preset.id}"), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text(preset.name, style = MaterialTheme.typography.titleSmall)
                         val kind = stringResource(when (preset.kind) {
                             Kind.VIDEO -> R.string.preset_video
