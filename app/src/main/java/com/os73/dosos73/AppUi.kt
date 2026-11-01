@@ -394,10 +394,11 @@ internal fun HomeScreen(
         }
         CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
             BoxWithConstraints(Modifier.fillMaxWidth()) {
+            val sourceWidth = (60 * LocalConfiguration.current.fontScale.coerceAtLeast(1f)).dp
             Row(Modifier.horizontalScroll(rememberScrollState()).widthIn(min = maxWidth).testTag("source_shortcuts"),
                 horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterHorizontally)) {
                 listOf("YouTube", "TikTok", "Instagram", "X").forEach { name ->
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Column(Modifier.width(sourceWidth), horizontalAlignment = Alignment.CenterHorizontally) {
                         Box(
                             Modifier.size(49.dp)
                                 .clip(CircleShape)
@@ -459,17 +460,17 @@ internal fun HomeScreen(
                             }
                         }
                         Spacer(Modifier.height(7.dp))
-                        Text(name, modifier = Modifier.clearAndSetSemantics {}, fontSize = 11.sp, lineHeight = 17.sp)
+                        Text(name, modifier = Modifier.clearAndSetSemantics {}, maxLines = 1, fontSize = 11.sp, lineHeight = 17.sp)
                     }
                 }
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Column(Modifier.width(sourceWidth), horizontalAlignment = Alignment.CenterHorizontally) {
                     IconAction(
                         Glyph.MORE,
                         stringResource(R.string.more),
                         onSettings,
                         Modifier.background(Neon.Surface, CircleShape),
                     )
-                    Text(stringResource(R.string.more), fontSize = 11.sp, lineHeight = 17.sp)
+                    Text(stringResource(R.string.more), maxLines = 1, fontSize = 11.sp, lineHeight = 17.sp)
                 }
             }
         }

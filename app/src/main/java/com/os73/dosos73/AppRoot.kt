@@ -275,7 +275,9 @@ internal fun MainActivity.AppScreen(model: MainViewModel, sharedGeneration: Int)
                 NavigationBar(
                     containerColor = Color(0xFF040E20),
                     tonalElevation = 0.dp,
-                    modifier = Modifier.navigationBarsPadding().heightIn(min = 68.dp),
+                    modifier = Modifier.navigationBarsPadding().heightIn(
+                        min = (80 + 24 * (LocalConfiguration.current.fontScale - 1f).coerceAtLeast(0f)).dp
+                    ),
                     windowInsets = WindowInsets(0, 0, 0, 0),
                 ) {
                     listOf(
@@ -304,6 +306,8 @@ internal fun MainActivity.AppScreen(model: MainViewModel, sharedGeneration: Int)
                                 label = {
                                     Text(
                                         stringResource(label),
+                                        maxLines = 1,
+                                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                                         style = MaterialTheme.typography.labelSmall,
                                     )
                                 },
