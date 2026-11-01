@@ -63,6 +63,8 @@ internal fun MainActivity.AppScreen(model: MainViewModel, sharedGeneration: Int,
     var query by rememberSaveable { mutableStateOf("") }
     LaunchedEffect(sharedGeneration) {
         if (sharedGeneration > 0) {
+            focus.clearFocus()
+            keyboard?.hide()
             page = "home"
             searching = false
             query = ""
@@ -299,6 +301,8 @@ internal fun MainActivity.AppScreen(model: MainViewModel, sharedGeneration: Int,
         } else enqueue(task)
     }
     fun requestStart() {
+        focus.clearFocus()
+        keyboard?.hide()
         val analysis = screen.analysis ?: return
         val choice = screen.selected ?: return
         requestTask(DownloadTask(analysis, choice, tree))
@@ -453,9 +457,11 @@ internal fun MainActivity.AppScreen(model: MainViewModel, sharedGeneration: Int,
                             tree != null,
                             model::edit,
                             model::select,
-                            model::analyze,
+                            { focus.clearFocus(); keyboard?.hide(); model.analyze() },
                             model::cancelAnalysis,
                             onPaste = {
+                                focus.clearFocus()
+                                keyboard?.hide()
                                 model.paste(
                                     getSystemService(ClipboardManager::class.java)
                                         .primaryClip
