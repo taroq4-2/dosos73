@@ -46,6 +46,9 @@ internal class PrivateJournal(context: Context, name: String, private val maxRec
 
     private fun readBytes(source: AtomicFile, limit: Int): ByteArray? = try {
         source.openRead().use { input ->
+            // Check the recovered, open descriptor before growing an in-memory buffer.
+            // Retain the streaming bound below in case the file grows after this check.
+            if (input.channel.size() > limit.toLong()) throw IOException("Private journal exceeds size limit")
             val output = java.io.ByteArrayOutputStream()
             val buffer = ByteArray(minOf(65536, limit))
             while (true) {
