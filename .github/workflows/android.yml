@@ -75,6 +75,7 @@ jobs:
             adb install -t /tmp/shared-debug.apk
             "$ANDROID_HOME/build-tools/35.0.0/apksigner" sign --ks /tmp/dosos-ci.jks --ks-key-alias androiddebugkey --ks-pass pass:android --out /tmp/shared-tests.apk app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
             adb install -t /tmp/shared-tests.apk
+            if [ "${{ matrix.api }}" -ge 33 ]; then adb shell pm grant com.os73.dosos73 android.permission.POST_NOTIFICATIONS; fi
             mkdir -p app/build/reports/shared-device
             adb shell df -h /data | tee app/build/reports/shared-device/storage.txt
             adb shell am instrument -w com.os73.dosos73.test/androidx.test.runner.AndroidJUnitRunner | tee app/build/reports/shared-device/instrumentation.txt
