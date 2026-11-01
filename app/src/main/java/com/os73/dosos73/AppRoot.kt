@@ -540,7 +540,8 @@ internal fun MainActivity.AppScreen(model: MainViewModel, sharedGeneration: Int,
     if (screen.quick) {
         val compactQuick = LocalConfiguration.current.screenHeightDp < 420
         AlertDialog(
-            modifier = (if (compactQuick) Modifier.widthIn(max = 640.dp).fillMaxWidth() else Modifier)
+            modifier = (if (compactQuick) Modifier.widthIn(max = 640.dp).fillMaxWidth()
+                .padding(vertical = 24.dp) else Modifier)
                 .testTag("quick_dialog"),
             properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = !compactQuick),
             onDismissRequest = model::closeQuick,
