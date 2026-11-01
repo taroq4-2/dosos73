@@ -1,0 +1,37 @@
+{
+  "reviewer_id": "04",
+  "scope": "Baseline b89b957. Full static review of DirectDownloader.kt, ResumeJournal.kt and DirectDownloaderTest.kt, limited to resume ETag validation, Content-Range validation and network interruption. Also inspected HttpRepresentation.kt and ResumeJournalTest.kt for context. No source edits, emulator use or deployment; tests were read but not executed.",
+  "findings": [],
+  "test_gaps": [
+    {
+      "file": "app/src/test/java/com/os73/dosos73/DirectDownloaderTest.kt",
+      "scenario": "A second network interruption during an already resumed 206 response, followed by another new downloader instance.",
+      "assertion": "The new checkpoint preserves the original total and ETag, advances only to durable bytes, and the third request starts at that checkpoint and yields exact final bytes.",
+      "status": "Untested path; no defect established. Existing interruption test covers an interrupted initial 200 followed by a successful 206."
+    },
+    {
+      "file": "app/src/test/java/com/os73/dosos73/DirectDownloaderTest.kt",
+      "scenario": "Resume redirect resolves to a different final URL while returning the same ETag and Content-Range.",
+      "assertion": "The destination and prior checkpoint remain intact when targetHash validation rejects the response.",
+      "status": "Untested validation branch; code explicitly checks targetHash before opening the destination."
+    },
+    {
+      "file": "app/src/test/java/com/os73/dosos73/DirectDownloaderTest.kt",
+      "scenario": "Chunked 206 response with a valid Content-Range but a truncated body or extra bytes.",
+      "assertion": "The transfer fails, preserves only a safe durable prefix, and a later retry cannot publish a truncated or overlong file.",
+      "status": "Untested path; existing wrong-length test supplies a known Content-Length and is rejected before append. No defect established."
+    },
+    {
+      "file": "app/src/test/java/com/os73/dosos73/ResumeJournalTest.kt",
+      "scenario": "Failure during journal replacement or process termination between file sync and checkpoint replacement.",
+      "assertion": "The previous checkpoint remains readable and never points beyond durable destination bytes; orphaned pending state is handled on the next attempt.",
+      "status": "Untested crash/failure durability assumption. Static ordering is file sync, pending journal sync, atomic move; no crash defect established."
+    },
+    {
+      "file": "app/src/test/java/com/os73/dosos73/DirectDownloaderTest.kt",
+      "scenario": "A complete checkpoint (offset equals total), a destination shorter than checkpoint offset, and an unknown-length initial transfer interrupted after receiving a strong ETag.",
+      "assertion": "Complete checkpoints trigger origin revalidation via a plain GET; short local files restart; unknown-length responses do not create resumable checkpoints.",
+      "status": "Untested boundary branches; the reviewed implementation explicitly handles each and no defect was established."
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "reviewer_id": "43",
+  "commit": "e625ee7",
+  "scope": [
+    "DirectDownloader.kt redirects, credential forwarding, cleartext downgrade and representation rebinding",
+    "Safety.kt and NetworkSettings.kt production network boundary",
+    "HttpRepresentation.kt, ResumeJournal.kt and ParallelDownloader.kt supporting representation checks",
+    "DirectDownloaderTest.kt, LiteralNetworkBoundaryTest.kt and SecurityReviewTest.kt existing coverage"
+  ],
+  "findings": [],
+  "positive_observations": [
+    "Redirects are manual, bounded to six requests, and each destination is revalidated with Safety.url and requirePublicLiteral. The production client disables automatic redirects and HTTP proxies and validates DNS answers.",
+    "HTTPS-to-HTTP redirects are rejected before following the Location, independently of the opt-in cleartext preference. The production client separately denies initial HTTP requests when the preference is disabled.",
+    "Each redirect constructs a fresh request containing only the fixed user agent, identity encoding and optional range validators. Production client construction supplies no Authorization, Cookie, cookie jar or authenticator. User-info URLs, including user-info in redirect targets, are rejected by Safety.url.",
+    "A resumed 206 must match both the final target URL hash and strong ETag before opening the output, and its range total and endpoints must agree with the durable checkpoint. A full 200 replaces the previous bytes. Parallel ranges likewise bind the final URL and validator."
+  ],
+  "test_gaps": [
+    "Existing source tests do not explicitly cover a cross-origin redirect chain with credentials in Location, followed by an HTTPS-to-HTTP downgrade while cleartext is enabled.",
+    "Existing direct resume tests cover changed validators and source URLs but lack an explicit redirect that changes the final target while reusing the same ETag and matching Content-Range; source inspection shows the target hash rejects that 206 before mutation."
+  ],
+  "runtime_execution": "Read-only static review only. No builds, test execution, devices or publishing. Test-only injected transports were not classified as production security bypasses."
+}

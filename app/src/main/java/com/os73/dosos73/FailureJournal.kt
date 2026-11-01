@@ -16,7 +16,7 @@ internal data class FailedDownload(
     val cancelled: Boolean,
 )
 
-/** Retains retryable failures independently of the current transfer; no output is deleted here. */
+/** Retains retryable failures; cleanup only touches unowned private partials, never saved outputs. */
 internal object FailureJournal {
     private val lock = Mutex()
     private var loaded = false
@@ -58,6 +58,20 @@ internal object FailureJournal {
         mutable.value = entries
     }
 
+    // Failure lock -> queue lock; queue operations never acquire the failure lock.
+    // Load queue ownership before committing eviction so an unreadable queue cannot
+    // remove the only recoverable reference. No suspension separates commit/cleanup.
+    private suspend fun saveAndDiscard(
+        context: Context,
+        entries: List<FailedDownload>,
+        removed: Set<String>,
+    ) {
+        if (removed.isEmpty()) save(context, entries)
+        else DownloadQueue.commitAndDiscardUnownedPartials(context, removed) {
+            save(context, entries)
+        }
+    }
+
     suspend fun initialize(context: Context) =
         withContext(Dispatchers.IO) { lock.withLock { load(context) } }
 
@@ -69,7 +83,9 @@ internal object FailureJournal {
                     (listOf(entry) + mutable.value.filterNot { it.task.id == entry.task.id }).take(
                         100
                     )
-                save(context, next)
+                val retained = next.map { it.task.id }.toSet()
+                val removed = mutable.value.map { it.task.id }.toSet() - retained
+                saveAndDiscard(context, next, removed)
             }
         }
 
@@ -77,12 +93,8 @@ internal object FailureJournal {
         withContext(Dispatchers.IO) {
             lock.withLock {
                 load(context)
-                save(context, mutable.value.filterNot { it.task.id == id })
-                if (
-                    discardPartial &&
-                        !(Transfers.state.value.active && Transfers.currentTask?.id == id)
-                )
-                    TransferFiles.discard(context, id)
+                val next = mutable.value.filterNot { it.task.id == id }
+                saveAndDiscard(context, next, if (discardPartial) setOf(id) else emptySet())
             }
         }
 
@@ -91,11 +103,7 @@ internal object FailureJournal {
             lock.withLock {
                 load(context)
                 val old = mutable.value
-                save(context, emptyList())
-                old.filterNot {
-                        Transfers.state.value.active && Transfers.currentTask?.id == it.task.id
-                    }
-                    .forEach { TransferFiles.discard(context, it.task.id) }
+                saveAndDiscard(context, emptyList(), old.map { it.task.id }.toSet())
             }
         }
 }

@@ -1,0 +1,70 @@
+{
+  "reviewer_id": "01",
+  "scope": [
+    "NativeProcessSession.kt (entire file)",
+    "ProcessLease.kt (entire file)",
+    "EngineRuntime.kt (entire file)",
+    "MediaEngine.kt (entire file)",
+    "ProcessLeaseTest.kt",
+    "NativeCancellationTest.kt",
+    "MainViewModel/DownloadService cancellation call sites",
+    "PythonCommonRuntime initialization interaction"
+  ],
+  "findings": [
+    {
+      "severity": "P2",
+      "file": "app/src/main/java/com/os73/dosos73/NativeProcessSession.kt",
+      "line": 32,
+      "evidence": "Static control-flow finding, not an observed production failure: terminate() guards both kill(-pgid) and destroyForcibly() with process.isAlive. If the Python group leader exits or is killed independently while FFmpeg/another helper remains in its already-established process group, isAlive is false, so cancel()/finally never signal the surviving group; execute() then deletes the only PGID record. The current real cancellation test leaves the parent sleeping for120s and cancels while it is alive, so it cannot detect this case. A surviving helper can keep consuming CPU/storage or retain a pipe after its owning task has ended.",
+      "recommendation": "Track ownership of the established process group independently from leader liveness and reap/terminate that owned group during all terminal paths, with an explicit PID/group-reuse safeguard. Add a controlled native fixture whose leader spawns a sleeping helper, records its PID, exits immediately (or is killed), then assert helper termination, bounded execute/cancel completion and PID-record cleanup. Do not simply send an unverified stale PGID after arbitrary delay."
+    }
+  ],
+  "test_gaps": [
+    "No native regression for an exited group leader with a surviving helper; this is the prerequisite to verify/fix finding01.",
+    "No forced cold-initialization cancellation/retry fixture spanning YoutubeDL.init, shared-file installation and FFmpeg.init. Ready is correctly set only at successful completion, but the wrapper singleton and partial state should be exercised together.",
+    "MediaEngine session admission is a volatile check-then-set at lines31-32, not atomic. Existing inspected callers serialize admission on Main; no current user-facing race was proven. Add atomic admission or an explicit single-thread contract before implementing multiple-active-download execution.",
+    "The PGID record is stored in cacheDir; loss of that record while helpers run currently falls back to killing only the leader. Storage-pressure/record-loss behavior needs a fixture or an ownership record retained independently from evictable cache."
+  ],
+  "positive_observations": [
+    "ProcessLease cancellation is sticky across the start-before-registration window; the two-thread200-round test covers that invariant.",
+    "Per-invocation UUID, structured argv, authenticated per-session proxy and a suspended cancellation guard avoid a shared process map and permanent polling worker.",
+    "EngineRuntime initialization is synchronized and marks ready only after all initializers succeed; cancellation before process execution remains checked by the session lease."
+  ],
+  "runtime_execution": "No emulator/native fixture was started by this reviewer. Conclusions distinguish source-proven conditional behavior from missing device evidence.",
+  "implementation": {
+    "status": "implemented, awaiting parent build/device validation",
+    "files_changed": [
+      "app/src/main/java/com/os73/dosos73/NativeProcessSession.kt",
+      "app/src/androidTest/java/com/os73/dosos73/NativeCancellationTest.kt"
+    ],
+    "process_lease_changed": false,
+    "mechanism": [
+      "Per-session in-memory HMAC key authenticates bootstrap PID/starttime/UUID record; the key is removed from the inherited environment before loading yt-dlp.",
+      "Original live/unreaped leader ownership is checked using authenticated starttime, UID, PGID and SID without requiring environ access.",
+      "When the leader has disappeared, a bounded lazy /proc scan requires the inherited session UUID on a member of that exact PGID/SID with a compatible starttime.",
+      "A short cross-process fcntl/FileChannel lock in noBackupFilesDir serializes all NativeProcessSession setsid creation against identity verification and group signaling.",
+      "UI-thread cancellation dispatches cleanup to existing Dispatchers.IO; no dedicated monitoring process/thread was introduced.",
+      "Nonblocking tryLock retries on IO are limited to2s; /proc enumeration is limited to200ms/2048 entries. An unverified or unavailable identity never authorizes a numeric PGID signal."
+    ],
+    "tests_added": [
+      "exitedLeaderCannotLeaveAHelperHoldingItsOutputPipe",
+      "mainThreadCancellationNeverWaitsForTheGroupCreationGate",
+      "aRecordNamingAnotherLiveGroupCannotKillThatSession"
+    ],
+    "verification_done": [
+      "Python bootstrap and all embedded fixtures parsed using ast.parse",
+      "git diff --check passed"
+    ],
+    "verification_not_done": [
+      "No Gradle build",
+      "No Android emulator execution",
+      "No release/native ABI matrix"
+    ],
+    "remaining_limits": [
+      "If Android denies helper environ access after the leader is gone, group cleanup fails closed, retains its record and records native_cleanup_unverified.",
+      "The creation gate coordinates all current NativeProcessSession groups, not unrelated/future code creating process groups outside that protocol.",
+      "Prolonged gate contention or proof/scan budget exhaustion can leave a helper; the owned Process is stopped but no unverified group is killed.",
+      "The PGID metadata remains in cacheDir; cache eviction while helpers survive is still a fail-closed limitation. The protocol lock itself is in noBackupFilesDir."
+    ]
+  }
+}

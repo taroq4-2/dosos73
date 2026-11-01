@@ -1,0 +1,67 @@
+{
+  "reviewer_id": 39,
+  "role": "URL parsing, literal address guards, and mixed Arabic/share extraction",
+  "scope": {
+    "method": "Read-only static review; no builds, tests, emulator, device, or network requests were run. Findings are demonstrated by exact string/control-flow traces.",
+    "files_read": [
+      "app/src/main/java/com/os73/dosos73/Safety.kt",
+      "app/src/main/java/com/os73/dosos73/DirectDownloader.kt",
+      "app/src/main/java/com/os73/dosos73/PublicProxy.kt",
+      "app/src/main/java/com/os73/dosos73/NetworkSettings.kt",
+      "app/src/main/java/com/os73/dosos73/MainActivity.kt",
+      "app/src/test/java/com/os73/dosos73/SafetyTest.kt"
+    ],
+    "additional_sections_read": [
+      "MainViewModel.kt:182-261,353-395",
+      "MediaEngine.kt:14-105,196-239",
+      "AdvancedScreens.kt:44-53"
+    ]
+  },
+  "findings": [
+    {
+      "id": "R39-01",
+      "severity": "P2",
+      "title": "Closing prose punctuation is included in shared URL",
+      "certainty": "Confirmed by regex and downstream string flow; not device-reproduced",
+      "file": "app/src/main/java/com/os73/dosos73/Safety.kt",
+      "line": 20,
+      "end_line": 22,
+      "evidence": "The regex terminates only at whitespace, angle brackets, or a double quote. For the ordinary mixed Arabic share text 'شاهد (https://www.youtube.com/watch?v=abc123)' it extracts 'https://www.youtube.com/watch?v=abc123)' instead of the enclosed link. URI accepts the closing parenthesis as query content, so url() preserves it. An Arabic sentence comma similarly produces 'https://example.com/video.mp4%D8%8C' from 'شاهد https://example.com/video.mp4،' because the comma is captured and toASCIIString percent-encodes it. MainViewModel.receive forwards that modified URL through edit() and analyze(); there is no later prose punctuation removal. This changes the requested video ID or file path and causes a valid shared link to fail or address a different resource.",
+      "reproduction": [
+        "Share or paste the text: شاهد (https://www.youtube.com/watch?v=abc123)",
+        "Safety.shared returns https://www.youtube.com/watch?v=abc123) with the prose closing parenthesis in the query.",
+        "Alternatively share: شاهد https://example.com/video.mp4، ; the Arabic comma becomes part of the requested path rather than a sentence delimiter."
+      ],
+      "recommendation": "Use a shared-link tokenizer that handles paired enclosing punctuation and Arabic prose delimiters. Remove only unmatched closing delimiters/prose punctuation after extraction while preserving deliberately balanced or encoded characters within a URL, and cover these share forms in SafetyTest."
+    },
+    {
+      "id": "R39-02",
+      "severity": "P2",
+      "title": "Accepted uppercase HTTPS schemes fail media extraction",
+      "certainty": "Confirmed by acceptance and downstream case-sensitive requirement; not device-reproduced",
+      "file": "app/src/main/java/com/os73/dosos73/MediaEngine.kt",
+      "line": 55,
+      "evidence": "Safety.shared matches schemes case-insensitively, Safety.url validates u.scheme.lowercase(), but returns u.toASCIIString() without normalizing the original scheme spelling. Thus 'HTTPS://www.youtube.com/watch?v=abc123' remains uppercase through receive(), analyze(), and analyzeSource(). NetworkSettings.requireSource allows it case-insensitively and OkHttp parses it, but when direct analysis sees a normal HTML response and returns null, MediaEngine.request rejects it with the case-sensitive startsWith(\"https://\") requirement. MainViewModel.kt:198 also incorrectly declines the HTTPS extractor fallback on a direct IOException for this same input. A lowercase equivalent enters extraction normally.",
+      "reproduction": [
+        "Paste or share a webpage/media-platform URL with scheme spelling HTTPS:// rather than https://.",
+        "Observe that Safety.shared and Safety.url accept the URL and retain the uppercase scheme.",
+        "For an HTML response DirectDownloader.analyze returns null; MediaEngine.request then throws before invoking the extractor because startsWith(\"https://\") is false."
+      ],
+      "recommendation": "Normalize the scheme in the canonical accepted URL, or compare the parsed scheme case-insensitively at MediaEngine.request and MainViewModel's fallback gate. Add coverage proving uppercase/mixed-case HTTPS follows the same media extraction path as lowercase."
+    }
+  ],
+  "guard_review": {
+    "result": "No transport bypass established in reviewed paths.",
+    "evidence": [
+      "Safety.url is a syntax check; its acceptance of an address alone was not treated as proof of a network-policy bypass.",
+      "DirectDownloader.request checks the actual OkHttp-canonicalized request.url.host with requirePublicLiteral at line 51, and secureClient checks it again in the interceptor at line 301.",
+      "The production NetworkSettings.client DNS resolver validates every returned InetAddress with Safety.checkedAddresses; the client also disables system proxy routing and automatic redirects.",
+      "PublicProxy validates CONNECT authority and port, checks all resolver results at line 87, and connects to the selected checked InetAddress directly at line 129, avoiding a second hostname resolution.",
+      "Literal guards reject abbreviated/integer/leading-zero IPv4 and scoped IPv6; publicAddress applies the IPv4 policy to the supported NAT64 prefix and rejects private/site-local/link-local/loopback, multicast, documentation, and listed transition ranges."
+    ]
+  },
+  "test_gaps": [
+    "SafetyTest covers Arabic prefix text separated from a link by whitespace, but not Arabic sentence punctuation, parenthesized links, or mixed-case schemes through extractor fallback.",
+    "No source changes or build/device/test runs were performed by this reviewer."
+  ]
+}

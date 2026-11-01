@@ -1,0 +1,26 @@
+{
+  "reviewer_id": "31",
+  "scope": {
+    "revision": "b89b957",
+    "files": [
+      "app/src/main/AndroidManifest.xml",
+      "app/src/main/res/xml/data_extraction_rules.xml",
+      "app/src/main/java/com/os73/dosos73/DososApp.kt",
+      "app/src/main/java/com/os73/dosos73/MainActivity.kt (intent handling only)"
+    ],
+    "topics": [
+      "exported components",
+      "grants",
+      "backup",
+      "URI permissions",
+      "least privilege"
+    ]
+  },
+  "findings": [],
+  "test_gaps": [
+    "Static review only; no build, emulator, deployment, or runtime intent/backup tests performed.",
+    "MainActivity forwards ACTION_SEND text/plain EXTRA_TEXT to model.receive; downstream parsing, explicit user confirmation, and network cleartext guards are outside the permitted scope and were not assessed.",
+    "Manifest exports only the launcher/share activity; the dataSync service is non-exported and no provider, URI-grant capability, storage permission, or broad package visibility is declared. Runtime need for each declared network/notification/foreground-service permission was not verified.",
+    "allowBackup=false and both cloud-backup/device-transfer rules exclude all listed ordinary app-data domains; actual platform/OEM backup behavior was not exercised."
+  ]
+}

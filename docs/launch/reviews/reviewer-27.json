@@ -1,0 +1,33 @@
+{
+  "reviewer": 27,
+  "commit": "b89b957",
+  "scope": [
+    "app/build.gradle.kts",
+    "app/src/main/AndroidManifest.xml",
+    "docs/VERIFICATION.md",
+    ".github/workflows/android.yml"
+  ],
+  "findings": [
+    {
+      "id": "R27-01",
+      "priority": "P2",
+      "title": "Verification document describes RC5 rather than the current release",
+      "file": "docs/VERIFICATION.md",
+      "line_start": 3,
+      "line_end": 11,
+      "evidence": "VERIFICATION.md identifies fe09629 and says subsequent commits only change documentation/screenshots, then binds the APK hash, certificate and acceptance results to 1.2.0-rc.5 / 11. app/build.gradle.kts:15-16 now builds 1.2.0 / 12.",
+      "impact": "The documented exact-artifact signature and same-certificate update acceptance do not establish those properties for the current release. A release reviewer cannot use the RC5 hash as validation of the version-12 APK.",
+      "recommendation": "Retain RC5 as explicitly historical evidence and add current release metadata/hash/certificate and a same-certificate update receipt tied to the final version-12 artifact."
+    }
+  ],
+  "signing_certificate_evidence": {
+    "classification": "not_verified_separate_from_defects",
+    "detail": "No signing key or actual APK certificate was read. The document supplies a certificate fingerprint for RC5, which is a claim, not independent verification of the current APK. Gradle only configures production signing when DOSOS73_KEYSTORE is supplied; CI has no such environment setup and uses an ephemeral test key for debug device tests. This does not prove that a real production certificate is absent outside these files."
+  },
+  "observations": [
+    "No debuggable=true or test fault provider is declared in the main manifest; debug tooling/test manifest dependencies use debugImplementation. Final merged release-manifest absence is not proven by this scoped static read.",
+    "Release minification and resource shrinking are enabled. applicationId remains com.os73.dosos73 and versionCode 12 exceeds the documented RC5 code 11.",
+    "CI runtime matrix installs repackaged debug builds, while VERIFICATION.md explicitly treats signed release acceptance as separate. No claim that the CI matrix itself verifies release signing was inferred."
+  ],
+  "actions": "Static read only; no repository modifications, build, emulator, publication or key access."
+}

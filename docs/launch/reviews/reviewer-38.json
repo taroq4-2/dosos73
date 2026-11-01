@@ -1,0 +1,30 @@
+{
+  "reviewer_id": "38",
+  "scope": [
+    "StreamIntegrity.kt",
+    "FileDigest.kt",
+    "FileDetailsContent.kt",
+    "StreamIntegrityTest.kt",
+    "FileDigestUiTest.kt",
+    "AppRoot.kt details-dialog integration"
+  ],
+  "findings": [],
+  "positive_observations": [
+    "Fingerprinting retains one 64 KiB buffer, one fixed-size SHA-256 state and a Long byte counter; no whole-file accumulation occurs. Math.addExact rejects overflow.",
+    "FileDigest computes from the content URI stream on Dispatchers.IO with runInterruptible. Its concurrently suspended cleanup child cancels the provider CancellationSignal and closes a registered stream when the scope is cancelled; the post-registration interrupt check covers cancellation before stream registration.",
+    "Both asset descriptor and input stream have structured use blocks. The result reports observed bytes rather than trusting library metadata.",
+    "Hash calculation starts only from the explicit button. A running calculation exposes cancellation, and rememberCoroutineScope is cancelled when the details dialog leaves composition.",
+    "Expected fingerprints accept exactly 64 hexadecimal characters after trim and locale-independent normalization. Digest text explicitly uses left-to-right direction."
+  ],
+  "test_gaps": [
+    "Existing hash UI coverage checks only a three-byte successful stream and expected-hash comparison. It does not exercise cancellation during descriptor open, cancellation during a blocked read, close-on-cancel, dialog dismissal while hashing, or reopening and recalculating after cancellation. These are coverage gaps, not proven defects.",
+    "No bounded-memory large-file/unknown-size or non-zero asset-offset fixture is present in the inspected hash tests.",
+    "StreamIntegrity only observes thread interruption. Its OutputStore callers use ordinary withContext rather than runInterruptible; the resulting publication cancellation defect is already covered by reviewer-37 and is not duplicated here."
+  ],
+  "validation": {
+    "method": "Read-only source and call-site inspection",
+    "builds_or_device_runs": "none",
+    "source_edits": "none",
+    "conclusion": "No additional proven defect in the scoped on-demand hashing path."
+  }
+}

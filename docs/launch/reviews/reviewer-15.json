@@ -1,0 +1,19 @@
+{
+  "reviewer_id": "15",
+  "scope": "Baseline b89b957: BatchDraft.kt, BatchInput (AdvancedScreens.kt), MainViewModel draft restoration/persistence and equivalent batch-to-queue path AppRoot.kt:462-480. queueBatch/markBatchQueued do not exist at this baseline. Read-only review; no build, emulator or deployment.",
+  "findings": [
+    {
+      "severity": "P1",
+      "file": "app/src/main/java/com/os73/dosos73/AppRoot.kt",
+      "line": 480,
+      "evidence": "The batch callback durably enqueues a newly constructed DownloadTask at lines 472-479, then calls removeBatch(entry) at line 480. MainViewModel.removeBatch (234-236) only updates memory and sends an asynchronous draft write; draft.write runs at line 60 and failures wait for explicit retry (65,71-76). If the process dies after enqueue commits but before that draft write commits, or the draft write fails and the process subsequently dies, waiting-tasks.json contains the accepted task while batch-review.json still contains the selected analyzed row. Restoring that row and pressing Queue again constructs another task with a fresh UUID (Models.kt:43); DownloadQueue.enqueue deduplicates only by task.id (DownloadQueue.kt:69), so the accepted download is duplicated. BatchDraft stores no handoff identity or receipt to reconcile the two durable files.",
+      "recommendation": "Make the draft-to-queue handoff recoverable: persist a stable transfer identity and a pending handoff/outbox state before queue insertion, enqueue idempotently using that identity, and reconcile an enduring queue acceptance/completion receipt before removing the draft row. Ensure failure and restart at every boundary preserve exactly one accepted task; simply waiting for the asynchronous draft write does not close the process-death window."
+    }
+  ],
+  "test_gaps": [
+    "BatchDraftTest covers fresh-reader round-trip and corruption preservation, but never exercises the AppRoot/ViewModel-to-DownloadQueue handoff.",
+    "Add deterministic fault injection for process death after queue commit and before draft-removal commit, plus draft.write failure after successful enqueue followed by a fresh process and resubmission; assert exactly one accepted transfer.",
+    "Cover a partial batch enqueue failure: accepted prefix must not be enqueued twice after restart, while unaccepted rows remain available.",
+    "Test restart/retry after a failed draft save and conflated subsequent revisions so persisted rows reflect the latest acknowledged review state."
+  ]
+}

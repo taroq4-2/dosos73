@@ -1,0 +1,61 @@
+{
+  "reviewer_id": 42,
+  "role": "IPv6, translated addresses, DNS rebinding and secure transport invocation",
+  "source_revision": "e625ee73e7a3d85abe502485c46faeb08b85090c",
+  "method": "Read-only static source and test review. No build, tests, device, emulator, DNS lookup or network request was run. Existing test assertions were inspected, not executed.",
+  "findings": [],
+  "result": "No proven bypass established in the assigned address-validation and transport paths.",
+  "files_read": [
+    "app/src/main/java/com/os73/dosos73/Safety.kt",
+    "app/src/main/java/com/os73/dosos73/NetworkSettings.kt",
+    "app/src/main/java/com/os73/dosos73/PublicProxy.kt",
+    "app/src/main/java/com/os73/dosos73/MediaEngine.kt",
+    "app/src/main/java/com/os73/dosos73/NativeProcessSession.kt",
+    "app/src/test/java/com/os73/dosos73/SafetyTest.kt",
+    "app/src/test/java/com/os73/dosos73/SecurityReviewTest.kt",
+    "app/src/test/java/com/os73/dosos73/PublicProxyTest.kt",
+    "app/src/androidTest/java/com/os73/dosos73/ProxyTransportTest.kt",
+    "app/src/androidTest/java/com/os73/dosos73/NativeTransportComparisonTest.kt",
+    "docs/ARCHITECTURE.md"
+  ],
+  "sections_read": [
+    "DirectDownloader.kt:1-74,261-317"
+  ],
+  "evidence": [
+    {
+      "file": "app/src/main/java/com/os73/dosos73/Safety.kt",
+      "lines": "31-65,74-99",
+      "observation": "publicAddress rejects Java any-local, loopback, link-local, site-local and multicast addresses before byte classification. IPv6 outside 2000::/3 is rejected except the explicit 64:ff9b::/96 branch, which recursively applies the IPv4 policy to the final four bytes. Scoped IPv6 is rejected. The explicit transition/documentation exclusions include Teredo, 6to4, 2001:db8::/32, 2001:2::/48, 2001:10::/28 and 3fff::/20. A mapped address normalized to Inet4Address receives the IPv4 policy; a mapped address retained as 16 bytes fails the IPv6 2000::/3 requirement. Literal validation runs on the canonical host and rejects percent-scoped IPv6 plus ambiguous numeric IPv4 forms."
+    },
+    {
+      "file": "app/src/main/java/com/os73/dosos73/DirectDownloader.kt",
+      "lines": "35-63,292-315",
+      "observation": "Every request/redirect passes Safety.url and the canonical OkHttp request.url.host literal guard before newCall. secureClient independently applies the literal guard in its application interceptor, installs Safety.resolve as DNS, forces Proxy.NO_PROXY, and disables automatic redirects. DNS returns the checked InetAddress list to OkHttp rather than prechecking and then passing the hostname to an independent connection API."
+    },
+    {
+      "file": "app/src/main/java/com/os73/dosos73/NetworkSettings.kt",
+      "lines": "56-69",
+      "observation": "Production network-bound clients derive from secureClient, retain its proxy/literal/redirect guards, and replace DNS with network.getAllByName followed by Safety.checkedAddresses on the entire answer. The paired network socketFactory is retained. Source call sites select this client in MainViewModel.kt:184 and DownloadService.kt:225; ParallelDownloader.kt:22 passes the supplied client to both direct workers."
+    },
+    {
+      "file": "app/src/main/java/com/os73/dosos73/PublicProxy.kt",
+      "lines": "82-88,117-137",
+      "observation": "Authenticated CONNECT authority is restricted to port 443 with no credentials/path/query/fragment. All resolver answers are checked before any connection. connectPublic uses InetSocketAddress(address,443) with a checked InetAddress, so it does not perform a second hostname resolution during connection. A changed/private answer on a subsequent tunnel is checked again."
+    },
+    {
+      "file": "app/src/main/java/com/os73/dosos73/MediaEngine.kt",
+      "lines": "14-26,58-79,87-98,129-150",
+      "observation": "Both native analysis and download create a PublicProxy using the selected Android network's resolver/socketFactory, attach it to the process session, and include --proxy with its authenticated URL in the request invocation. Initial native source URLs require HTTPS. NativeProcessSession.kt:195-209 removes inherited proxy bypass environment variables including no_proxy."
+    },
+    {
+      "file": "app/src/test/java/com/os73/dosos73/PublicProxyTest.kt",
+      "lines": "87-112",
+      "observation": "Existing deterministic regression source models public then loopback DNS answers, records connection endpoints without contacting the target network, and asserts two resolutions but only one resolved public-IP connection. SecurityReviewTest.kt:19-37 covers empty/mixed/private DNS lists, mapped private IPv4, NAT64 private IPv4 and listed IPv6 exclusions. These tests were not executed in this review."
+    }
+  ],
+  "limitations": [
+    "This review does not establish device-specific InetAddress behavior, physical network transitions, or live IPv6/NAT64 reachability.",
+    "The explicit special-address exclusions were inspected for the assigned private/mapped/NAT64/site-local cases; this is not certification of every current or future IPv6 special-purpose allocation or network-specific translation prefix.",
+    "Presence of a CONNECT proxy option is source evidence of invocation, not proof that every native helper/protocol honors it. Full helper/protocol isolation remains explicitly unverified in docs/ARCHITECTURE.md:13."
+  ]
+}

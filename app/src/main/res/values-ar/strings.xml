@@ -202,5 +202,16 @@
     <string name="allow_cleartext">السماح بروابط HTTP غير المشفّرة</string>
     <string name="allow_cleartext_hint">معطّل افتراضيًا. فعّله فقط لملفات عامة تثق بها؛ يمكن قراءة نقل HTTP أو تغييره في الطريق. يبقى تحويل HTTPS إلى HTTP ممنوعًا.</string>
     <string name="error_cleartext_disabled">يستخدم الرابط HTTP غير المشفّر. استخدم HTTPS أو فعّل السماح بروابط HTTP صراحةً من سياسة الشبكة.</string>
+
+    <string name="sha256_title">بصمة الملف · SHA-256</string>
+    <string name="sha256_hint">تُحسب من الملف المحفوظ عند طلبك. قد تستغرق الملفات الكبيرة وقتًا.</string>
+    <string name="calculate_sha256">حساب SHA-256</string>
+    <string name="sha256_failed">تعذرت قراءة الملف. تحقق من صلاحية الوصول وأعد المحاولة.</string>
+    <string name="copy_sha256">نسخ البصمة</string>
+    <string name="sha256_copied">نُسخت البصمة</string>
+    <string name="expected_sha256">البصمة المتوقعة (اختياري)</string>
+    <string name="sha256_invalid">أدخل 64 محرفًا بالنظام الست عشري.</string>
+    <string name="sha256_matches">البصمتان متطابقتان.</string>
+    <string name="sha256_differs">البصمتان مختلفتان.</string>
 </resources>
 

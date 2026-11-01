@@ -1,9 +1,7 @@
-# Screenshot provenance
+# Actual release screenshots
 
-| Files | Source |
-|---|---|
-| home-ar.png, home-en.png, files-ar.png, downloads-ar.png, media-library-ar.png, settings-ar.png | Final signed universal RC5, versionCode11, Android15/API35 x86_64,1080×2400 emulator. Real W3C trailer and YouTube720p/2160p/MP3 downloads. No invented transfer entries. |
-| charter-task-timeline-ar.png | API35 instrumentation build from the earlier RC4 source increment. Real successful fixture and controlled failures, not a production failure-rate sample. |
-| charter-batch-ar.png, charter-privacy-ar.png | Earlier charter instrumentation build. Feature illustrations, not captures of the final signed RC5 APK. |
+These unedited device captures show the signed1.2.0 universal APK, SHA-256 `278c1cdeb6c65ad18180ddeef1fa39f9b024bede0109c6ee1ed78132dcf5402a`, app source `72783e39d2704f18722a91040443a51f88adb245`.
 
-Screenshots are unedited application captures. The repository banner reuses the vector brand mark; the owner-provided reference remains in branding/neon-reference.png. Arabic and English captures were reviewed. Landscape and200% text were checked separately; font/orientation were restored afterward.
+Home Arabic/English, Settings, Downloads, Files and playback were captured on a clean Android15/API35 x86_64 emulator during real YouTube720p, MP3 and direct-file acceptance. The file rows refer to actual saved media; no synthetic progress or sample inventory was injected. The200% font capture uses the same signed APK on the update profile. The original captures and their hashes are listed in manifest.json. Images are shown scaled by the README renderer; pixels were not edited to simulate behavior.
+
+[Release verification](../docs/VERIFICATION.md)

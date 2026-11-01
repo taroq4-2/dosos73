@@ -1,0 +1,32 @@
+{
+  "reviewer_id": "29",
+  "scope": {
+    "baseline": "b89b957",
+    "focus": "Reflection, R8, ZipExtraField preservation, and debug/release verification",
+    "files": [
+      "app/proguard-rules.pro",
+      "app/src/main/java/com/os73/dosos73/EngineRuntime.kt",
+      "app/src/main/java/com/os73/dosos73/MediaEngine.kt",
+      "app/src/androidTest/java/com/os73/dosos73/RuntimeInventoryTest.kt"
+    ],
+    "method": "Read baseline contents using git show only; no build, emulator, publication, or application changes",
+    "assessment": "No proven defect in the allowed files. The ZipExtraField keep rule retains implementing classes and every member, including public no-argument constructors. Metadata uses org.json directly. Debug execution alone does not establish optimized release correctness."
+  },
+  "findings": [],
+  "test_gaps": [
+    {
+      "id": "29-G1",
+      "file": "app/src/androidTest/java/com/os73/dosos73/RuntimeInventoryTest.kt",
+      "lines": "10-15",
+      "gap": "The test invokes EngineRuntime.initialize on the selected target application but contains no assertion or recorded evidence that this target is the optimized release artifact. No supplied result establishes that R8 output preserves reflective ZIP field registration.",
+      "required_validation": "Execute and record this acceptance test against the actual minified release artifact, including artifact identity and build variant; a passing debug run is insufficient."
+    },
+    {
+      "id": "29-G2",
+      "file": "app/src/androidTest/java/com/os73/dosos73/RuntimeInventoryTest.kt",
+      "lines": "12-15,43-44",
+      "gap": "Initialization runs against existing installed engine/runtime files, explicitly described that way in the report. The test does not reset extraction state. A warm installation may avoid the native runtime extraction path whose ZIP extra-field constructors must survive R8.",
+      "required_validation": "On a fresh optimized release installation with no extracted runtime files, initialize and execute Python, yt-dlp/EJS, QuickJS and FFmpeg; retain the cold-run evidence separately from a warm run."
+    }
+  ]
+}

@@ -1,0 +1,65 @@
+{
+  "reviewer_id": 3,
+  "role": "Queue durability, service actions, interruption recovery and private journals",
+  "scope": {
+    "application_commit_reviewed": "b89b957 (application code fe09629)",
+    "files_read_complete": [
+      "DownloadQueue.kt",
+      "DownloadService.kt",
+      "TransferProcessor.kt",
+      "Models.kt",
+      "PrivateJournal.kt",
+      "FailureJournal.kt",
+      "PublicationReceipt.kt",
+      "OutputStore.kt",
+      "DososApp.kt",
+      "ServiceQueueTest.kt",
+      "LibraryQueueTest.kt",
+      "PrivateJournalTest.kt",
+      "ConcurrentJournalTest.kt",
+      "PublicationRecoveryTest.kt",
+      "OutputSafetyTest.kt"
+    ],
+    "additional_read": "AppRoot startup/enqueue/download-action wiring and AppUi TransferCard action section",
+    "method": "Read-only static control-flow review. No emulator, source modifications, publication or test execution."
+  },
+  "findings": [
+    {
+      "id": "R03-01",
+      "severity": "P1",
+      "certainty": "confirmed by control flow, not device-reproduced in this review",
+      "file": "app/src/main/java/com/os73/dosos73/DownloadService.kt",
+      "line": 55,
+      "evidence": "A direct lease with userPaused=true survives process death. AppRoot.kt104-113 restores Transfers.currentTask and Phase.PAUSED without starting a service. TransferCard routes Resume to onPause, then command(\"pause\"). In the newly constructed service paused starts false and job is null. The first branch at55 is selected solely from currentTask.direct and Phase.PAUSED; next=!paused.value becomes true, saves paused=true and returns at87 without starting the transfer job. The cold-service recovery branch76 is unreachable for this scenario.",
+      "reproduction": [
+        "Pause an active direct download",
+        "Kill application process without clearing data",
+        "Reopen app and observe recovered paused item",
+        "Press Resume; item remains paused and no transfer job is created"
+      ],
+      "recommendation": "Handle a cold service/job-null resume before the live-job pause-toggle branch. Unpause the durable active lease, retain its identity and partial file, then enter the ordinary foreground execution path. Do not infer the persisted pause state from a new service-local false value."
+    },
+    {
+      "id": "R03-02",
+      "severity": "P1",
+      "certainty": "confirmed by control flow, not device-reproduced in this review",
+      "file": "app/src/main/java/com/os73/dosos73/DownloadService.kt",
+      "line": 48,
+      "evidence": "In the same restored-paused state, Cancel starts a new service with job=null. The cancel branch sets flags, invokes cancelTransfer (which only cancels clients/job), and stops itself. TransferProcessor.run never executes, so its finally block cannot record cancellation, finish the durable lease, discard the task-owned temporary files or update Transfers. The UI remains PAUSED and the durable lease remains userPaused=true despite Cancel.",
+      "reproduction": [
+        "Create a paused direct active lease",
+        "Kill and reopen the process",
+        "Press Cancel on the restored paused card while no DownloadService job exists",
+        "Inspect active lease and UI; they are not acknowledged/cancelled by the branch"
+      ],
+      "recommendation": "Implement durable cancellation for a cold/job-null service: identify only the active task, record the cancelled failure or chosen terminal state, finish that exact lease, discard only its owned partial data, update Transfers and stop. Keep queued tasks untouched. Ensure journal failures preserve recoverable ownership rather than silently dropping it."
+    }
+  ],
+  "test_gaps": [
+    "Existing ServiceQueueTest covers a failed active task and waiting-task preservation, but does not cover Resume or Cancel after process death with an already paused durable lease.",
+    "Existing queue tests assert paused leases block take/hasRunnable, but do not execute the UI-to-service cold action handlers.",
+    "No interruption-injection test was run here for journal acknowledgement failure after a destination has already been published; test that retry recovers the same receipt without duplicate publication.",
+    "Network waiting and a live direct pause currently keep the foreground service resident: startForeground occurs before awaitPermitted / paused.first. Consider OS-managed deferral for lightweight idle behavior; no battery or quota outcome was measured in this review.",
+    "No real manufacturer power-saving, reboot/force-stop or long-duration device behavior was tested by this reviewer."
+  ]
+}

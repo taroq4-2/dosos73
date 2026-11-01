@@ -1,0 +1,42 @@
+{
+  "reviewer_id": "reviewer-33",
+  "scope": [
+    "MainActivity.kt: activity recreation and shared intent delivery",
+    "AppRoot.kt: dialog/input state and persistent folder grant handoff",
+    "FileDetailsContent.kt: hash input and cancellation lifecycle",
+    "RotationStateTest.kt: coverage of recreation"
+  ],
+  "findings": [
+    {
+      "id": "R33-1",
+      "severity": "P2",
+      "title": "تدوير الجهاز يغلق حوار إعادة التسمية ويفقد النص المدخل",
+      "file": "app/src/main/java/com/os73/dosos73/AppRoot.kt",
+      "line_start": 72,
+      "line_end": 74,
+      "condition": "افتح إجراء إعادة تسمية ملف أو تعيين مجموعة، غيّر النص في rename_input، ثم دوّر الجهاز أو غيّر اللغة لإعادة إنشاء MainActivity.",
+      "evidence": "fileAction وrenamed محفوظان عبر remember فقط. لا يعلن النشاط configChanges في AndroidManifest.xml:14، لذلك تُنشأ التركيبة من جديد ويعود fileAction=null وrenamed إلى نص فارغ. حوار التفاصيل كذلك يعتمد على fileAction؛ وبداخله digest/expected في FileDetailsContent.kt:29-34 محفوظان عبر remember فقط.",
+      "impact": "تختفي المهمة الجارية ويفقد المستخدم النص الذي لم يؤكده؛ وفي حوار البصمة يختفي أيضاً ناتج الحساب والنص المتوقع بعد إعادة الإنشاء.",
+      "recommendation": "احفظ هوية الملف ونوع الإجراء والنص المدخل في حالة قابلة للاستعادة، واستعد حوار التفاصيل ومدخل البصمة من هذه الحالة."
+    },
+    {
+      "id": "R33-2",
+      "severity": "P2",
+      "title": "استعادة النشاط بعد إنهاء العملية تفقد رابط الصفحة الرئيسية والرابط المشترك المعلق",
+      "file": "app/src/main/java/com/os73/dosos73/MainActivity.kt",
+      "line_start": 45,
+      "line_end": 46,
+      "condition": "اكتب رابطاً في الصفحة الرئيسية، أو اترك رابط مشاركة في pendingShared، ضع التطبيق في الخلفية ثم دع النظام ينهي العملية واستعده من المهام الأخيرة.",
+      "evidence": "onCreate يتجاوز receive عندما savedInstanceState غير فارغ. MainViewModel.kt:21-23 ينشئ ScreenState فارغة دون SavedStateHandle أو استعادة لمسودة الرابط؛ url وpendingShared موجودان فقط في MutableStateFlow داخل الذاكرة. receive يزيل EXTRA_TEXT أيضاً في MainActivity.kt:58. ViewModel يبقى أثناء الدوران لكنه لا يبقى بعد إنهاء العملية.",
+      "impact": "النشاط المستعاد يعرض رابطاً فارغاً أو يفقد الرابط المشترك المؤجل، رغم بقاء حالة التنقل المستعادة. RotationStateTest يغطي تغيّر الاتجاه داخل العملية فقط.",
+      "recommendation": "احفظ url وpendingShared في SavedStateHandle أو حالة مسودة دائمة، مع علامة لمعالجة المشاركة مرة واحدة."
+    }
+  ],
+  "test_gaps": [
+    "لم تُشغّل اختبارات أو بناء أو محاكٍ؛ هذه مراجعة ساكنة فقط.",
+    "RotationStateTest.kt:17-19 يتحقق من landscape ومحتوى url فقط؛ لا يثبت تبدّل كائن النشاط، ويمكن ألا تحدث إعادة إنشاء إذا كانت البداية أفقية. يلزم اختبار recreate صريح لحوارات rename/collection/info ولـ expected_hash.",
+    "لا يغطي الاختبار استعادة عملية جديدة مع savedInstanceState ورابط مكتوب أو مشاركة معلقة.",
+    "FileDigestUiTest يغطي حساب ملف صغير والمقارنة، ولا يغطي إلغاء حساب بطيء أو إغلاق الحوار أو التدوير أثناء الحساب. لم يثبت عيب إلغاء من الكود: CoroutineScope مرتبط بالتركيبة وFileDigest يستخدم CancellationSignal وإغلاق stream وrunInterruptible.",
+    "التقاط إذن المجلد يستخدم takePersistableUriPermission، وpendingBatchDestination محفوظ عبر rememberSaveable؛ OutputStore.preflight يفحص الكتابة. لا توجد هنا حالة اختبار لعودة picker بعد إعادة الإنشاء أو سحب الإذن قبل التشغيل. لم يُسجل عيب صلاحيات مستقل دون دليل إضافي."
+  ]
+}

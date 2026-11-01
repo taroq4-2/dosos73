@@ -1,0 +1,66 @@
+{
+  "reviewer_id": "reviewer-13",
+  "scope": {
+    "baseline": "b89b957",
+    "repository": "[workspace]/outputs/dosos73",
+    "files": [
+      "app/src/main/res/values/strings.xml",
+      "app/src/main/res/values-ar/strings.xml",
+      "README-ar.md",
+      "docs/REMAINING_REQUIREMENTS.md",
+      "app/src/main/java/com/os73/dosos73/NeonTheme.kt"
+    ],
+    "mode": "Read-only static review. No source edits, build, emulator, or publication.",
+    "checks": [
+      "All five files decode with strict UTF-8 (throwOnInvalidBytes=true); no U+FFFD replacement characters.",
+      "Both string resource files parse as XML and contain 203 unique string names, with no missing or duplicate translations.",
+      "All five formatted resources have identical indexed placeholder signatures across locales: speed_value, transfer_amount, file_size_value, delete_confirmation, timeline_task.",
+      "Neither locale defines plurals; no dynamic quantity resource requiring Arabic plural forms was found in the scoped files.",
+      "Error resource pairs retain matching error conditions and recovery guidance. PipelineException maps to resource IDs.",
+      "NeonTheme contains no hardcoded user-facing messages; fixed BACK geometry is currently unused by callers, so no active RTL defect is asserted.",
+      "Scoped files match baseline b89b957."
+    ]
+  },
+  "findings": [
+    {
+      "id": "R13-001",
+      "priority": "P3",
+      "title": "Remove proven foreign Unicode characters from the Arabic RC5 review paragraph",
+      "file": "docs/REMAINING_REQUIREMENTS.md",
+      "line_start": 39,
+      "line_end": 39,
+      "evidence": [
+        {
+          "column_1_based": 183,
+          "codepoint": "U+0261 LATIN SMALL LETTER SCRIPT G",
+          "excerpt": "باختبارات مضبوطɡ وأضيف"
+        },
+        {
+          "column_1_based": 225,
+          "codepoint": "U+0261 LATIN SMALL LETTER SCRIPT G",
+          "excerpt": "لملفات السجل الخاصɡ وصار"
+        },
+        {
+          "column_1_based": 315,
+          "codepoint": "U+02A1 LATIN LETTER GLOTTAL STOP WITH STROKE",
+          "excerpt": "هذه أدلة محاكياʡ لا اعتماد"
+        }
+      ],
+      "description": "The baseline Arabic RC5 summary contains three literal IPA/Latin characters inside Arabic words or at clause boundaries. This is confirmed from decoded code points, not inferred from terminal rendering. The file remains valid UTF-8; the defect is corrupted text content, which breaks the Arabic wording of the evidence summary.",
+      "recommendation": "Correct the three affected Arabic fragments in line 39 and add a content check for unexpected IPA characters in Arabic documentation.",
+      "confidence": "high"
+    }
+  ],
+  "test_gaps": [
+    {
+      "file": "app/build.gradle.kts",
+      "line_start": 83,
+      "line_end": 94,
+      "description": "verifyTranslations checks duplicate string keys and key-set parity only. It does not compare formatting arguments, validate future plurals quantities, or catch corrupted Unicode content; current static placeholder checks pass."
+    },
+    {
+      "file": "app/src/main/java/com/os73/dosos73/NeonTheme.kt",
+      "description": "Arabic/English font fallback, mixed-direction filenames and large-font clipping were not validated at runtime because builds and emulator runs were excluded from this review. Static theme review alone cannot establish those visual outcomes."
+    }
+  ]
+}

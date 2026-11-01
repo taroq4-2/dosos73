@@ -43,7 +43,14 @@ class MainActivity : ComponentActivity() {
             navigationBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT),
         )
         if (savedInstanceState == null) receive(intent)
+        else model.restoreInput(savedInstanceState.getString("dosos.url"), savedInstanceState.getString("dosos.shared"))
         setContent { DososTheme { AppScreen(model, sharedGeneration) } }
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        outState.putString("dosos.url", model.state.value.url)
+        outState.putString("dosos.shared", model.state.value.pendingShared)
+        super.onSaveInstanceState(outState)
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -54,7 +61,7 @@ class MainActivity : ComponentActivity() {
 
     private fun receive(intent: Intent?) {
         if (intent?.action == Intent.ACTION_SEND && intent.type == "text/plain") {
-            intent.getStringExtra(Intent.EXTRA_TEXT)?.let(model::receive)
+            intent.getCharSequenceExtra(Intent.EXTRA_TEXT)?.toString()?.let(model::receive)
             intent.removeExtra(Intent.EXTRA_TEXT)
             sharedGeneration++
         }

@@ -1,0 +1,28 @@
+{
+  "reviewer_id": "23",
+  "scope": [
+    "b89b957b32b2c9d73bfff505fecdf0abfadd5cf7",
+    "MediaEngine.request/analyze/download/mapFormats",
+    "work/research/YoutubeDLRequest.kt",
+    "PublicProxy / NativeProcessSession network route",
+    "Bundled yt-dlp format selector and downloader dispatch"
+  ],
+  "findings": [
+    {
+      "severity": "P2",
+      "title": "Treat extractor format IDs as literal IDs rather than selector expressions",
+      "file": "app/src/main/java/com/os73/dosos73/MediaEngine.kt",
+      "line": 126,
+      "evidence": "mapFormats accepts all, best, worst and other reserved selector words through [a-zA-Z0-9_.-]{1,80}; download passes that ID directly as the -f expression. A local, network-free execution of the exact bundled app/src/main/res/raw/ytdlp using process_ie_result(download=False) preserved a valid HTTPS MP4 format_id=all alongside format_id=safe. The application regex accepted all. build_format_selector(all) selected [safe, all], whereas build_format_selector(best[format_id=all]) selected [all]. This proves the selected advertised item can expand into multiple downloads instead of its own format. No real provider failure or Android execution is claimed.",
+      "impact": "A valid extractor result with a reserved-word ID can download different or additional formats, waste data, or fail against the fixed media output filename instead of honoring the selected choice. The regex prevents punctuation injection but does not establish literal selector semantics.",
+      "recommendation": "Construct a literal format_id field filter for every validated component, including both sides of merged video+audio choices, or reject selector-reserved IDs explicitly. Add a bundled-engine regression covering all/best/worst and an ordinary ID; test that one advertised ID selects exactly that format."
+    }
+  ],
+  "test_gaps": [
+    "No build, source edits, emulator, deployment, or external network requests were performed. The finding is a local bundled-Python selector reproduction plus Kotlin control-flow inspection.",
+    "The existing OutputSafetyTest covers a punctuation selector such as bad+selector but has no reserved-word ID fixture and no request-to-bundled-selector integration assertion.",
+    "Live HLS/DASH can dispatch to FFmpegFD even when protocol is m3u8_native/http_dash_segments: confirmed in the bundled downloader/__init__.py. The inspected transport fixtures exercise direct HTTPS/Python requests; they do not prove authenticated CONNECT, TLS verification, redirect/manifest/segment host restrictions, and bound-network routing for that FFmpeg fallback. This is an unverified route, not a demonstrated bypass.",
+    "No inspected fixture covers mixed clear/DRM metadata, missing versus true has_drm, and a provider changing its format inventory between analyze and download. mapFormats rejects explicit per-format has_drm=true and download retains yt-dlp default DRM rejection; no DRM bypass was demonstrated.",
+    "request supplies --ignore-config and --no-remote-components; YoutubeDLRequest.buildCommand appends separate argv elements, and NativeProcessSession uses ProcessBuilder without a shell. No option/shell injection or remote-component download was demonstrated. An assertion on the actual dependency options builder and final argv would close the remaining request-construction coverage gap."
+  ]
+}

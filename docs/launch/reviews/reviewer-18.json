@@ -1,0 +1,112 @@
+{
+  "reviewer_id": "18",
+  "scope": {
+    "baseline": "b89b957b32b2c9d73bfff505fecdf0abfadd5cf7",
+    "repository": "[workspace]/outputs/dosos73",
+    "files": [
+      "app/src/main/java/com/os73/dosos73/StoragePolicy.kt",
+      "app/src/main/java/com/os73/dosos73/OutputStore.kt: preflight, space-check and UnknownSize recovery interactions",
+      "app/src/test/java/com/os73/dosos73/StoragePolicyTest.kt",
+      "app/src/androidTest/java/com/os73/dosos73/OutputSafetyTest.kt"
+    ],
+    "supporting_reads": [
+      "TransferProcessor.kt",
+      "DirectDownloader.kt",
+      "PublicationReceipt.kt",
+      "PublicationRecoveryTest.kt",
+      "RecoveryTestDocumentsProvider.kt",
+      "PipelineError.kt",
+      "FailureClassifierTest.kt",
+      "LibraryRepository.kt",
+      "LibraryScreens.kt"
+    ],
+    "method": "Static baseline review using git show b89b957. Source working-tree changes were not reviewed as baseline, modified or reverted. No build, tests, emulator or publication was run. CommitRace06 is excluded."
+  },
+  "findings": [
+    {
+      "id": "18-01",
+      "severity": "P2",
+      "title": "Space preflight counts already retained resume bytes as new allocation",
+      "file": "app/src/main/java/com/os73/dosos73/TransferProcessor.kt",
+      "line": 46,
+      "end_line": 50,
+      "conditions": [
+        "A direct task has a valid incomplete ResumeJournal/checkpoint and its partial body is retained after pause/failure.",
+        "The origin accepts a matching 206 continuation, so only the remaining body must be allocated.",
+        "Available storage exceeds the remaining download plus publication copy and reserve, but is less than the complete analysis size multiplied by copies."
+      ],
+      "evidence": "Before invoking transfer(), baseline lines 46-50 pass task.analysis.sizeBytes and copies=2 for MediaStore or 1 for SAF into StoragePolicy.requireAvailable. This does not subtract the retained checkpoint offset. TransferProcessor lines 111-114 explicitly retain direct partial data on non-complete, non-user-cancelled outcomes. DirectDownloader lines 164-169 read the checkpoint, lines 190-206 validate a matching 206 and reuse prior.offset, and lines 221-223 preserve/seek to that offset. With a 1 GiB total, 768 MiB retained and 1.4 GiB available on the common cache/publication filesystem, 256 MiB remaining + 1 GiB publication + 32 MiB reserve fits, but the unconditional preflight requires 2 GiB + reserve and fails before the resumable downloader runs. For SAF on another filesystem, the equivalent cache example is 512 MiB available versus only 256 MiB remaining + reserve.",
+      "impact": "A paused or failed task can remain blocked with STORAGE_FULL despite sufficient space to finish its valid resume. The retained partial file itself contributes to the false refusal.",
+      "recommendation": "Make resume admission account for durable bytes already present, then check the actual response mode: matching 206 needs remaining bytes, while a 200/restart must be rechecked for a full replacement. Keep publication space separate and retain overflow-safe comparisons.",
+      "verification_limit": "Control-flow and arithmetic finding only. No device fixture was executed; the example assumes the existing checkpoint and origin response satisfy the downloader's validation."
+    },
+    {
+      "id": "18-02",
+      "severity": "P3",
+      "title": "Recovered UnknownSize documents are indexed as zero-byte files",
+      "file": "app/src/main/java/com/os73/dosos73/OutputStore.kt",
+      "line": 20,
+      "end_line": 24,
+      "conditions": [
+        "A nonempty SAF publication is recovered through OutputStore.recover.",
+        "The provider returns a readable pipe/descriptor with statSize=-1, as supported by the existing UnknownSize provider fixture."
+      ],
+      "evidence": "Baseline OutputStore lines 20-24 convert descriptor.statSize=-1 to 0 with coerceAtLeast(0), then pass 0 to LibraryRepository.remember. PublicationReceipt.recoverPlan already fingerprints the entire stream and compares its actual byte count with the receipt before returning (PublicationReceipt lines 87-90); the accurate expected byte count is durable in the receipt. LibraryRepository.remember persists the supplied bytes, and LibraryScreens line 125 displays item.bytes. RecoveryTestDocumentsProvider lines 62-67 deliberately returns a pipe for unknownSize=true, so this is a supported provider condition rather than an invalid empty file.",
+      "impact": "A successfully recovered nonempty document appears as 0 B in the saved library and leaves incorrect persistent size metadata.",
+      "recommendation": "Return the verified byte count from publication recovery, or otherwise reuse the verified receipt/fingerprint byte count when statSize is unknown. Do not map a negative size to a known empty size.",
+      "verification_limit": "Static finding only. Existing PublicationRecoveryTest lines 67-75 calls PublicationReceipt.recover directly, so it does not exercise OutputStore.recover's library indexing path."
+    }
+  ],
+  "test_gaps": [
+    {
+      "area": "Resume-aware free space",
+      "references": [
+        "StoragePolicyTest.kt:8-26",
+        "TransferProcessor.kt:43-50"
+      ],
+      "gap": "No storage admission test includes a retained partial/checkpoint. Add matching-206 cases that fit only after subtracting durable bytes, plus a 200 fallback case that must recheck full allocation. This covers finding 18-01."
+    },
+    {
+      "area": "Overflow and reserve boundaries",
+      "references": [
+        "StoragePolicy.kt:7-10",
+        "StoragePolicyTest.kt:8-26"
+      ],
+      "gap": "The current Long.MAX_VALUE/copies=2 rejection is useful but there are no exact-boundary cases: available=reserve with bytes=0/null; available=reserve-1; bytes=(available-reserve)/copies and one byte above; copies=1 and a large copies value. No overflow defect was found for valid nonnegative inputs: the policy divides usable space instead of multiplying bytes."
+    },
+    {
+      "area": "ENOSPC during destination copy/close",
+      "references": [
+        "OutputStore.kt:119-139,163-170 (baseline)",
+        "OutputSafetyTest.kt:81-105",
+        "FailureClassifierTest.kt:14-23"
+      ],
+      "gap": "OutputSafetyTest covers a successful exact-byte publication, while FailureClassifierTest only covers a direct IOException message containing ENOSPC. No inspected fault provider injects ENOSPC after partial writes, on flush or on close. Add a deterministic provider fixture asserting STORAGE_FULL when the cause is preserved, no published success, deletion of only the unverified temporary output, and recoverable receipt behavior if deletion also fails."
+    },
+    {
+      "area": "Wrapped/provider ENOSPC classification",
+      "references": [
+        "PipelineError.kt:41-47",
+        "FailureClassifierTest.kt:14-23"
+      ],
+      "gap": "Only the outer exception message is classified. A wrapper with a generic outer message and an ENOSPC cause is not covered. Treat this as missing compatibility coverage here; no specific platform/provider wrapper was executed or proved in this review."
+    },
+    {
+      "area": "UnknownSize publication and recovered metadata",
+      "references": [
+        "PublicationRecoveryTest.kt:67-75",
+        "RecoveryTestDocumentsProvider.kt:42,62-67",
+        "OutputStore.kt:17-24"
+      ],
+      "gap": "Existing coverage combines UnknownSize with rejected rename and checks only receipt recovery/non-deletion. Add normal successful OutputStore.save and OutputStore.recover paths for a pipe descriptor, assert exact content and nonzero indexed byte count, and inject a truncated pipe to verify fingerprint rejection. This covers finding 18-02."
+    },
+    {
+      "area": "Destination and cache on different volumes",
+      "references": [
+        "OutputStore.kt:31-36,88-92 (baseline)",
+        "TransferProcessor.kt:46-50"
+      ],
+      "gap": "No fixture models cacheDir and MediaStore publication residing on distinct filesystems. The save-time StatFs query uses cacheDir, so device coverage should establish correct space admission for supported adopted/removable/primary-volume layouts. No concrete device failure is claimed."
+    }
+  ]
+}

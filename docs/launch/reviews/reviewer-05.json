@@ -1,0 +1,40 @@
+{
+  "reviewer_id": "reviewer-05",
+  "scope": "baseline b89b957b32b2c9d73bfff505fecdf0abfadd5cf7; قراءة كاملة لـ ParallelDownloader.kt وStreamIntegrity.kt وParallelDownloaderTest.kt وHttpRepresentation.kt، مع تتبع DirectDownloader.kt وResumeJournal.kt. مراجعة فقط؛ لا تعديل مصدر ولا محاكي ولا نشر. تحقق JVM مستقل محفوظ في work/launch-review/repro-05.",
+  "findings": [
+    {
+      "severity": "P2",
+      "file": "app/src/main/java/com/os73/dosos73/HttpRepresentation.kt",
+      "line": 11,
+      "evidence": "requireIdentity يقرأ response.header(\"Content-Encoding\")، وOkHttp يعيد آخر قيمة فقط. عند وجود Content-Encoding: gzip ثم Content-Encoding: identity يمر الفحص رغم بقاء gzip ضمن سلسلة الترميز. DirectDownloader يرسل Accept-Encoding: identity صراحة، فلا يوجد فك ضغط شفاف يعتمد عليه، ومسار ParallelDownloader يستعمل هذا الفحص قبل قبول كل نطاق ثم يتحقق من طول التمثيل المضغوط فقط. أعدت إنتاجه على فئات التطبيق المبنية وبـ OkHttp 4.12.0 باستخدام interceptor يعيد استجابات probe/نطاقين، ETag قويًا ثابتًا وContent-Range دقيقًا. أصل 4194304 بايت ضغط إلى 4195602 بايت؛ download(connections=2) عاد بنجاح، وحفظ output.pdf مطابقًا لبایتات gzip وليس للأصل. المخرجات: savedEqualsEncoded=true; savedEqualsOriginal=false; allEncodingHeaders=[gzip, identity]; selectedEncoding=identity. الدليل work/launch-review/repro-05/result.txt وإعادة الإنتاج RepeatedEncodingRepro.java. يمكن أن ينتج هذا من خادم/وسيط يعيد ترميزات مكررة؛ سلامة الطول وETag وSHA-256 اللاحقة لا تكشف فقدان تمثيل الملف لأنها تتحقق من البايتات المضغوطة نفسها.",
+      "recommendation": "افحص response.headers(\"Content-Encoding\") كلها، وافصل كل قيمة على الفاصلة ثم ارفض أي token غير identity، أو ارفض تكرار/تعارض هذه الترويسة بالكامل. أضف اختبارًا يثبت رفض gzip ثم identity في probe والنطاقين والمسار التسلسلي."
+    }
+  ],
+  "test_gaps": [
+    {
+      "file": "app/src/test/java/com/os73/dosos73/ParallelDownloaderTest.kt",
+      "line": 123,
+      "evidence": "اختبار encoding يغطي ترويسة gzip واحدة فقط؛ لا يغطي الترويسات المكررة التي أعادت الإنتاج المثبت."
+    },
+    {
+      "file": "app/src/test/java/com/os73/dosos73/ParallelDownloaderTest.kt",
+      "line": 17,
+      "evidence": "كل البيانات بطول زوجي ثابت 4 MiB، فلا اختبار للنصفين غير المتساويين عند total فردي، ولا حالات chunked بلا Content-Length، ولا جسم نطاق مبتور أو زائد أو انقطاع أثناء القراءة/الدمج."
+    },
+    {
+      "file": "app/src/test/java/com/os73/dosos73/ParallelDownloaderTest.kt",
+      "line": 97,
+      "evidence": "الإلغاء مغطى باستدعاء engine.cancel عند آخر قراءة دمج فقط. لا اختبار لإلغاء Coroutine Job أثناء probe محجوب أو أثناء قراءة نطاق، ولا لإلغاء أحد العاملين عندما يفشل الآخر، ولا لإبقاء وجهة سابقة دون تغيير عند فشل/إلغاء المسار المتوازي."
+    },
+    {
+      "file": "app/src/test/java/com/os73/dosos73/ParallelDownloaderTest.kt",
+      "line": 123,
+      "evidence": "لا تغطية لتغير عنوان redirect النهائي مع بقاء ETag، أو ETag ضعيف/غائب، أو probe بترميز غير identity، أو فشل الطلب التسلسلي الوحيد بعد fallback. المراجعة وجدت فحوصًا لهذه الحالات في الكود؛ هذا نقص إثبات اختباري لا ادعاء بعيب إضافي."
+    },
+    {
+      "file": "app/src/main/java/com/os73/dosos73/StreamIntegrity.kt",
+      "line": 11,
+      "evidence": "لم أجد عيبًا مثبتًا في عد البايتات أو SHA-256. ينبغي اختبار stream متعدد القراءات قصير القطع وstream يرجع صفراً مؤقتًا والانقطاع أثناء fingerprint؛ الموجود StreamIntegrityTest يثبت التطابق/الاختلاف لمدخلات صغيرة فقط."
+    }
+  ]
+}

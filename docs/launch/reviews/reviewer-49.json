@@ -1,0 +1,31 @@
+{
+  "reviewer_id": 49,
+  "role": "Redundant network operations and analysis cancellation; single-link/shared-link submission flow",
+  "scope": {
+    "application_commit_reviewed": "e625ee7; in-progress network/runtime fixes present in working tree",
+    "files_read_complete": [
+      "MainViewModel.kt",
+      "DirectDownloader.kt",
+      "MediaEngine.kt",
+      "MainActivity.kt"
+    ],
+    "additional_read": [
+      "AppRoot.kt startup, analysis callbacks and pending-share wiring",
+      "AdvancedScreens.kt batch analysis and network-controls callbacks",
+      "DirectDownloaderTest.kt analysis/cancellation test references"
+    ],
+    "method": "Read-only static control-flow review. No source edits, build, test execution, device interaction or publication."
+  },
+  "findings": [],
+  "verified_observations": [
+    "analyze() synchronously marks the single-link state busy before launching; analyzeBatch() checks and sets the other busy flag, preventing concurrent submissions through these entry points.",
+    "Shared text arriving during analysis is retained in pendingShared; accepting it is blocked until both analysis busy flags clear. MainActivity removes EXTRA_TEXT after initial delivery and does not redeliver that intent on ordinary state restoration.",
+    "analyzeSource creates a fresh DirectDownloader per operation. withAnalysisCancellation cancels the owned downloader and media operation during scope cancellation and waits for guardian cleanup before returning; direct cancellation is not reset in request().",
+    "Direct analysis uses HEAD, then a byte probe only for explicit unsupported/forbidden HEAD statuses, and a normal GET only after a 416. These are explicit fallback paths, not a proven accidental duplicate submission."
+  ],
+  "limitations": [
+    "No network timing, byte counts, cancellation latency or device behavior was measured.",
+    "A repeated explicit Analyze or newly accepted share may deliberately request fresh metadata; no unsupported cache requirement was treated as a defect.",
+    "The maximum-two finding requirement yielded zero proven defects in this narrow scope."
+  ]
+}

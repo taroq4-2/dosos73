@@ -32,10 +32,12 @@ class RuntimeInventoryTest {
             return result
         }
         val code =
-            "import sys; sys.path.insert(0,sys.argv[1]); import yt_dlp.version,yt_dlp_ejs._version; print(sys.version.split()[0]); print(yt_dlp.version.__version__); print(yt_dlp_ejs._version.__version__)"
+            "import sys; sys.path.insert(0,sys.argv[1]); import yt_dlp.version,yt_dlp_ejs._version; import readline,dbm.gnu,mutagen; print(readline._READLINE_LIBRARY_VERSION); print(mutagen.version_string); print(sys.version.split()[0]); print(yt_dlp.version.__version__); print(yt_dlp_ejs._version.__version__)"
         val versions =
             run("$native/libpython.so", "-c", code, File(base, "yt-dlp/yt-dlp").absolutePath)
         assertTrue(versions.contains("2026.10.21"))
+        assertTrue(versions.contains("8.3"))
+        assertTrue(versions.contains("1.47.0"))
         val qjs = run("$native/libqjs.so", "-e", "console.log('quickjs-execution-ok')")
         assertTrue(qjs.contains("quickjs-execution-ok"))
         val ffmpeg = run("$native/libffmpeg.so", "-version").lineSequence().first()

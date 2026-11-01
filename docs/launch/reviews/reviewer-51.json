@@ -1,0 +1,73 @@
+{
+  "reviewer_id": 51,
+  "role": "History retention, privacy clear actions and persistence resource growth",
+  "scope": {
+    "application_commit_reviewed": "e625ee7; in-progress network/runtime fixes present in working tree",
+    "files_read_complete": [
+      "TaskTimeline.kt",
+      "FailureJournal.kt",
+      "LibraryRepository.kt",
+      "PrivateJournal.kt",
+      "TransferProcessor.kt",
+      "DososApp.kt",
+      "TaskTimelineTest.kt"
+    ],
+    "additional_read": [
+      "AdvancedScreens.kt LibraryPreferences, PrivacyScreen and TaskTimelineDialog",
+      "DownloadQueue.kt queue lifecycle and TransferFiles",
+      "AppRoot.kt retry enqueue and history-filter/callback wiring",
+      "DownloadService.kt cold cancel handling",
+      "English/Arabic history visibility and clear-confirmation strings",
+      "All main-source references to TransferFiles, transfers-directory names and hidden_history"
+    ],
+    "method": "Read-only static control-flow and ownership review. No source edits, build, test execution, device interaction or publication."
+  },
+  "findings": [
+    {
+      "title": "[P2] Dispose retained partials when failure entries are evicted",
+      "priority": 2,
+      "file": "app/src/main/java/com/os73/dosos73/FailureJournal.kt",
+      "line_start": 68,
+      "line_end": 72,
+      "trigger": "More than 100 distinct direct-download failures accumulate, with an evicted task having downloaded bytes before failing and not being explicitly cancelled.",
+      "body": "record() caps the failure list with take(100) and commits it without disposing directories belonging to the dropped IDs. TransferProcessor deliberately retains direct-download directories on failure (lines 131-133), then acknowledges the queue lease after recording the failure (147-148). Consequently the evicted failure no longer has retry or removal metadata, while its potentially large partial and resume files remain under noBackupFilesDir/transfers/<id>. Clear history only discards IDs still in FailureJournal (93-98), startup cleanup only visits cacheDir, and no source code enumerates the persistent transfers root. Every further distinct failure can orphan another directory, so the 100-row limit does not bound disk retention. After committing eviction, discard dropped IDs that are not owned by a queued/active transfer, or reconcile unowned transfer directories safely.",
+      "evidence": [
+        "FailureJournal.kt:68-72 truncates metadata without disposal",
+        "TransferProcessor.kt:131-148 retains failed direct files and finishes their queue lease",
+        "DownloadQueue.kt:273-280 locates retained files outside cacheDir and only exposes ID-based deletion",
+        "FailureJournal.kt:93-98 clear sees only current rows",
+        "DososApp.kt:11-18 startup sweep is limited to cacheDir"
+      ],
+      "data_classification": "Unbounded private temporary file retention; this finding does not claim saved/published files are deleted."
+    },
+    {
+      "title": "[P3] Remove hidden-history tombstones for explicitly deleted files",
+      "priority": 3,
+      "file": "app/src/main/java/com/os73/dosos73/LibraryRepository.kt",
+      "line_start": 198,
+      "line_end": 202,
+      "trigger": "Repeatedly download a distinct file, hide its completed history (or use Clear history), then delete that file from the library; the same issue occurs after explicit Forget missing.",
+      "body": "delete() removes the provider file and saved index row, but clears only collection metadata via LibraryPreferences.clearUri; it never removes the URI from hidden_history. forgetMissing() has the same omission at lines 210-214. Both hideHistory and clearHistory continually union into this persisted set, with no pruning path anywhere in main source (rename merely replaces a URI). Thus a user who keeps the actual library small by deleting files still accumulates every previously hidden deleted URI for the lifetime of the installation, and future history clears copy and rewrite all of them. Remove a URI's tombstone after a successful explicit delete or confirmed-missing forget, while retaining tombstones for existing files so clearing history remains metadata-only.",
+      "evidence": [
+        "LibraryRepository.kt:189-202 explicit delete removes file and index but not hidden_history",
+        "LibraryRepository.kt:207-214 confirmed-missing forget also omits hidden_history cleanup",
+        "LibraryRepository.kt:237-259 hide/clear union into hidden_history",
+        "AdvancedScreens.kt:75-76 clearUri removes only collection:<uri>"
+      ],
+      "data_classification": "Unbounded stale URI metadata retention; hideHistory and clearHistory themselves intentionally do not delete saved files."
+    }
+  ],
+  "verified_observations": [
+    "TaskTimeline bounds stored events to 32 task IDs and 24 events per ID, applies age retention on read/write, and rewrites expired events when read; clear writes an empty timeline without touching transfer or saved files.",
+    "LibraryPreferences.historyDays is presented as completed-history visibility, and visibleHistory only filters completed UI rows. The strings explicitly say files remain in the library; metadata persistence behind this visibility filter alone was not treated as a defect.",
+    "LibraryRepository.hideHistory and clearHistory change hidden URI metadata only; LibraryRepository.delete explicitly deletes the provider file; forgetMissing only removes metadata after a fresh MISSING result.",
+    "FailureJournal.remove and clear delete private retained partial directories for the referenced inactive failures. They do not delete published library files. Retry enqueue passes discardPartial=false after committing the task to the queue.",
+    "PrivateJournal read size is bounded at 16 MiB and per-file synchronization uses a fixed 64-lock stripe array rather than an unbounded path map."
+  ],
+  "limitations": [
+    "The findings are static proofs of reachable retention paths; no device storage measurements or runtime reproductions were performed.",
+    "No requirement that the history visibility filter purge published files, all library metadata, or failed-task history was invented.",
+    "An initial read attempt was blocked by automatic approval review usage-limit failure; the same reviewed execution mechanism subsequently recovered and the relevant reads completed.",
+    "Network/runtime files changed by the parent were not edited or reviewed as part of this scope."
+  ]
+}

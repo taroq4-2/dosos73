@@ -1,0 +1,31 @@
+{
+  "reviewer_id": "48",
+  "reviewed_commit": "e625ee7",
+  "completed_utc": "2026-10-31T01:04:08.3480322Z",
+  "scope": [
+    "FileDigest.kt full file: digest lifetime and cleanup",
+    "StreamIntegrity.kt full file: streaming allocation bounds",
+    "DirectDownloader.kt full file: response and transfer buffers",
+    "ParallelDownloader.kt full file: worker count, buffers, response cleanup",
+    "NativeProcessSession.kt full file: output accumulation and limited proc reads",
+    "LibraryRepository.kt thumbnail cache and LibraryScreens.kt thumbnail references"
+  ],
+  "findings": [],
+  "positive_observations": [
+    "StreamIntegrity.kt:13 uses one reusable 64 KiB buffer, incrementally updates SHA-256, and returns only the byte count and 32-byte digest; file size does not scale the digest allocation.",
+    "FileDigest.kt:27-44 closes the descriptor and stream via use, clears the atomic stream reference, and cancels/joins the cleanup child in finally.",
+    "DirectDownloader.kt:222-271 streams into RandomAccessFile using a single 64 KiB buffer; response closes in finally at 286-288. Unknown-length responses are not accumulated in memory.",
+    "ParallelDownloader.kt:22,72-73 fixes concurrency to exactly two workers. Each has one 64 KiB transfer buffer at 103; after awaiting workers, merge streams parts using a 64 KiB buffer at 153. All transfer streams and responses use use.",
+    "NativeProcessSession.kt:215-242 reads output in 4 KiB chunks, keeps diagnostic tail at 16,384 characters and line at 8,192 characters. Tail can transiently exceed its cap only by the bounded incoming chunk. Continued output or one newline-free line cannot grow either builder without bound. Process streams close in finally at 246-251.",
+    "NativeProcessSession.kt:176-185 proc reads allocate a caller-specified bounded buffer (maximum call-site limit 65,536 bytes), reject overflow and return a bounded copy.",
+    "LibraryRepository.kt:46-47 limits thumbnail cache to 8 MiB by actual allocationByteCount and requests 192x192 thumbnails at 275. LibraryScreens.kt:60 holds row bitmap in composition-local remembered state. No proven retained bitmap leak was found in this supporting path."
+  ],
+  "validation": {
+    "executed": "Read-only source inspection and commit verification only",
+    "source_changes": "none",
+    "build": "not run as requested",
+    "device": "not used",
+    "publishing": "none",
+    "limitations": "No runtime heap, native allocation or process PSS measurements were performed. Findings cover proven leaks or unbounded allocations in the assigned paths; no speculative optimization recommendations."
+  }
+}

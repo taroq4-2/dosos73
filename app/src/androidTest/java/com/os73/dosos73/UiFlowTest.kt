@@ -131,6 +131,7 @@ class UiFlowTest {
         compose.onNodeWithTag("nav_more").performClick()
         compose.onNodeWithTag("about").performScrollTo().performClick()
         capture("05-about-ar.png")
+        compose.waitUntil(10000) { compose.onAllNodesWithTag("contact").fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithTag("contact").performScrollTo().performClick()
         capture("06-contact-ar.png")
         compose.onNodeWithTag("compose_email").performScrollTo().performClick()
@@ -145,6 +146,7 @@ class UiFlowTest {
             .performScrollTo()
             .performTextInput("Please help with a download.")
         compose.onNodeWithTag("back").performScrollTo().performClick()
+        compose.waitUntil(10000) { compose.onAllNodesWithTag("contact").fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithTag("contact").performScrollTo().performClick()
         compose.onNodeWithTag("contact_email").assertTextContains("tester@example.com")
         compose.onNodeWithTag("contact_message").assertTextContains("Please help with a download.")

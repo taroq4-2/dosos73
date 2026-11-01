@@ -1,0 +1,89 @@
+{
+  "reviewer_id": 57,
+  "role": "CI and release quality gates, artifact publication paths, signing and coverage claims",
+  "scope": {
+    "application_commit_reviewed": "e625ee7; launch fixes in progress in working tree",
+    "files_read_complete": [
+      ".github/workflows/android.yml",
+      ".github/workflows/compact-engine.yml",
+      ".github/workflows/network-diagnostic.yml",
+      ".github/dependabot.yml",
+      "app/build.gradle.kts",
+      "build.gradle.kts",
+      "gradle.properties",
+      "gradle/wrapper/gradle-wrapper.properties",
+      "app/proguard-rules.pro",
+      "app/src/main/AndroidManifest.xml",
+      ".gitignore",
+      "README.md",
+      "docs/VERIFICATION.md",
+      "docs/COMPACT_ENGINE.md",
+      "docs/launch/CHECKPOINT.md",
+      "docs/audit/ci-jobs.json",
+      "docs/audit/device-matrix.json",
+      "docs/audit/artifact-static.json",
+      "tools/build_compact_ffmpeg.sh",
+      "tools/assemble_compact_experiment.py",
+      "tools/trim_universal_apk.py",
+      "tools/audit_elf_alignment.py"
+    ],
+    "additional_read": [
+      "tools/generate_sbom.py required engine-proof arguments and artifact payload verification",
+      "tools/fetch_runtime_overrides.py pinned manifest/archive/library checks",
+      "CONTRIBUTING.md build and acceptance instructions",
+      "docs/audit/apk-signature.txt historical signature evidence",
+      "docs/REMAINING_REQUIREMENTS.md claimed coverage limitations",
+      "LiveDownloadTest.kt opt-in gates and execution assertions"
+    ],
+    "method": "Read-only static workflow/argument/dataflow review. No production source edits, builds, test execution, device interaction, GitHub mutations or publication. No live CI/release state was queried; historical evidence files are treated as recorded snapshots."
+  },
+  "findings": [
+    {
+      "title": "[P2] Upload the assembler proof with the compact candidate",
+      "priority": 2,
+      "file": ".github/workflows/compact-engine.yml",
+      "line_start": 72,
+      "line_end": 74,
+      "trigger": "Use the compact-universal-UNSIGNED-experiment artifact from a successful compact-engine workflow run for downstream signing and release inventory generation.",
+      "body": "The assembler invoked at line 65 writes compact-universal-unsigned.runtime-proof.json beside its APK, but this upload includes only the aligned APK and checksum. No other step uploads the proof, so it disappears with the package runner. tools/generate_sbom.py now requires --engine-proof and checks that proof's per-ABI engine/configuration records and payload hash against the final APK. A consumer of the workflow's candidate cannot complete that checked SBOM path using the supplied artifacts, even though native engines are available separately. Include the original runtime-proof JSON in this candidate artifact; its payload binding intentionally survives the subsequent alignment/signing steps.",
+      "evidence": [
+        "compact-engine.yml:65 generates compact-universal-unsigned.apk",
+        "assemble_compact_experiment.py:89 names its sibling .runtime-proof.json and :246 writes it",
+        "compact-engine.yml:72-74 uploads only aligned APK and SHA256SUMS",
+        "generate_sbom.py:73 requires --engine-proof; :81-100 loads proof and verifies final payload"
+      ],
+      "scope_limit": "This is a broken evidence handoff for workflow-produced candidates, not a claim that an unverified APK was already published."
+    },
+    {
+      "title": "[P3] Update the compact build recipe to the current required arguments",
+      "priority": 3,
+      "file": "docs/COMPACT_ENGINE.md",
+      "line_start": 20,
+      "line_end": 25,
+      "trigger": "Follow the documented compact universal Build shell commands against the current tools.",
+      "body": "The assembler command supplies no --ffmpeg-version or --lame-version, while the current script explicitly calls argparse.error unless both numeric versions are supplied for replacement-engine mode; therefore the documented recipe stops before producing its unsigned candidate. The final audit command also omits the mandatory report positional argument required by audit_elf_alignment.py. Refresh the recipe to use the pinned versions/current runtime overrides and include an output report path so the documented release preparation path actually runs.",
+      "evidence": [
+        "COMPACT_ENGINE.md:21 assembler invocation omits both version flags",
+        "assemble_compact_experiment.py:82-86 requires both flags unless --python-only",
+        "COMPACT_ENGINE.md:25 audit invocation has only APK",
+        "audit_elf_alignment.py:37 requires apk and report positional arguments"
+      ],
+      "scope_limit": "Static parser/control-flow proof; no native build or script execution was performed."
+    }
+  ],
+  "verified_observations": [
+    "android.yml runs on main/maintenance/feature pushes, v* tags, pull requests and manual dispatch. Its permissions are contents:read, and it does not create/update GitHub releases or upload APKs as official downloads.",
+    "compact-engine.yml publishes CI artifacts explicitly named UNSIGNED experiment. Its automatic trigger is restricted to the named feature branch and native recipe/workflow paths; manual dispatch remains available. It does not sign or publish official releases.",
+    "Production Gradle signing uses owner-provided environment values; absent those inputs, release builds remain unsigned. CI emulator packages use a temporary generated test key, and the workflows do not reference production signing secrets.",
+    "The API29-36 device matrix uses shared Python packaging with upstream FFmpeg and a terminal JUnit OK-result assertion, rather than treating adb instrument's process exit alone as test success. Existing historical documentation explicitly separates that matrix from signed compact-release acceptance and discloses skipped opt-in network cases.",
+    "The checkpoint marks current launch work unpublished, records pending/full-lint and emulator acceptance work, and retains the older RC5 verification as historical artifact evidence. No claim of completed current launch certification was inferred from the older files.",
+    "The compact package job performs testDebugUnitTest, lintRelease and assembleRelease before size/checksum/upload; it is not represented here as signed-release runtime acceptance.",
+    "Gradle wrapper distribution has a pinned SHA-256. Native recipe pins FFmpeg commit, LAME source digest and NDK version; runtime override fetch/assembly verifies pinned archive and library hashes and ABI identities."
+  ],
+  "limitations": [
+    "No live remote workflow state, branch protection settings, release downloads or signing certificates were fetched or independently reverified.",
+    "No requirement for automatic official publication, all-ABI device tests, automatic lintRelease on every source push or a new security certification gate was invented.",
+    "Source/workflow review cannot establish that a particular final APK passed acceptance; that remains separate artifact/device evidence owned by the parent workflow.",
+    "No source changes were made for reviewer57. The earlier explicitly authorized reviewer51 fixes are recorded separately in reviewer-51-integration.json."
+  ]
+}

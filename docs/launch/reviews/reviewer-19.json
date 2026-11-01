@@ -1,0 +1,13 @@
+{
+  "reviewer_id": "19",
+  "scope": "Static review of commit b89b957b32b2c9d73bfff505fecdf0abfadd5cf7: OfflinePreview in AdvancedScreens.kt; FileAccess, implemented in FileAvailability.kt (no FileAccess.kt at this commit); LiveDownloadTest.kt; Mp3EncodingTest.kt; supporting FileAccess tests and committed documentation. Focus: resource lifecycle, audio/video/image, pause/background. Working-tree edits excluded. No tests, build, emulator or deployment executed; no application source changed.",
+  "findings": [],
+  "test_gaps": [
+    "AdvancedScreens.kt:198-289: no direct OfflinePreview instrumentation/UI test at the reviewed commit. Cover audio/video playback in the actual dialog, image decode success/failure, dismiss/back behavior and resource disposal.",
+    "LiveDownloadTest.kt:73-104: playback acceptance creates a separate MediaPlayer and SurfaceView; it does not invoke OfflinePreview or verify its ON_PAUSE/ON_STOP observer, delayed preparation while paused, foreground return or controller behavior.",
+    "Mp3EncodingTest.kt:35-47: verifies PCM-to-MP3 encoding, ffprobe codec identity and Android metadata/duration; it does not start MP3 playback or exercise OfflinePreview. These tests establish no general codec/device support.",
+    "AdvancedScreens.kt:205-225: bounded image output dimensions are implemented, but reviewed tests do not cover oversized/corrupt images, dismiss during decoding, or background transitions during decoding.",
+    "Known documented limit, not a new defect: docs/FILE_AVAILABILITY.md:3 explicitly permits provider-delayed cancellation. FileAvailability.kt:17-21 cancels the query after its timeout, but an uncooperative blocking provider can hold its enclosing coroutineScope until the query returns. The reviewed FileAccess tests do not cover such a provider.",
+    "Known documented limits, not new defects: README.md:67 and docs/FILE_AVAILABILITY.md:9 leave physical-device/codec and removable/cloud-provider matrices open. FileAccess metadata availability does not prove readable media contents or codec support."
+  ]
+}

@@ -35,6 +35,7 @@ class NativeTransportComparisonTest {
                                 if (legacy)
                                     addOption("--compat-options", "prefer-legacy-http-handler")
                             }
+                    val started = android.os.SystemClock.elapsedRealtime()
                     try {
                         YoutubeDL.execute(request)
                         val digest = MessageDigest.getInstance("SHA-256")
@@ -47,11 +48,11 @@ class NativeTransportComparisonTest {
                             }
                         }
                         report.appendLine(
-                            "legacy=$legacy pass=$pass bytes=${output.length()} sha256=${digest.digest().joinToString("") { "%02x".format(it) }}"
+                            "legacy=$legacy pass=$pass elapsedMs=${android.os.SystemClock.elapsedRealtime() - started} bytes=${output.length()} sha256=${digest.digest().joinToString("") { "%02x".format(it) }}"
                         )
                     } catch (e: Exception) {
                         report.appendLine(
-                            "legacy=$legacy pass=$pass failure=${FailureClassifier.classify(Stage.TRANSFER,e).code}"
+                            "legacy=$legacy pass=$pass elapsedMs=${android.os.SystemClock.elapsedRealtime() - started} failure=${FailureClassifier.classify(Stage.TRANSFER,e).code}"
                         )
                     }
                 }

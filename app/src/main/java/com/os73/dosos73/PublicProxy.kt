@@ -16,7 +16,13 @@ import java.util.concurrent.Semaphore
 class PublicProxy(
     private val resolve: (String) -> List<InetAddress> = Safety::resolve,
     private val socketFactory: javax.net.SocketFactory = javax.net.SocketFactory.getDefault(),
+    private val headerTimeoutMillis: Int = 10_000,
+    private val originIdleTimeoutMillis: Int = 60_000,
 ) : Closeable {
+    init {
+        require(headerTimeoutMillis in 1..60_000)
+        require(originIdleTimeoutMillis in 1..60_000)
+    }
     private val server = ServerSocket(0, 8, InetAddress.getByName("127.0.0.1"))
     // One acceptor plus two directions per tunnel, with one spare worker.
     private val pool = Executors.newFixedThreadPool(18)
@@ -60,12 +66,18 @@ class PublicProxy(
     }
 
     private fun tunnel(client: Socket) {
-        client.soTimeout = 30_000
+        val headerDeadline = System.nanoTime() + headerTimeoutMillis * 1_000_000L
         val input = client.getInputStream()
         val header = StringBuilder()
         while (!header.endsWith("\r\n\r\n")) {
             require(header.length < 8192)
+            val remaining = headerDeadline - System.nanoTime()
+            if (remaining <= 0) throw java.net.SocketTimeoutException("CONNECT header timed out")
+            // Each read gets only the remainder of the absolute header deadline.
+            client.soTimeout = ((remaining + 999_999L) / 1_000_000L).toInt()
             val value = input.read()
+            if (System.nanoTime() >= headerDeadline)
+                throw java.net.SocketTimeoutException("CONNECT header timed out")
             require(value >= 0)
             header.append(value.toChar())
         }
@@ -87,13 +99,13 @@ class PublicProxy(
         val addresses = Safety.checkedAddresses(resolve(target.host))
         connectPublic(addresses).use { remote ->
             try {
-                remote.soTimeout = 60_000
+                remote.soTimeout = originIdleTimeoutMillis
                 client
                     .getOutputStream()
                     .write("HTTP/1.1 200 Connection Established\r\n\r\n".toByteArray())
-                // The native client's socket timeout owns idle deadlines after CONNECT.
+                // Downloads can receive for a long time without any further client writes.
+                // Bound only origin read inactivity, including after a client half-close.
                 client.soTimeout = 0
-                remote.soTimeout = 0
                 val upstream =
                     pool.submit {
                         try {

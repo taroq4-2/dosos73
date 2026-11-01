@@ -1,0 +1,41 @@
+{
+  "reviewer": 35,
+  "scope": [
+    "DownloadService pause/resume/cancel",
+    "DownloadQueue lease mutation",
+    "ColdServiceControlTest"
+  ],
+  "findings": [
+    {
+      "id": "R35-1",
+      "priority": "P2",
+      "title": "Startup lease refresh can overwrite an acknowledged Pause",
+      "file": "app/src/main/java/com/os73/dosos73/DownloadQueue.kt",
+      "line_start": 137,
+      "line_end": 138,
+      "trigger": "Pause a direct task just after DownloadService.startWorker has taken its lease and published DOWNLOADING through Transfers.reserve, while its rememberActive call is dispatched to IO but has not yet acquired the queue mutex. Allow setPaused(true) to acquire/commit first, then allow rememberActive to commit the original task snapshot before the control continuation cancels the worker.",
+      "evidence": [
+        "DownloadService.kt:147-151 captures the unpaused task, reserves/publishes it, then dispatches rememberActive independently of controlJob.",
+        "DownloadService.kt:67-81 permits Pause at that point, writes userPaused=true, and only cancels the worker after the IO acknowledgement returns. Setting cancelled=true only prevents taking the next task; rememberActive does not check it.",
+        "DownloadQueue.kt:133-138 only checks matching lease identity and replaces active with the stale task, reverting userPaused to false. The mutex serializes individual commits but does not preserve the newer pause field.",
+        "TransferProcessor.kt:104-111 and 141-147 retain the lease on non-user cancellation; they do not restore its paused flag. DownloadService.kt:83-84 still displays PAUSED based solely on matching lease id.",
+        "AppRoot.kt:104-119 automatically restarts an interrupted lease when userPaused is false, so subsequent process/UI restoration resumes the download despite the prior Pause acknowledgement."
+      ],
+      "impact": "A successful Pause can leave the journal runnable and silently resume the task when the app/process is restored. The UI can show PAUSED while the durable lease is unpaused.",
+      "recommendation": "Avoid rewriting an already-owned lease from a previously captured task snapshot, or merge control fields from the current lease under the mutex. Cover the ordering between setPaused and rememberActive in a startup/pause race test.",
+      "proof": "Source-level feasible coroutine interleaving; not reproduced on device."
+    }
+  ],
+  "checks": [
+    "Read all three requested files with numbered lines.",
+    "Traced TransferProcessor finalization, Models.Transfers reservation, AppRoot restoration/callers, AppUi pause affordance, and PrivateJournal commit behavior.",
+    "ColdServiceControlTest covers an already-established paused lease and serialized repeated cancel; it does not overlap startup rememberActive with Pause.",
+    "Excluded pause-while-WAITING and paused-head queue blocking as intentional UI/queue policy, not bugs.",
+    "Checked repository status read-only; no source modifications, build, device access, network transfer, or publication."
+  ],
+  "limits": [
+    "Static review only, no build or runtime execution by request.",
+    "Only one proven source-level race reported; no second finding met confidence threshold.",
+    "Initial default shell and Node launcher failed on locked BitLocker P:; read-only elevated shell with login:false succeeded."
+  ]
+}

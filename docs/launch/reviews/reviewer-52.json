@@ -1,0 +1,49 @@
+{
+  "reviewer_id": 52,
+  "role": "Saved-file open/share/delete/rename, URI grants and mutation error handling",
+  "scope": {
+    "application_commit_reviewed": "e625ee7 with unrelated in-progress network/runtime fixes in the working tree",
+    "files_read_complete": [
+      "LibraryRepository.kt",
+      "LibraryScreens.kt",
+      "FileAvailability.kt",
+      "AppRoot.kt",
+      "LibraryMutationTest.kt",
+      "AndroidManifest.xml"
+    ],
+    "additional_read": [
+      "AdvancedScreens.kt LibraryPreferences and OfflinePreview implementations",
+      "Safety.kt requireFilename and filename validation",
+      "Official AOSP ClipData.java newUri/getMimeTypes implementation"
+    ],
+    "method": "Read-only static control-flow and Android platform-source review. No code edits, builds, device interaction or test execution."
+  },
+  "findings": [
+    {
+      "id": "R52-1",
+      "priority": "P2",
+      "title": "Sharing a saved SAF document queries its provider on the UI thread",
+      "file": "app/src/main/java/com/os73/dosos73/AppRoot.kt",
+      "start_line": 244,
+      "end_line": 244,
+      "evidence": "action(item, \"share\") is invoked by a Compose UI callback and immediately constructs ClipData.newUri(contentResolver, item.name, uri). AOSP newUri calls getMimeTypes, which synchronously calls ContentResolver.getType(uri) and getStreamTypes(uri,\"*/*\") for content URIs. This occurs before startActivity and outside Dispatchers.IO.",
+      "trigger_and_impact": "A slow or offline third-party document provider can hold the main thread while the user shares an already-indexed SAF file; the chooser is delayed and prolonged provider stalls can cause an unresponsive UI. This is a static execution-path finding, not a reproduced ANR.",
+      "recommendation": "Use the already-indexed item.mime to construct ClipData(item.name, arrayOf(item.mime), ClipData.Item(uri)) directly, retaining Intent.EXTRA_STREAM and FLAG_GRANT_READ_URI_PERMISSION. Verify the constructed share Intent metadata and permission flag without needing to query a provider.",
+      "primary_source": "https://android.googlesource.com/platform/frameworks/base/+/refs/heads/main/core/java/android/content/ClipData.java",
+      "status": "Reported; no changes made by this reviewer."
+    }
+  ],
+  "verified_observations": [
+    "External file opening and sharing grant read access only; sharing includes both EXTRA_STREAM and ClipData. No broad write grant is passed to the receiving app.",
+    "Renaming validates the requested filename before invoking the provider, retains a changed document URI even when subsequent metadata lookup fails, and migrates hidden-history/collection metadata after persisting the new reference. Existing instrumentation source exercises these previously repaired cases.",
+    "Provider deletion and index edits run on Dispatchers.IO under the repository mutex. The UI requests explicit confirmation before deleting file contents. Forget Missing separately removes metadata after a fresh confident local-missing check.",
+    "The library does not automatically discard saved SAF URIs solely because permissions are revoked or a provider is offline. Missing, permission-required and unavailable states are differentiated.",
+    "Offline previews stop playback on lifecycle pause/stop and disposal, and image decoding limits the target dimensions."
+  ],
+  "limitations": [
+    "No chooser receiver was launched and no real URI-grant transfer was verified in this review.",
+    "The deletion or rename operation in an external provider and the app's private index cannot be one atomic transaction; the existing source explicitly documents the rename index-write failure limitation. No new universal crash-recovery guarantee was inferred.",
+    "The official AOSP source confirms the synchronous provider-query mechanism; the precise duration and any actual ANR on a particular document provider remain unmeasured.",
+    "Read-only review found one actionable issue in this scope; no second defect was invented to meet a quota."
+  ]
+}

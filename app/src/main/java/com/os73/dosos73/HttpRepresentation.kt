@@ -8,9 +8,14 @@ internal object HttpRepresentation {
     data class ByteRange(val first: Long, val last: Long, val total: Long)
 
     fun requireIdentity(response: Response) {
-        val encoding = response.header("Content-Encoding")
-        if (!encoding.isNullOrBlank() && !encoding.equals("identity", true))
+        val encodings = response.headers.values("Content-Encoding").flatMap { it.split(',') }.map { it.trim() }
+        if (encodings.any { it.isNotEmpty() && !it.equals("identity", true) })
             throw IOException("Unsupported content encoding")
+        // Never let a final header silently override a contradictory representation.
+        for (name in listOf("Content-Type", "Content-Length", "Content-Range", "ETag")) {
+            val values = response.headers.values(name).map { it.trim() }
+            if (values.distinct().size > 1) throw IOException("Conflicting $name headers")
+        }
         val mime = response.header("Content-Type").orEmpty().trim()
         if (mime.startsWith("text/html", true) || mime.startsWith("multipart/byteranges", true))
             throw IOException("Unexpected response type")

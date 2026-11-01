@@ -1,0 +1,76 @@
+{
+  "reviewer_id": "reviewer-45",
+  "baseline": "e625ee73e7a3d85abe502485c46faeb08b85090c",
+  "scope": {
+    "mode": "static_read_only",
+    "files": [
+      "app/src/main/java/com/os73/dosos73/NetworkSettings.kt",
+      "app/src/main/java/com/os73/dosos73/DownloadService.kt",
+      "app/src/main/java/com/os73/dosos73/DirectDownloader.kt"
+    ],
+    "supporting_files": [
+      "app/src/main/java/com/os73/dosos73/TransferProcessor.kt",
+      "app/src/main/java/com/os73/dosos73/DownloadQueue.kt",
+      "app/src/main/java/com/os73/dosos73/MediaEngine.kt",
+      "docs/NETWORK_CHARTER_REVIEW.md"
+    ],
+    "method": "Read-only control-flow inspection and official Android callback-contract verification. No edits to repository files, builds, tests, emulator/device operations or publication. Findings are static execution traces, not claimed device reproductions."
+  },
+  "findings": [
+    {
+      "id": "R45-1",
+      "priority": "P2",
+      "title": "Default-network handover leaves the bound transfer on an unobserved old network",
+      "file": "app/src/main/java/com/os73/dosos73/DownloadService.kt",
+      "start_line": 228,
+      "end_line": 234,
+      "supporting_locations": [
+        "app/src/main/java/com/os73/dosos73/NetworkSettings.kt:75-90",
+        "app/src/main/java/com/os73/dosos73/NetworkSettings.kt:56-62",
+        "app/src/main/java/com/os73/dosos73/DownloadService.kt:223-225,239-243"
+      ],
+      "trigger": "Start a long download on cellular with Wi-Fi-only/unmetered-only disabled. Connect to permitted Wi-Fi while cellular remains connected. Let the bound cellular connection subsequently fail or cellular disconnect after the Wi-Fi onAvailable/onCapabilitiesChanged events have completed, with no subsequent Wi-Fi event.",
+      "evidence": "changes() registers registerDefaultNetworkCallback and converts every event into only permitted(context), discarding the event's Network identity. At Wi-Fi handover the new default and the old cellular Network can both satisfy permitted(), so the guard does not set networkLost or recreate the downloader. The downloader remains bound to the captured cellular socketFactory and DNS. Android documents that after a new onAvailable for a default callback, that callback no longer reports events for the previously-best network. Thus the later cellular loss produces no guard event; when the bound I/O fails, line 243 observes networkLost=false and throws instead of selecting the already-available Wi-Fi network. TransferProcessor records FAILED rather than continuing recovery. This also affects the MediaEngine route, whose proxy captures the same transferNetwork.",
+      "impact": "An ordinary permitted-network handover can terminate a download and require explicit retry despite a usable replacement network. A direct partial file is retained; this is not a demonstrated byte-corruption or data-loss finding.",
+      "recommendation": "Carry network identity in connectivity events and either restart the attempt when the default changes or independently observe the captured bound Network until the attempt ends. Before classifying a transport exception as unrelated to connectivity, reconcile the bound network with current connectivity state.",
+      "confidence": "Confirmed static control-flow defect under the documented Android default-callback contract; not exercised on a device.",
+      "sources": [
+        "https://developer.android.com/reference/android/net/ConnectivityManager.NetworkCallback#onAvailable(android.net.Network)",
+        "https://developer.android.com/develop/connectivity/network-ops/reading-network-state"
+      ]
+    },
+    {
+      "id": "R45-2",
+      "priority": "P2",
+      "title": "Network acquisition race escapes the recovery loop before its guard exists",
+      "file": "app/src/main/java/com/os73/dosos73/DownloadService.kt",
+      "start_line": 219,
+      "end_line": 225,
+      "supporting_locations": [
+        "app/src/main/java/com/os73/dosos73/NetworkSettings.kt:41-45",
+        "app/src/main/java/com/os73/dosos73/DownloadService.kt:237-243",
+        "app/src/main/java/com/os73/dosos73/TransferProcessor.kt:117-125,136-148"
+      ],
+      "trigger": "The active network passes permitted() at line 219, or awaitPermitted() completes at line 221, then that network disappears or becomes disallowed before requireNetwork() at line 223.",
+      "evidence": "requireNetwork reads activeNetwork and rechecks policy, throwing NETWORK_UNAVAILABLE for this legitimate interleaving. It runs outside the try/catch at lines 237-246 and before networkLost/guard initialization. Consequently the exception exits withNetworkRecovery immediately, even on the first attempt. TransferProcessor converts it into FAILED, journals the failed task and acknowledges its active lease; returning connectivity cannot wake the exited wait loop. The intended WAITING/awaitPermitted path is therefore bypassed solely because connectivity changed between two preflight samples.",
+      "impact": "A short connectivity flap during initial selection or reconnection changes a recoverable network wait into a terminal failure requiring explicit retry. Durable direct partial data remains retained.",
+      "recommendation": "Treat acquisition-time NETWORK_UNAVAILABLE as a connectivity wait/reselection condition within the same recovery loop, while preserving cancellation and cleartext-policy failures. Acquire a candidate and establish its observation without letting a normal connectivity race escape the recovery boundary.",
+      "confidence": "Confirmed by the exact exception/control-flow interleaving; no device reproduction claimed."
+    }
+  ],
+  "positive_observations": [
+    "Direct transfers bind both socketFactory and hostname resolution to the same captured Network and run Safety.checkedAddresses on its DNS results.",
+    "A direct retry reuses the stable UUID task directory. DirectDownloader persists a synchronized checkpoint on read failure; TransferProcessor retains direct partial data for non-user-cancel failures and interruptions.",
+    "A system coroutine cancellation becomes PAUSED and retains the active lease rather than acknowledging it as complete; explicit user cancellation is separately identified."
+  ],
+  "excluded_requirements": [
+    "OS-backed scheduling/wakeup after process death or a future notBefore time is documented as an unfinished requirement and is not reported as a defect here.",
+    "The explicitly bounded two connection-policy retries are not independently classified as a defect.",
+    "No inference of DNS/socket policy bypass was made merely from syntactic URL acceptance."
+  ],
+  "test_gaps": [
+    "No deterministic service test found for cellular-to-Wi-Fi handover followed by loss of the now-nondefault bound network.",
+    "No deterministic test found for network removal between permitted/awaitPermitted and requireNetwork.",
+    "No build, tests or physical network transitions were executed in this review."
+  ]
+}

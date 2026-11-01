@@ -1,0 +1,33 @@
+{
+  "reviewer_id": "22",
+  "scope": {
+    "baseline": "b89b957",
+    "repository": "[workspace]/outputs/dosos73",
+    "files": [
+      "app/src/main/java/com/os73/dosos73/MediaEngine.kt:mapFormats",
+      "app/src/main/java/com/os73/dosos73/ChoiceSelection.kt",
+      "app/src/androidTest/java/com/os73/dosos73/Mp3EncodingTest.kt"
+    ],
+    "focus": "Format labels, audio quality, and M4A versus MP3 representation",
+    "validation": "Static inspection only; no build, emulator, publication, or source changes. Scoped files match b89b957."
+  },
+  "findings": [
+    {
+      "priority": 2,
+      "title": "Do not advertise transcoded audio as Original or retain its source size",
+      "file": "app/src/main/java/com/os73/dosos73/MediaEngine.kt",
+      "start_line": 224,
+      "end_line": 226,
+      "body": "When an accepted m4a or opus entry omits both acodec and vcodec, f.unspecified is true and this branch emits an AUDIO choice with extension mp3, quality Original, and estimatedBytes equal to the source file size. The normal audio branch explicitly labels conversion as MP3 V0 and clears the size because conversion changes it (lines 230-234). The same source therefore receives materially different promises solely because codec metadata is absent: users are offered Original audio and a known download size for an MP3 conversion. Use the conversion label and unknown output size for this fallback too.",
+      "evidence": "Input: format_id=a1, ext=m4a, protocol=https, url=https://example.test/a.m4a, filesize=1000000, with acodec and vcodec absent. mapFormats produces AUDIO/mp3/Original/1000000; adding acodec=mp4a.40.2 and vcodec=none instead produces AUDIO/mp3/MP3 V0/null."
+    }
+  ],
+  "test_gaps": [
+    {
+      "file": "app/src/androidTest/java/com/os73/dosos73/Mp3EncodingTest.kt",
+      "start_line": 35,
+      "end_line": 38,
+      "description": "The test proves that the bundled FFmpeg can encode PCM using libmp3lame and that the output codec is MP3. It does not exercise mapFormats labels, missing codec metadata, qualityChoices, or the application's selected-format download conversion, and does not cover M4A/Opus inputs. This is a coverage gap, not evidence of a failed conversion."
+    }
+  ]
+}

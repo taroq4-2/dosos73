@@ -1,0 +1,53 @@
+{
+  "reviewer_id": "reviewer-20",
+  "scope": {
+    "repository": "outputs/dosos73",
+    "revision": "b89b957",
+    "files": [
+      "app/src/main/java/com/os73/dosos73/MainActivity.kt",
+      "app/src/androidTest/java/com/os73/dosos73/RotationStateTest.kt",
+      "app/src/androidTest/java/com/os73/dosos73/UiFlowTest.kt"
+    ],
+    "focus": [
+      "locale",
+      "recreate",
+      "onNewIntent",
+      "state"
+    ],
+    "method": "Static review only; no edits to repository, build, or emulator."
+  },
+  "findings": [
+    {
+      "id": "R20-1",
+      "priority": "P2",
+      "file": "app/src/main/java/com/os73/dosos73/MainActivity.kt",
+      "line_start": 57,
+      "line_end": 58,
+      "title": "Valid CharSequence share payloads are discarded",
+      "condition": "ACTION_SEND with type text/plain and EXTRA_TEXT containing a non-String CharSequence, such as SpannableString.",
+      "evidence": "EXTRA_TEXT supports CharSequence. getStringExtra only retrieves String; for a styled CharSequence it returns null, so model.receive is never called. The next line removes the payload, making it unavailable for a later retry.",
+      "impact": "Sharing a valid URL as styled text opens the app without accepting the URL.",
+      "recommendation": "Read getCharSequenceExtra(Intent.EXTRA_TEXT)?.toString() before forwarding and consuming the payload."
+    }
+  ],
+  "test_gaps": [
+    {
+      "file": "app/src/androidTest/java/com/os73/dosos73/UiFlowTest.kt",
+      "line_start": 85,
+      "line_end": 109,
+      "gap": "Share test covers only a String payload delivered directly to onNewIntent. Add non-String CharSequence, initial cold launch, and share followed by recreation cases."
+    },
+    {
+      "file": "app/src/androidTest/java/com/os73/dosos73/RotationStateTest.kt",
+      "line_start": 11,
+      "line_end": 20,
+      "gap": "Rotation covers only the home URL. No language switch/recreation coverage on pre-33 and 33+, locale selection after restart, layout-direction assertion, or Android system app-language reset coverage exists in the reviewed tests."
+    },
+    {
+      "file": "app/src/androidTest/java/com/os73/dosos73/UiFlowTest.kt",
+      "line_start": 29,
+      "line_end": 45,
+      "gap": "ActivityScenario.recreate keeps the ViewModel. These assertions do not establish process-death restoration of draft input, shared content, or navigation."
+    }
+  ]
+}

@@ -1,0 +1,46 @@
+{
+  "reviewer_id": "06",
+  "scope": {
+    "repository": "[workspace]/outputs/dosos73",
+    "revision": "b89b957b32b2c9d73bfff505fecdf0abfadd5cf7",
+    "reviewed_in_full": [
+      "app/src/main/java/com/os73/dosos73/OutputStore.kt",
+      "app/src/main/java/com/os73/dosos73/PublicationReceipt.kt",
+      "app/src/androidTest/java/com/os73/dosos73/OutputSafetyTest.kt",
+      "app/src/androidTest/java/com/os73/dosos73/PublicationRecoveryTest.kt"
+    ],
+    "supporting_reads": [
+      "app/src/main/java/com/os73/dosos73/TransferProcessor.kt",
+      "app/src/main/java/com/os73/dosos73/PrivateJournal.kt",
+      "app/src/debug/java/com/os73/dosos73/RecoveryTestDocumentsProvider.kt",
+      "app/src/main/java/com/os73/dosos73/DownloadQueue.kt",
+      "app/src/main/java/com/os73/dosos73/LibraryRepository.kt"
+    ],
+    "method": "Static review only. No source changes, emulator, app execution, or publication performed."
+  },
+  "findings": [
+    {
+      "severity": "P2",
+      "file": "app/src/main/java/com/os73/dosos73/PublicationReceipt.kt",
+      "line": 82,
+      "evidence": "recoverPlan enumerates only the exact planned temporary/final display names (lines 59-60 and 74), then unconditionally throws PUBLICATION_REVIEW_REQUIRED when no candidate matches but a recorded URI exists. It never attempts to open that recorded URI. Deterministic scenario: a MediaStore publication reaches publish() and durably records ready=true; the process dies before DownloadQueue.finish(); the user renames that same MediaStore row while its content URI and bytes remain intact; on restart the row no longer matches DISPLAY_NAME IN (?, ?), and recovery fails on every retry despite the receipt identifying a readable, fingerprint-matching file. The comment on line 81 describes the missing fallback. Existing tests keep the exact planned names and therefore do not exercise this path.",
+      "recommendation": "When no name candidate exists and the journal has a recorded URI, validate that URI within the original destination/ownership boundary, open it, and compare its full recorded fingerprint before accepting a ready publication or safely retrying publication. Preserve review-required behavior when the URI is inaccessible or does not match. Add a deterministic recovery test that changes a committed row's display name while retaining its URI."
+    },
+    {
+      "severity": "P2",
+      "file": "app/src/main/java/com/os73/dosos73/OutputStore.kt",
+      "line": 152,
+      "evidence": "save() runs its entire body inside cancellable withContext(Dispatchers.IO) (line 82). publishVerified() can already clear IS_PENDING or finish the SAF rename and write ready=true (PublicationReceipt.kt:115-128), after which save still opens the final descriptor, updates the library and crosses the dispatch boundary on return (lines 153-160). Deterministic timing scenario: cancellation arrives after publication commits but before save resumes its caller. withContext's prompt cancellation discards the returned Pair and throws CancellationException. TransferProcessor.kt:94-102 never sets COMPLETE and its cancellation handler (104-112) sets CANCELLED/PAUSED instead. For explicit user cancellation, the finally path records a cancelled failed-download and finishes the queue although the output is already publicly committed; the completion callback is not called. The caller's comment that publication is the commit point cannot protect a result that save never delivers.",
+      "recommendation": "Make the post-verification publication commit and delivery of its committed result cancellation-aware as one protocol: once provider publication has committed, ensure TransferProcessor records COMPLETE and acknowledges the committed URI even if cancellation is pending. Avoid relying solely on assigning terminal after returning from a cancellable withContext. Add an injected cancellation test at the provider's successful update/rename boundary."
+    }
+  ],
+  "test_gaps": [
+    "No cancellation-at-commit test for either MediaStore update or SAF rename; existing tests cover provider exceptions after rename, not coroutine cancellation after successful commit.",
+    "No recorded-URI fallback test after external rename or provider name normalization; existing recovery fixtures preserve exact requested display names.",
+    "No creation-gap test where a provider changes the requested display name before record(uri); without a receipt URI the plan is forgotten when enumeration has no exact candidate. This is a provider-dependent risk, not counted as a separately confirmed production defect.",
+    "No ambiguity test with both a task temporary name and final name present; code conservatively raises review-required and preserves both, but duplicate-prevention behavior is not asserted.",
+    "No test for a permanently deleted destination after a recorded URI, or unavailable/removable destination during recovery; current behavior is conservative review-required, and no data-loss defect is claimed.",
+    "No full media fixtures exercising expectedHeight, rotation, missing audio, or valid-but-truncated media; rejectsEmptyAndFakeMedia only verifies empty and HTML input rejection.",
+    "No instrumented tests executed in this read-only review, per task restriction against emulator/app execution."
+  ]
+}

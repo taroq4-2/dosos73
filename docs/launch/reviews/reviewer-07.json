@@ -1,0 +1,57 @@
+{
+  "reviewer_id": "07",
+  "scope": {
+    "repository": "[workspace]/outputs/dosos73",
+    "revision": "b89b957b32b2c9d73bfff505fecdf0abfadd5cf7",
+    "focus": [
+      "SAF URI validity and persisted publication URI",
+      "documentId changes and failed rename",
+      "storage disconnection and permission loss",
+      "recovery of provider-normalized display names"
+    ],
+    "reviewed_in_full": [
+      "app/src/main/java/com/os73/dosos73/OutputStore.kt",
+      "app/src/main/java/com/os73/dosos73/PublicationReceipt.kt",
+      "app/src/main/java/com/os73/dosos73/FileAvailability.kt",
+      "app/src/debug/java/com/os73/dosos73/RecoveryTestDocumentsProvider.kt",
+      "app/src/androidTest/java/com/os73/dosos73/PublicationRecoveryTest.kt",
+      "app/src/androidTest/java/com/os73/dosos73/FileAccessTest.kt"
+    ],
+    "supporting_reads": [
+      "app/src/main/java/com/os73/dosos73/TransferProcessor.kt",
+      "app/src/main/java/com/os73/dosos73/LibraryRepository.kt",
+      "app/src/main/java/com/os73/dosos73/PrivateJournal.kt",
+      "docs/PUBLICATION_RECOVERY.md",
+      "docs/FILE_AVAILABILITY.md"
+    ],
+    "method": "Static review of the specified revision and deterministic branch tracing only. No source changes, emulator, app execution, deployment, or publication.",
+    "verified_behaviors": [
+      "SAF successful rename consumes DocumentsContract.renameDocument returned URI, rather than continuing to use the obsolete documentId (PublicationReceipt.kt:123-128).",
+      "Failed rename after documentId change is rediscovered through exact final display name and verified by full fingerprint; the existing controlled provider/test explicitly covers this path (PublicationRecoveryTest.kt:53-64).",
+      "Unreadable verified output is preserved: fingerprint/open failure precedes deletion and verified mismatch paths call review (PublicationReceipt.kt:88-98).",
+      "FileAccess returns UNAVAILABLE for empty unknown-provider listings and recognizes only primary ExternalStorageProvider document IDs as known local storage (FileAvailability.kt:26-39)."
+    ]
+  },
+  "findings": [],
+  "test_gaps": [
+    {
+      "file": "app/src/main/java/com/os73/dosos73/PublicationReceipt.kt",
+      "line": 82,
+      "gap": "Provider-normalized SAF names are not recovered via a still-valid recorded URI. This is the same missing recorded-URI fallback already reported by reviewer-06, so it is not counted again as a new finding. docs/PUBLICATION_RECOVERY.md:16 also lists silent normalization as an explicit existing limitation.",
+      "reproduction_condition": "Using the existing SAF fixture: set rejectRename=true; call OutputStore.save so a verified receipt and one document remain; keep the map key/documentId and bytes unchanged but replace entries[id] with entries[id].copy(name=\"provider-normalized.bin\"); set rejectRename=false; call PublicationReceipt(context, task.id).recover(). queryChildDocuments returns the document with a different display name, line74 admits no candidate, and line82 throws PUBLICATION_REVIEW_REQUIRED on every retry even though the recorded URI remains readable and fingerprint-matching.",
+      "coverage_needed": "A provider fault mode that normalizes create/rename display names while retaining or returning a valid URI; tests must separately cover a durable recorded URI and the pre-record creation gap."
+    },
+    {
+      "file": "app/src/debug/java/com/os73/dosos73/RecoveryTestDocumentsProvider.kt",
+      "line": 51,
+      "gap": "The fault provider cannot currently simulate a disconnected parent/root, failed child listing, or a partial/empty child listing independently of queryDocument. denyQuery only affects queryDocument; emptyQuery only affects individual document metadata. Existing storage-offline test denies reads after an exact-name candidate has already been found.",
+      "coverage_needed": "Add controlled faults for root metadata, child-list failures and reconnect, and assert that verified documents and receipts remain intact and the original task completes after reconnect. Physical removable/cloud provider removal remains unexecuted."
+    },
+    {
+      "file": "app/src/main/java/com/os73/dosos73/FileAvailability.kt",
+      "line": 35,
+      "gap": "Volume-specific MediaStore absence versus primary mounted state has no test. The current tests exercise app-owned default MediaStore downloads and unknown SAF providers only. No confirmed reachable wrong-volume failure is asserted by this review.",
+      "coverage_needed": "If secondary-volume MediaStore rows can enter the supported library, test removal/reconnection of that volume while primary remains mounted before allowing MISSING or forgetMissing."
+    }
+  ]
+}

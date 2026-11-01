@@ -40,7 +40,10 @@ class PipelineException(val stage: Stage, val code: FailureCode, cause: Throwabl
 object FailureClassifier {
     fun classify(stage: Stage, error: Throwable): PipelineException {
         if (error is PipelineException) return error
-        val message = error.message.orEmpty().lowercase()
+        val full = error.message.orEmpty().lowercase()
+        // Native tails may contain recoverable TLS/HTTP warnings before a different
+        // terminal error. Report the final ERROR line when the engine provides one.
+        val message = full.lineSequence().lastOrNull { it.trimStart().startsWith("error:") } ?: full
         val code =
             when {
                 "enospc" in message || "no space left on device" in message ->
@@ -60,7 +63,8 @@ object FailureClassifier {
                 "no supported javascript runtime" in message -> FailureCode.JS_RUNTIME_UNAVAILABLE
                 "ejs" in message && ("not found" in message || "unavailable" in message) ->
                     FailureCode.EJS_COMPONENT_UNAVAILABLE
-                error is java.net.SocketTimeoutException || "timed out" in message ->
+                error is java.net.SocketTimeoutException ||
+                    (error is java.io.InterruptedIOException && message == "timeout") || "timed out" in message ->
                     FailureCode.NETWORK_TIMEOUT
                 error is java.net.UnknownHostException || error is java.net.ConnectException ->
                     FailureCode.NETWORK_UNAVAILABLE

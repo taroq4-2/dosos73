@@ -48,6 +48,7 @@ class DirectDownloader(private val client: OkHttpClient = secureClient()) {
                         }
                     }
                     .build()
+            Safety.requirePublicLiteral(request.url.host)
             if (cancelled.get()) throw IOException("Cancelled")
             val call = client.newCall(request)
             activeCall = call
@@ -297,6 +298,7 @@ class DirectDownloader(private val client: OkHttpClient = secureClient()) {
                 .addInterceptor { chain ->
                     if (!chain.request().url.isHttps && !allowCleartext())
                         throw PipelineException(Stage.TRANSFER, FailureCode.CLEARTEXT_DISABLED)
+                    Safety.requirePublicLiteral(chain.request().url.host)
                     chain.proceed(chain.request())
                 }
                 .dns(

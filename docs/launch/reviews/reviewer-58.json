@@ -1,0 +1,42 @@
+{
+  "reviewer_id": 58,
+  "role": "Negative tests and security-boundary regression coverage versus production behavior",
+  "scope": {
+    "application_commit_reviewed": "e625ee7 with concurrent working-tree network/runtime fixes",
+    "files_read_complete": [
+      "Safety.kt",
+      "PublicProxy.kt",
+      "HttpRepresentation.kt",
+      "NetworkSettings.kt",
+      "SafetyTest.kt",
+      "SecurityReviewTest.kt",
+      "LiteralNetworkBoundaryTest.kt",
+      "PublicProxyTest.kt",
+      "HeaderRepresentationTest.kt",
+      "FormatSelectorTest.kt",
+      "DirectDownloaderTest.kt",
+      "ProxyTransportTest.kt"
+    ],
+    "additional_read": [
+      "Previously completed complete DirectDownloader.kt and MediaEngine.kt reads connecting the tested boundaries to request/format construction",
+      "docs/SECURITY.md references discovered; no external source or platform guarantee inferred"
+    ],
+    "method": "Read-only static comparison of negative-test assertions, fixtures and production call paths. No source/test/build edits, builds, test execution, device interaction or publication."
+  },
+  "findings": [],
+  "verified_observations": [
+    "LiteralNetworkBoundaryTest exercises the production secureClient with literal-host validation and counts DNS/socket attempts. Both counters must remain zero, so a generic transport exception alone cannot falsely satisfy the test. A separate test passes a redirect through DirectDownloader.request and asserts only one request reached the test transport.",
+    "The older DirectDownloaderTest.rejectionsPrivateRedirectTargetThroughProductionDns-style test checks only an initial blocked loopback URL, despite its redirect-oriented name. Current LiteralNetworkBoundaryTest supplies the actual redirect boundary regression, so this naming weakness does not establish a masked production defect.",
+    "PublicProxyTest uses per-session credentials, rejects missing/wrong/other-session credentials and private/wrong-port targets, and records a resolved public InetSocketAddress before a second private DNS answer is rejected. Production PublicProxy validates the full answer list and connects that address rather than resolving the hostname again.",
+    "HeaderRepresentationTest exercises the actual HttpRepresentation helper against conflicting repeated Content-Encoding/Content-Length/Content-Type/Content-Range/ETag headers. Production direct and parallel transfer paths invoke the same helper before accepting body bytes.",
+    "DirectDownloaderTest seeds a real ResumeJournal and asserts invalid ranges or weak/changed validators leave the prior durable prefix unchanged. Its public-logical-URL-to-loopback transport is explicitly test-only and is not treated as production DNS coverage.",
+    "FormatSelectorTest rejects selector expressions/malformed pairs and compares allowlisted literal-ID construction. MediaEngine constructs structured wrapper options and applies the same selector helper.",
+    "ProxyTransportTest is explicitly opt-in and compares complete byte counts/hashes through Java and bundled Python CONNECT paths; static inspection does not promote a skipped optional network case into passed runtime evidence."
+  ],
+  "limitations": [
+    "No test was executed; all observations concern test source and production wiring, not current passing status.",
+    "No broad penetration-test, certificate-endpoint compatibility, every-address-registry or arbitrary native-helper network coverage is claimed.",
+    "Security/test gaps alone were not filed as defects without a demonstrated material failed boundary or assertion that hides it.",
+    "Maximum-two finding cap yielded zero new proven actionable defects in the selected high-risk scope. Concurrent edits may change the final tree."
+  ]
+}

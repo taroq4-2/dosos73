@@ -1,0 +1,60 @@
+{
+  "reviewer": 30,
+  "baseline": "b89b957",
+  "scope": [
+    "tools/assemble_compact_experiment.py",
+    "tools/trim_universal_apk.py",
+    ".github/workflows/compact-engine.yml"
+  ],
+  "method": "Static inspection only; no builds, emulator, publishing, source changes, or commands executing project code.",
+  "findings": [
+    {
+      "id": "R30-01",
+      "priority": "P2",
+      "category": "input_validation",
+      "title": "Validate ELF architecture before replacing each ABI's engines",
+      "file": "tools/assemble_compact_experiment.py",
+      "line_start": 22,
+      "line_end": 26,
+      "evidence": "The only executable validation is path.read_bytes()[:4] == b'\\x7fELF'. No ELF class, byte order, e_machine, or Android compatibility is checked. Shared libraries at lines 30–36 are copied without even that magic check.",
+      "impact": "A valid x86_64 ELF placed in the arm64-v8a directory passes this check and is copied to lib/arm64-v8a/libffmpeg.so or libffprobe.so at lines 92–95. The resulting universal APK can therefore contain an engine unusable on its advertised ABI while assembly succeeds. The workflow checks size and ZIP alignment but adds no ELF validation.",
+      "recommendation": "Validate ELF class and e_machine against each ABI for both executable replacements and packaged shared libraries; fail assembly with the offending path and expected ABI.",
+      "verification": "Proven from the acceptance predicate and unconditional replacement; no project code was run."
+    }
+  ],
+  "improvements": [
+    {
+      "id": "R30-I1",
+      "category": "reproducibility",
+      "file": "tools/assemble_compact_experiment.py",
+      "lines": [
+        36,
+        98,
+        99
+      ],
+      "title": "Normalize timestamps of newly created ZIP entries",
+      "evidence": "These writestr calls supply names rather than copied ZipInfo records, so their timestamps use assembly time. Existing copied entries in both tools retain source ZipInfo metadata.",
+      "recommendation": "If byte-identical reassembly is desired, use explicit ZipInfo timestamps and compression settings for newly created entries, ideally a documented SOURCE_DATE_EPOCH policy.",
+      "qualification": "The inspected files describe an unsigned experiment and do not promise reproducible builds; this is an improvement, not a broken advertised guarantee."
+    },
+    {
+      "id": "R30-I2",
+      "category": "provenance",
+      "file": ".github/workflows/compact-engine.yml",
+      "lines": [
+        9,
+        18,
+        23,
+        24,
+        40,
+        45,
+        49
+      ],
+      "title": "Record the toolchain and input digests alongside the candidate",
+      "evidence": "NDK and Android build-tools have explicit versions, while ubuntu-latest, major action tags, Java 17 selection and apt-installed nasm may evolve. The assembled candidate's runtime proof records shared runtime data but not the input APK or replacement-engine digests; trim_universal_apk.py does record its input APK SHA-256.",
+      "recommendation": "Publish input APK and per-ABI engine/library hashes, resolved tool versions, and the runtime-proof JSON with the candidate. Pin remaining inputs where repeatability is required.",
+      "qualification": "Provenance/reassembly improvement only; no claim that the project guarantees reproducible builds."
+    }
+  ],
+  "summary": "One ABI validation defect; two explicitly non-blocking reproducibility/provenance improvements. Trim preserves copied ZIP metadata and verifies retained entry bytes. No runtime behavior was tested."
+}

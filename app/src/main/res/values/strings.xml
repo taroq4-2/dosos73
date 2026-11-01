@@ -202,5 +202,16 @@
     <string name="allow_cleartext">Allow unencrypted HTTP links</string>
     <string name="allow_cleartext_hint">Off by default. Enable only for public files you trust. HTTP traffic can be read or changed in transit; HTTPS-to-HTTP redirects remain blocked.</string>
     <string name="error_cleartext_disabled">This link uses unencrypted HTTP. Use HTTPS, or explicitly enable HTTP links in Network policy.</string>
+
+    <string name="sha256_title">File fingerprint · SHA-256</string>
+    <string name="sha256_hint">Calculated from the saved file when requested. Large files may take time.</string>
+    <string name="calculate_sha256">Calculate SHA-256</string>
+    <string name="sha256_failed">The file could not be read. Check access and try again.</string>
+    <string name="copy_sha256">Copy fingerprint</string>
+    <string name="sha256_copied">Fingerprint copied</string>
+    <string name="expected_sha256">Expected SHA-256 (optional)</string>
+    <string name="sha256_invalid">Enter 64 hexadecimal characters.</string>
+    <string name="sha256_matches">Fingerprints match.</string>
+    <string name="sha256_differs">Fingerprints differ.</string>
 </resources>
 

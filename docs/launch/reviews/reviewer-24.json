@@ -1,0 +1,54 @@
+{
+  "reviewer_id": "reviewer-24",
+  "scope": {
+    "baseline": "b89b957",
+    "mode": "static_read_only",
+    "files": [
+      "app/src/main/java/com/os73/dosos73/BundledEngine.kt",
+      "app/src/main/java/com/os73/dosos73/EngineRuntime.kt",
+      "tools/assemble_compact_experiment.py",
+      "tools/build_compact_ffmpeg.sh"
+    ],
+    "assessment": "No demonstrated defect in the four assigned files. BundledEngine verifies the pinned SHA-256 before atomic rename. Runtime initialization is synchronized. LAME archive bytes and FFmpeg revision are pinned. APK assembly checks reconstruction of the trimmed Python runtimes, including external attributes, and explicitly marks its result unsigned and runtime_verified=false."
+  },
+  "findings": [],
+  "test_gaps": [
+    {
+      "area": "AAR conversion and pinned engine integration",
+      "evidence": [
+        "BundledEngine.kt:32-42 validates the raw resource and installed yt-dlp.",
+        "EngineRuntime.kt:12-15 calls YoutubeDL.init after BundledEngine.install.",
+        "assemble_compact_experiment.py:78-99 rewrites existing APK entries; no AAR conversion is performed in this file."
+      ],
+      "gap": "The supplied scope does not establish that AAR conversion preserves the expected resource and native entries, or that upstream initialization preserves the already pinned yt-dlp. This is missing integration evidence, not a demonstrated overwrite or conversion bug."
+    },
+    {
+      "area": "Source-to-binary provenance",
+      "evidence": [
+        "build_compact_ffmpeg.sh:26 verifies the LAME archive SHA-256.",
+        "build_compact_ffmpeg.sh:37 selects an exact FFmpeg commit.",
+        "build_compact_ffmpeg.sh:15-16 accepts an external NDK installation.",
+        "build_compact_ffmpeg.sh:20,37 reuses an existing checkout without a clean-tree assertion.",
+        "build_compact_ffmpeg.sh:62 writes checksums for ffmpeg and ffprobe only."
+      ],
+      "gap": "No evidence in these files binds resulting binaries and shared libraries to a clean source tree, a specific NDK revision, and the recorded source pins. Reproducible-build or provenance attestation remains unverified; no dirty checkout or mismatched binary was observed."
+    },
+    {
+      "area": "Native assembly acceptance",
+      "evidence": [
+        "assemble_compact_experiment.py:22-37 accepts ELF magic and packages shared-library files.",
+        "assemble_compact_experiment.py:68-76 proves only reconstruction of the trimmed Python runtimes.",
+        "assemble_compact_experiment.py:101-102 emits a Python reconstruction proof and runtime_verified=false."
+      ],
+      "gap": "The proof does not certify native ABI, ELF dependencies, loadability, feature coverage, or binary provenance. Those require the stated acceptance process; this reviewer did not build or execute anything."
+    },
+    {
+      "area": "Verification boundary",
+      "evidence": [
+        "Static review only; no build, emulator, publication, or internet inspection.",
+        "The assigned scripts have no working-tree diff from b89b957."
+      ],
+      "gap": "No acceptance results, bundled artifacts, signatures, or runtime-generated proof files were inspected under the four-file scope."
+    }
+  ]
+}

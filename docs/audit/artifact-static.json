@@ -1,20 +1,29 @@
 {
-  "apk_bytes": 61944601,
-  "rc4_bytes": 72758008,
-  "identical_elf_files": 608,
-  "native_compressed_bytes_by_abi": {
-    "armeabi-v7a": 11905393,
-    "arm64-v8a": 13489896,
-    "x86": 13315246,
-    "x86_64": 13631929
-  },
-  "size_scope": "ZIP compressed entry contributions only; ZIP/signature overhead and shared application assets are not included per ABI. Only one universal APK is published.",
-  "jvm": {
-    "tests": 72,
-    "failures": 0,
-    "errors": 0,
-    "skipped": 0
-  },
-  "apk_sha256": "8d5e740f09d8a60becc74c202738699c27029458184d86680b0016cfb0cc31eb",
-  "application_commit": "fe09629"
+  "release": "1.2.0",
+  "source_commit": "72783e39d2704f18722a91040443a51f88adb245",
+  "apk_sha256": "278c1cdeb6c65ad18180ddeef1fa39f9b024bede0109c6ee1ed78132dcf5402a",
+  "bytes": 62059289,
+  "schema_valid": true,
+  "assembly_deterministic": true,
+  "unsigned_sha256": "b43c66236fb6f0eee02740cca3ae4beb010df479b368bc0dd59fc3b9954cb5ee",
+  "wrong_untransformed_apk_rejected": true,
+  "release_debug_hooks_absent": [
+    "beforeWriteForTests",
+    "beforeFormatWriteForTests",
+    "networkWaitMillisForTests",
+    "beforeIndexWriteForTests",
+    "failureObserverForTests",
+    "RecoveryTestDocumentsProvider"
+  ],
+  "four_abis": [
+    "armeabi-v7a",
+    "arm64-v8a",
+    "x86",
+    "x86_64"
+  ],
+  "shared_python_files": 642,
+  "elf_count": 608,
+  "64_bit_segment_failures": 0,
+  "certificate_sha256": "bf0bcb1ba4d282b2e38f75be6220ad4b06902f96b47bbe68d67a51bfeb6e0ca9",
+  "scope": "Artifact/ELF/static checks; physical16KB runtime not certified"
 }

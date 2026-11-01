@@ -35,40 +35,55 @@ class BatchChoiceUiTest {
         }
     }
 
+    private fun waitForDraft(model: MainViewModel) {
+        compose.waitUntil(5000) { !model.batchSaving.value && !model.batchStorageError.value }
+    }
+
+    private fun editModel(model: MainViewModel, edit: () -> Unit) {
+        compose.runOnIdle(edit)
+        waitForDraft(model)
+    }
+
     private fun withModel(block: (MainViewModel) -> Unit) {
         val base = androidx.test.core.app.ApplicationProvider.getApplicationContext<android.app.Application>()
         val folder = java.io.File(base.cacheDir, "batch-model-test-${java.util.UUID.randomUUID()}").apply { mkdirs() }
-        val app = object : android.app.Application() { override fun getFilesDir() = folder }
+        val app = object : android.app.Application() {
+            init { attachBaseContext(base) }
+            override fun getFilesDir() = folder
+        }
         val store = androidx.lifecycle.ViewModelStore()
-        val model = androidx.lifecycle.ViewModelProvider(store, androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory(app))[MainViewModel::class.java]
+        val model = compose.runOnIdle {
+            androidx.lifecycle.ViewModelProvider(store, androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory(app))[MainViewModel::class.java]
+        }
         try {
-            compose.runOnIdle { block(model) }
-            compose.waitUntil(5000) { !model.batchSaving.value }
+            waitForDraft(model)
+            block(model)
+            waitForDraft(model)
         } finally { compose.runOnIdle { store.clear() }; folder.deleteRecursively() }
     }
 
     @Test fun destinationOverrideIsPerLinkAndDownloadsIsExplicit() = withModel { model ->
-        model.prepareBatch("https://example.com/a https://example.com/b")
+        editModel(model) { model.prepareBatch("https://example.com/a https://example.com/b") }
         val first = model.batch.value.first().url!!
-        model.batchDestination(first, "content://com.android.externalstorage.documents/tree/primary%3ADownload")
+        editModel(model) {
+            model.batchDestination(first, "content://com.android.externalstorage.documents/tree/primary%3ADownload")
+        }
         assertTrue(model.batch.value.first().destinationOverride)
         assertFalse(model.batch.value.last().destinationOverride)
-        model.batchDestination(first, "file:///private")
+        editModel(model) { model.batchDestination(first, "file:///private") }
         assertTrue(model.batch.value.first().destination!!.startsWith("content://"))
-        model.batchDestination(first, null)
+        editModel(model) { model.batchDestination(first, null) }
         assertTrue(model.batch.value.first().destinationOverride)
         assertNull(model.batch.value.first().destination)
     }
 
-    @Test fun removingQueuedEntryPreservesFailedAndUnselectedRows() = withModel { model ->
-        model.prepareBatch("https://example.com/a invalid https://example.com/b")
-        model.selectBatch(2, false)
-        val first = model.batch.value.first()
-        model.removeBatch(first)
-        assertEquals(2, model.batch.value.size)
-        assertEquals(R.string.error_url, model.batch.value.first().error)
+    @Test fun invalidChoicePreservesFailedAndUnselectedRows() = withModel { model ->
+        editModel(model) { model.prepareBatch("https://example.com/a invalid https://example.com/b") }
+        editModel(model) { model.selectBatch(2, false) }
+        assertEquals(3, model.batch.value.size)
+        assertEquals(R.string.error_url, model.batch.value[1].error)
         assertFalse(model.batch.value.last().selected)
-        model.chooseBatch(1, Choice("fake", Kind.VIDEO, "mp4", "4K"))
+        editModel(model) { model.chooseBatch(2, Choice("fake", Kind.VIDEO, "mp4", "4K")) }
         assertNull(model.batch.value.last().choice)
     }
     @Test fun storageFailureOffersRetryAndPreventsEnqueue() {
