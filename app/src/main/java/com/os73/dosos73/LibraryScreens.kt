@@ -168,6 +168,11 @@ internal fun SavedFileRow(
                                 enabled = availability != FileAvailability.MISSING || key in setOf("info", "collection"),
                             )
                         }
+                    if (item.kind == Kind.VIDEO)
+                        DropdownMenuItem({ Text(stringResource(R.string.offline_convert)) }, {
+                            menu = false
+                            onAction(item, "extract_mp3")
+                        }, enabled = availability == FileAvailability.AVAILABLE)
                     if (history)
                         DropdownMenuItem(
                             { Text(stringResource(R.string.remove_history)) },

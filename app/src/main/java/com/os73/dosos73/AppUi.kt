@@ -197,6 +197,9 @@ internal fun HomeScreen(
     onDefaultFolder: () -> Unit,
     onStart: () -> Unit,
     onSource: (String) -> Unit,
+    onOffline: () -> Unit = {},
+    onPreset: (Choice, String?) -> Unit = { _, _ -> },
+    startEnabled: Boolean = true,
 ) {
     val locale = LocalConfiguration.current.locales[0]
     val compactHeader = LocalConfiguration.current.screenHeightDp < 420
@@ -268,7 +271,7 @@ internal fun HomeScreen(
                     ),
                     if (screen.analysis != null) onStart else onAnalyze,
                     Modifier.testTag(if (screen.analysis != null) "download" else "analyze"),
-                    !screen.busy,
+                    !screen.busy && startEnabled,
                     Glyph.DOWNLOAD,
                 )
             }
@@ -295,7 +298,7 @@ internal fun HomeScreen(
                 style = MaterialTheme.typography.bodySmall,
             )
         }
-        AnalysisOptions(screen, customFolder, onSelect, onFolder, onDefaultFolder)
+        AnalysisOptions(screen, customFolder, onSelect, onFolder, onDefaultFolder, onPreset)
         CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
             BoxWithConstraints(Modifier.fillMaxWidth()) {
             val sourceWidth = (60 * LocalConfiguration.current.fontScale.coerceAtLeast(1f)).dp
@@ -389,10 +392,10 @@ internal fun HomeScreen(
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             ToolTile(
                 R.string.extract_audio,
-                R.string.from_video,
+                R.string.tools_local_hint,
                 Glyph.VIDEO,
                 Neon.Purple,
-                onAudio,
+                onOffline,
                 Modifier.weight(1f),
             )
             ToolTile(
@@ -643,9 +646,11 @@ internal fun NeonChip(
 
 @Composable
 internal fun AnalysisOptions(screen: ScreenState, customFolder: Boolean, onSelect: (Choice) -> Unit,
-    onFolder: () -> Unit, onDefaultFolder: () -> Unit) {
+    onFolder: () -> Unit, onDefaultFolder: () -> Unit,
+    onPreset: (Choice, String?) -> Unit = { _, _ -> }) {
     val locale = LocalConfiguration.current.locales[0]
     screen.analysis?.let { analysis ->
+        PresetControls(analysis, screen.selected, onPreset)
         Panel {
             Text(
                 analysis.title,

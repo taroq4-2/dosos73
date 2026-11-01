@@ -25,6 +25,8 @@ class DownloadService : Service() {
     @Volatile private var transferNetwork: android.net.Network? = null
     private val mediaDelegate = lazy { MediaEngine(this) { transferNetwork ?: NetworkSettings.requireNetwork(this) } }
     private val media by mediaDelegate
+    private val offlineDelegate = lazy { OfflineAudio(this) }
+    private val offline by offlineDelegate
     private val notificationGate = NotificationGate()
     private var detail = ""
     private val processor by lazy { TransferProcessor(this, ::publish, ::transferTask, { userCancelled }, ::completionNotification) }
@@ -202,40 +204,49 @@ class DownloadService : Service() {
         worker.start()
     }
 
-    private suspend fun transferTask(task: DownloadTask, directory: File): File =
-                withNetworkRecovery(task) {
-                    if (task.analysis.direct) {
-                        File(directory, "file.${task.choice.extension}").also { file ->
-                            direct.download(
-                                task.analysis.url,
-                                file,
-                                connections = if (NetworkSettings.parallelConnections(this@DownloadService)) 2 else 1,
-                                progress = { bytes, total, speed ->
-                                    publish(
-                                        TransferState(
-                                            if (paused.value) Phase.PAUSED else Phase.DOWNLOADING,
-                                            task.analysis.title,
-                                            bytes,
-                                            total,
-                                            Safety.progress(bytes, total),
-                                            speed,
-                                        )
-                                    )
-                                },
-                                awaitReady = { paused.first { !it } },
-                            )
-                        }
-                    } else
-                        media.download(task, directory) { percent, processing ->
+    private suspend fun transferTask(task: DownloadTask, directory: File): File {
+        val input = task.localSource
+        if (input != null) {
+            publish(TransferState(Phase.PROCESSING, task.analysis.title))
+            return offline.convert(input, directory) { percent, encoding ->
+                val overall = percent?.let { if (encoding) 0.2f + 0.8f * it else 0.2f * it }
+                publish(TransferState(Phase.PROCESSING, task.analysis.title, percent = overall))
+            }
+        }
+        return withNetworkRecovery(task) {
+            if (task.analysis.direct) {
+                File(directory, "file.${task.choice.extension}").also { file ->
+                    direct.download(
+                        task.analysis.url,
+                        file,
+                        connections = if (NetworkSettings.parallelConnections(this@DownloadService)) 2 else 1,
+                        progress = { bytes, total, speed ->
                             publish(
                                 TransferState(
-                                    if (processing) Phase.PROCESSING else Phase.DOWNLOADING,
+                                    if (paused.value) Phase.PAUSED else Phase.DOWNLOADING,
                                     task.analysis.title,
-                                    percent = if (processing) null else percent,
+                                    bytes,
+                                    total,
+                                    Safety.progress(bytes, total),
+                                    speed,
                                 )
                             )
-                        }
+                        },
+                        awaitReady = { paused.first { !it } },
+                    )
                 }
+            } else
+                media.download(task, directory) { percent, processing ->
+                    publish(
+                        TransferState(
+                            if (processing) Phase.PROCESSING else Phase.DOWNLOADING,
+                            task.analysis.title,
+                            percent = if (processing) null else percent,
+                        )
+                    )
+                }
+        }
+    }
 
     private suspend fun <T> withNetworkRecovery(task: DownloadTask, block: suspend () -> T): T =
         recoverNetwork(
@@ -346,6 +357,7 @@ class DownloadService : Service() {
         cancelled = true
         direct.cancel()
         if (mediaDelegate.isInitialized()) media.cancel()
+        if (offlineDelegate.isInitialized()) offline.cancel()
         job?.cancel()
     }
 
@@ -358,6 +370,7 @@ class DownloadService : Service() {
         cancelled = true
         direct.cancel()
         if (mediaDelegate.isInitialized()) media.cancel()
+        if (offlineDelegate.isInitialized()) offline.cancel()
         scope.cancel()
         super.onDestroy()
     }

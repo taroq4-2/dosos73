@@ -44,6 +44,7 @@ data class DownloadTask(
     val priority: TaskPriority = TaskPriority.NORMAL,
     val userPaused: Boolean = false,
     val notBefore: Long = 0,
+    val localSource: Uri? = null,
 )
 
 enum class Phase {

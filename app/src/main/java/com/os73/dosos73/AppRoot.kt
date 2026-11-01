@@ -74,6 +74,7 @@ internal fun MainActivity.AppScreen(model: MainViewModel, sharedGeneration: Int,
     var quickEnabled by remember { mutableStateOf(QuickLaunch.enabled(this)) }
     var launcherPaste by remember { mutableStateOf(QuickLaunch.launcherPaste(this)) }
     var submitting by remember { mutableStateOf(false) }
+    var presetApplying by remember { mutableStateOf(false) }
     var requestingNotifications by remember { mutableStateOf(false) }
     var details by remember { mutableStateOf(false) }
     var source by remember { mutableStateOf<String?>(null) }
@@ -86,6 +87,12 @@ internal fun MainActivity.AppScreen(model: MainViewModel, sharedGeneration: Int,
     )) { mutableStateOf(null) }
     var renamed by rememberSaveable { mutableStateOf("") }
     var preview by remember { mutableStateOf<SavedFile?>(null) }
+    var duplicate by remember { mutableStateOf<Pair<SavedFile, kotlinx.coroutines.CompletableDeferred<Int>>?>(null) }
+    var localUri by rememberSaveable { mutableStateOf<String?>(null) }
+    var localInput by remember { mutableStateOf<LocalAudioInput?>(null) }
+    var localLoading by remember { mutableStateOf(false) }
+    var localError by remember { mutableStateOf<Int?>(null) }
+    var pendingStart by rememberSaveable { mutableStateOf<String?>(null) }
     var libraryRevision by remember { mutableIntStateOf(0) }
     val batchRequested by model.batchRequested.collectAsStateWithLifecycle()
     LaunchedEffect(batchRequested) {
@@ -116,8 +123,8 @@ internal fun MainActivity.AppScreen(model: MainViewModel, sharedGeneration: Int,
                 FailureJournal.initialize(this@AppScreen)
             }
             val interrupted = DownloadQueue.interrupted(this@AppScreen)
-            if (!Transfers.state.value.active && interrupted != null) {
-                if (interrupted.userPaused) {
+            if (!Transfers.state.value.active && (interrupted != null || DownloadQueue.hasRunnable())) {
+                if (interrupted?.userPaused == true) {
                     if (Transfers.reserve(interrupted)) {
                         Transfers.take()
                         Transfers.update(
@@ -175,6 +182,72 @@ internal fun MainActivity.AppScreen(model: MainViewModel, sharedGeneration: Int,
             } catch (_: SecurityException) { message(R.string.error_storage) }
         }
     }
+    val localPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) {
+            try {
+                contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                localUri = uri.toString()
+            } catch (_: SecurityException) { message(R.string.offline_error_read) }
+        }
+    }
+    LaunchedEffect(localUri) {
+        localInput = null
+        localError = null
+        val uri = localUri ?: return@LaunchedEffect
+        localLoading = true
+        try { localInput = OfflineAudio(this@AppScreen).inspect(Uri.parse(uri)) }
+        catch (error: kotlinx.coroutines.CancellationException) { throw error }
+        catch (error: Exception) { localError = (error as? OfflineAudioException)?.messageResource ?: R.string.offline_error_read }
+        finally { localLoading = false }
+    }
+    fun applyPreset(choice: Choice, destination: String?) {
+        if (presetApplying || submitting || requestingNotifications) return
+        val target = model.state.value.analysis?.url ?: return
+        val previousChoice = model.state.value.selected
+        presetApplying = true
+        scope.launch {
+            try {
+                val uri = destination?.let(Uri::parse)
+                withContext(Dispatchers.IO) {
+                    if (uri != null) {
+                        val owns = packageManager.resolveContentProvider(uri.authority.orEmpty(), 0)
+                            ?.applicationInfo?.uid == android.os.Process.myUid()
+                        require(owns || contentResolver.persistedUriPermissions.any {
+                            it.uri == uri && it.isWritePermission
+                        })
+                    }
+                    OutputStore(this@AppScreen).preflight(uri)
+                }
+                val current = model.state.value
+                val currentAnalysis = current.analysis ?: return@launch
+                if (currentAnalysis.url != target || choice !in currentAnalysis.choices ||
+                    current.selected != previousChoice || current.busy) return@launch
+                model.select(choice)
+                tree = uri
+                preferences.edit().apply {
+                    if (uri == null) remove("tree") else putString("tree", uri.toString())
+                }.apply()
+                message(R.string.tools_preset_applied)
+            } catch (error: kotlinx.coroutines.CancellationException) { throw error }
+            catch (_: Exception) { message(R.string.tools_preset_folder_error) }
+            finally { presetApplying = false }
+        }
+    }
+    suspend fun reviewExisting(task: DownloadTask): Boolean {
+        val existing = try { DownloadHistory.find(this@AppScreen, task) }
+            catch (error: kotlinx.coroutines.CancellationException) { throw error }
+            catch (_: Exception) { message(R.string.tools_history_error); null }
+        if (existing == null) return true
+        val answer = kotlinx.coroutines.CompletableDeferred<Int>()
+        duplicate = existing to answer
+        return try {
+            when (answer.await()) {
+                1 -> true
+                2 -> { model.closeQuick(); preview = existing; false }
+                else -> false
+            }
+        } finally { if (duplicate?.second === answer) duplicate = null }
+    }
     fun runQueue() {
         try {
             ContextCompat.startForegroundService(
@@ -190,6 +263,7 @@ internal fun MainActivity.AppScreen(model: MainViewModel, sharedGeneration: Int,
         submitting = true
         scope.launch {
             try {
+                if (retryOf == null && !reviewExisting(task)) return@launch
                 DownloadQueue.enqueue(this@AppScreen, task)
                 retryOf?.let {
                     FailureJournal.remove(this@AppScreen, it, discardPartial = false)
@@ -205,24 +279,29 @@ internal fun MainActivity.AppScreen(model: MainViewModel, sharedGeneration: Int,
             }
         }
     }
-    fun start() {
-        val analysis = screen.analysis ?: return
-        val choice = screen.selected ?: return
-        enqueue(DownloadTask(analysis, choice, tree))
-    }
-    val notifications =
-        rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
-            requestingNotifications = false
-            start()
+    val notifications = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
+        requestingNotifications = false
+        val task = pendingStart
+        pendingStart = null
+        if (task != null) {
+            try { enqueue(DownloadQueue.decodeTask(org.json.JSONObject(task))) }
+            catch (_: Exception) { message(R.string.error_start) }
         }
-    fun requestStart() {
-        if (submitting || requestingNotifications) return
+    }
+    fun requestTask(task: DownloadTask) {
+        if (submitting || requestingNotifications || presetApplying) return
         if (Build.VERSION.SDK_INT >= 33 && ContextCompat.checkSelfPermission(
                 this@AppScreen, Manifest.permission.POST_NOTIFICATIONS) !=
             android.content.pm.PackageManager.PERMISSION_GRANTED) {
+            pendingStart = DownloadQueue.encodeTask(task).toString()
             requestingNotifications = true
             notifications.launch(Manifest.permission.POST_NOTIFICATIONS)
-        } else start()
+        } else enqueue(task)
+    }
+    fun requestStart() {
+        val analysis = screen.analysis ?: return
+        val choice = screen.selected ?: return
+        requestTask(DownloadTask(analysis, choice, tree))
     }
     fun command(action: String) {
         try {
@@ -247,6 +326,7 @@ internal fun MainActivity.AppScreen(model: MainViewModel, sharedGeneration: Int,
             "missing" -> message(R.string.file_missing)
             "permission" -> message(R.string.file_permission_required)
             "unavailable" -> message(R.string.file_storage_unavailable)
+            "extract_mp3" -> { localUri = item.uri; page = "offline" }
             "open" -> preview = item
             "external" -> open(Uri.parse(item.uri), item.mime)
             "share" ->
@@ -342,6 +422,11 @@ internal fun MainActivity.AppScreen(model: MainViewModel, sharedGeneration: Int,
         },
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding).statusBarsPadding().imePadding()) {
+            if (presetApplying) {
+                LinearProgressIndicator(Modifier.fillMaxWidth())
+                Text(stringResource(R.string.tools_preset_checking), Modifier.padding(12.dp),
+                    style = MaterialTheme.typography.bodySmall)
+            }
             if (page in setOf("downloads", "files")) {
                 ScreenHeader(
                     {
@@ -397,6 +482,9 @@ internal fun MainActivity.AppScreen(model: MainViewModel, sharedGeneration: Int,
                             },
                             onStart = ::requestStart,
                             onSource = { source = it },
+                            onOffline = { page = "offline" },
+                            onPreset = ::applyPreset,
+                            startEnabled = !submitting && !requestingNotifications && !presetApplying,
                         )
                     "downloads" ->
                         DownloadsScreen(
@@ -471,23 +559,24 @@ internal fun MainActivity.AppScreen(model: MainViewModel, sharedGeneration: Int,
                             storageError = batchStorageError,
                             onRetryStorage = model::retryBatchDraft,
                             onQueue = {
-                                if (!submitting && !batchSaving && !batchStorageError) {
+                                if (!submitting && !batchSaving && !batchStorageError && !presetApplying) {
                                     submitting = true
                                     scope.launch {
                                         try {
                                             val ready =
                                                 batch.filter { it.selected && it.analysis != null }
                                             require(queue.size + ready.size <= 50)
-                                            ready.forEach { entry ->
+                                            val tasks = ready.map { entry ->
                                                 val analysis = entry.analysis!!
-                                                model.queueBatch(
-                                                    entry,
-                                                    DownloadTask(
-                                                        analysis,
-                                                        entry.choice?.takeIf { it in analysis.choices } ?: analysis.choices.first(),
-                                                        if (entry.destinationOverride) entry.destination?.let(Uri::parse) else tree,
-                                                    ),
-                                                )
+                                                entry to DownloadTask(analysis,
+                                                    entry.choice?.takeIf { it in analysis.choices } ?: analysis.choices.first(),
+                                                    if (entry.destinationOverride) entry.destination?.let(Uri::parse) else tree)
+                                            }
+                                            // Finish duplicate review before committing any batch row.
+                                            for ((_, task) in tasks) if (!reviewExisting(task)) return@launch
+                                            for ((entry, task) in tasks) {
+                                                model.queueBatch(entry, task)
+                                                runQueue()
                                             }
                                             // Failed and unselected entries remain available for retry.
                                             page = "downloads"
@@ -507,7 +596,18 @@ internal fun MainActivity.AppScreen(model: MainViewModel, sharedGeneration: Int,
                         ::setLanguage, { picker.launch(tree) }, {
                             tree = null
                             preferences.edit().remove("tree").apply()
-                        }, { page = "privacy" }, { page = "batch" }, { page = "about" }, { page = "quick" })
+                        }, { page = "privacy" }, { page = "batch" }, { page = "about" }, { page = "quick" }, { page = "offline" })
+                    "offline" -> OfflineAudioScreen(localInput, localLoading, localError, tree != null,
+                        onPick = { localPicker.launch(arrayOf("video/*")) },
+                        onFolder = { picker.launch(tree) },
+                        onDefaultFolder = { tree = null; preferences.edit().remove("tree").apply() },
+                        onStart = {
+                            localInput?.let { input ->
+                                val title = input.name.substringBeforeLast('.', input.name).take(200)
+                                val analysis = Analysis(input.uri.toString(), title, listOf(OfflineAudio.CHOICE), false)
+                                requestTask(DownloadTask(analysis, OfflineAudio.CHOICE, tree, localSource = input.uri))
+                            }
+                        })
                     "quick" -> QuickLaunchScreen(quickEnabled, launcherPaste,
                         onEnabled = { value ->
                             try {
@@ -559,18 +659,36 @@ internal fun MainActivity.AppScreen(model: MainViewModel, sharedGeneration: Int,
                     AnalysisOptions(screen, tree != null, model::select, { picker.launch(tree) }, {
                         tree = null
                         preferences.edit().remove("tree").apply()
-                    })
+                    }, ::applyPreset)
                 }
             },
             confirmButton = {
                 TextButton(::requestStart, enabled = !screen.busy && screen.selected != null &&
-                    !submitting && !requestingNotifications, modifier = Modifier.testTag("quick_start")) {
+                    !submitting && !requestingNotifications && !presetApplying, modifier = Modifier.testTag("quick_start")) {
                     Symbol(Glyph.DOWNLOAD)
                     Spacer(Modifier.width(8.dp))
                     Text(stringResource(R.string.start_short))
                 }
             },
             dismissButton = { TextButton(model::closeQuick, Modifier.testTag("quick_close")) { Text(stringResource(R.string.cancel)) } },
+        )
+    }
+    duplicate?.let { (item, answer) ->
+        AlertDialog(
+            modifier = Modifier.testTag("history_dialog"),
+            onDismissRequest = { answer.complete(0) },
+            title = { Text(stringResource(R.string.history_downloaded_before)) },
+            text = { Column {
+                Text(stringResource(R.string.history_downloaded_before_message))
+                Text(item.name, maxLines = 3, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                TextButton({ answer.complete(2) }, Modifier.testTag("history_open")) {
+                    Text(stringResource(R.string.history_open_existing))
+                }
+            } },
+            confirmButton = { TextButton({ answer.complete(1) }, Modifier.testTag("history_again")) {
+                Text(stringResource(R.string.history_download_again))
+            } },
+            dismissButton = { TextButton({ answer.complete(0) }) { Text(stringResource(R.string.cancel)) } },
         )
     }
     preview?.let { item ->

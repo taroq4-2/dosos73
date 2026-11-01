@@ -11,7 +11,7 @@ import androidx.compose.ui.unit.dp
 @Composable
 internal fun SettingsScreen(customFolder: Boolean, onLanguage: (String) -> Unit,
     onFolder: () -> Unit, onDefaultFolder: () -> Unit,
-    onPrivacy: () -> Unit, onBatch: () -> Unit, onAbout: () -> Unit, onQuick: () -> Unit) {
+    onPrivacy: () -> Unit, onBatch: () -> Unit, onAbout: () -> Unit, onQuick: () -> Unit, onOffline: () -> Unit = {}) {
     Page {
         Brand(true)
         Text(stringResource(R.string.settings), style = MaterialTheme.typography.headlineMedium)
@@ -30,6 +30,9 @@ internal fun SettingsScreen(customFolder: Boolean, onLanguage: (String) -> Unit,
         }
         OutlinedButton(onQuick, Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag("quick_settings")) {
             Symbol(Glyph.LINK); Spacer(Modifier.width(8.dp)); Text(stringResource(R.string.quick_title))
+        }
+        OutlinedButton(onOffline, Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag("offline_settings")) {
+            Symbol(Glyph.AUDIO); Spacer(Modifier.width(8.dp)); Text(stringResource(R.string.offline_convert))
         }
         NetworkControls()
         OutlinedButton(onPrivacy, Modifier.fillMaxWidth()) { Text(stringResource(R.string.privacy_title)) }
@@ -50,6 +53,7 @@ internal fun MoreScreen(onNavigate: (String) -> Unit) {
         Text(stringResource(R.string.more), style = MaterialTheme.typography.headlineMedium)
         listOf(Triple("settings", R.string.settings, Glyph.SETTINGS),
             Triple("batch", R.string.batch_title, Glyph.LINK),
+            Triple("offline", R.string.offline_convert, Glyph.AUDIO),
             Triple("privacy", R.string.privacy_title, Glyph.INFO),
             Triple("about", R.string.about, Glyph.INFO),
             Triple("contact", R.string.contact, Glyph.SHARE)).forEach { (key, label, icon) ->

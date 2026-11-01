@@ -252,6 +252,7 @@ internal object DownloadQueue {
             .put("priority", task.priority.name)
             .put("paused", task.userPaused)
             .put("notBefore", task.notBefore)
+            .put("localSource", task.localSource?.toString())
             .put("choice", encodeChoice(task.choice))
 
     internal fun encodeChoice(choice: Choice): JSONObject =
@@ -267,7 +268,13 @@ internal object DownloadQueue {
                     .put("language", choice.language)
 
     internal fun decodeTask(json: JSONObject): DownloadTask {
-        val source = Safety.url(json.getString("url"))
+        val local = if (json.isNull("localSource")) null else Uri.parse(json.getString("localSource"))
+        require(local == null || (local.scheme == "content" && !local.authority.isNullOrBlank() &&
+            local.toString().length <= 8192))
+        val source = if (local == null) Safety.url(json.getString("url")) else {
+            require(json.getString("url") == local.toString())
+            local.toString()
+        }
         val c = json.getJSONObject("choice")
         val choice =
             Choice(
@@ -283,6 +290,7 @@ internal object DownloadQueue {
             )
         require(choice.extension.matches(Regex("[a-zA-Z0-9]{1,8}")))
         require(choice.id.matches(Regex("[a-zA-Z0-9_.-]{1,80}(?:\\+[a-zA-Z0-9_.-]{1,80})?")))
+        require(local == null || (!json.getBoolean("direct") && choice == OfflineAudio.CHOICE))
         val tree = if (json.isNull("tree")) null else Uri.parse(json.getString("tree"))
         require(tree == null || tree.scheme == "content")
         val id = json.getString("id")
@@ -301,6 +309,7 @@ internal object DownloadQueue {
             TaskPriority.valueOf(json.optString("priority", "NORMAL")),
             json.optBoolean("paused", false),
             json.optLong("notBefore", 0),
+            local,
         )
     }
 }

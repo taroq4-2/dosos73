@@ -72,7 +72,7 @@ internal object DeferredTransferScheduler {
                         if (NetworkSettings.unmeteredOnly(context)) addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED)
                     }.build()
                 val info = JobInfo.Builder(JOB_ID, ComponentName(context, DeferredTransferJobService::class.java))
-                    .setRequiredNetwork(request)
+                    .apply { if (candidate.localSource == null) setRequiredNetwork(request) }
                     .setPersisted(true)
                     .setMinimumLatency((candidate.notBefore - now).coerceAtLeast(0))
                     .setBackoffCriteria(30_000, JobInfo.BACKOFF_POLICY_EXPONENTIAL)
@@ -99,7 +99,8 @@ internal object DeferredTransferScheduler {
             if (!prefs(context).getBoolean("armed", false) ||
                 prefs(context).getString(REQUEST_ID, null) != params.extras.getString(REQUEST_ID))
                 return@withLock false
-            if (candidate.notBefore > System.currentTimeMillis() || !NetworkSettings.permitted(context, params.network))
+            if (candidate.notBefore > System.currentTimeMillis() ||
+                (candidate.localSource == null && !NetworkSettings.permitted(context, params.network)))
                 return@withLock true // System backoff/constraints handle a changed clock/network.
             val manager = context.getSystemService(NotificationManager::class.java)
             manager.createNotificationChannel(NotificationChannel("downloads", context.getString(R.string.downloads), NotificationManager.IMPORTANCE_LOW))

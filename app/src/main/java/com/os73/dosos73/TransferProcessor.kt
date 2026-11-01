@@ -19,7 +19,7 @@ internal class TransferProcessor(
 
     suspend fun run(task: DownloadTask, detail: String) = coroutineScope {
         val directory =
-            if (task.analysis.direct) TransferFiles.directory(context, task.id)
+            if (task.analysis.direct || task.localSource != null) TransferFiles.directory(context, task.id)
             else File(context.cacheDir, "transfer-${UUID.randomUUID()}")
         var stage = Stage.TRANSFER
         var terminal = TransferState(Phase.CANCELLED, task.analysis.title)
@@ -48,6 +48,14 @@ internal class TransferProcessor(
             }
             withContext(Dispatchers.IO) {
                 store.preflight(task.tree)
+                if (task.localSource != null) {
+                    val parent = File(context.noBackupFilesDir, "transfers").canonicalFile
+                    check(directory.canonicalFile == File(parent, task.id)) { "Local staging path changed" }
+                    // Local conversions restart from their read-only source; a dead process's
+                    // copied input must not consume space needed for the replacement attempt.
+                    if (directory.exists() && !directory.deleteRecursively())
+                        throw java.io.IOException("Local staging cannot be reclaimed")
+                }
                 check(directory.mkdirs() || directory.isDirectory)
                 val partial = File(directory, "file.${task.choice.extension}")
                 val checkpoint = if (task.analysis.direct) ResumeJournal(partial).read()?.takeIf {
@@ -122,7 +130,9 @@ internal class TransferProcessor(
                 withContext(NonCancellable) { trace(failure.stage, TimelineResult.FAILED, code = failure.code) }
                 Diagnostics.event(failure.stage, "failed", code = failure.code)
                 terminal =
-                    TransferState(Phase.FAILED, task.analysis.title, error = failure.messageResource())
+                    TransferState(Phase.FAILED, task.analysis.title,
+                        error = if (failure.code == FailureCode.STORAGE_FULL) failure.messageResource()
+                            else (e as? OfflineAudioException)?.messageResource ?: failure.messageResource())
             }
         } finally {
             // Keep every dispatcher return in finalization inside an active context. A
@@ -133,6 +143,14 @@ internal class TransferProcessor(
                     if (!retain) directory.deleteRecursively()
                 }
                 var acknowledged = terminal.phase == Phase.COMPLETE
+                if (terminal.phase == Phase.COMPLETE) {
+                    try {
+                        val uri = terminal.uri ?: error("Committed output URI missing")
+                        val bytes = store.committedBytes ?: terminal.total
+                            ?: LibraryRepository.files.value.firstOrNull { it.uri == uri.toString() }?.bytes
+                        if (bytes != null) DownloadHistory.record(context, task, uri, terminal.mime, bytes)
+                    } catch (_: Exception) { Diagnostics.event(Stage.PUBLISH, "history_unavailable") }
+                }
                 if (terminal.phase in setOf(Phase.FAILED, Phase.CANCELLED)) {
                     acknowledged =
                         runCatching {

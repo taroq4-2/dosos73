@@ -1,0 +1,8 @@
+<resources>
+    <string name="tools_local_hint">From a saved video · offline</string>
+    <string name="tools_preset_applied">Preset applied. Review the options before starting.</string>
+    <string name="tools_preset_folder_error">The preset folder is unavailable. Choose an accessible folder and try again.</string>
+    <string name="tools_history_error">Previous downloads could not be checked. You can continue with this download.</string>
+    <string name="tools_unknown_duration">Duration will be checked during conversion</string>
+    <string name="tools_preset_checking">Checking the preset folder…</string>
+</resources>

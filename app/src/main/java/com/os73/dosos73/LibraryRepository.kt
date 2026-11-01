@@ -49,6 +49,10 @@ internal object LibraryRepository {
             override fun sizeOf(key: String, value: Bitmap) = value.allocationByteCount
         }
 
+    private suspend fun updateSourceHistory(block: suspend () -> Unit) = withContext(kotlinx.coroutines.NonCancellable) {
+        try { block() } catch (_: Exception) { Diagnostics.event(Stage.PUBLISH, "history_unavailable") }
+    }
+
     private fun index(context: Context) = AtomicFile(File(context.filesDir, "saved-files.json"))
 
     private fun read(context: Context): List<SavedFile> {
@@ -121,6 +125,7 @@ internal object LibraryRepository {
                     putString("collection:${changed.uri}", collection)
             }.commit())
         }
+        updateSourceHistory { DownloadHistory.migrate(context, plan.original.uri, changed.uri) }
         recovery.forget()
         return next
     }
@@ -241,6 +246,7 @@ internal object LibraryRepository {
                 write(context, next)
                 migrateHiddenUri(context, item.uri, newUri.toString())
                 LibraryPreferences.migrateUri(context, item.uri, newUri.toString())
+                updateSourceHistory { DownloadHistory.migrate(context, item.uri, newUri.toString()) }
             }
         }
 
@@ -260,6 +266,7 @@ internal object LibraryRepository {
                 cache.remove(item.uri)
                 LibraryPreferences.clearUri(context, item.uri)
                 removeHiddenUri(context, item.uri)
+                updateSourceHistory { DownloadHistory.remove(context, item.uri) }
             }
         }
 
@@ -274,6 +281,7 @@ internal object LibraryRepository {
             cache.remove(item.uri)
             LibraryPreferences.clearUri(context, item.uri)
             removeHiddenUri(context, item.uri)
+            updateSourceHistory { DownloadHistory.remove(context, item.uri) }
         }
     }
 
@@ -314,6 +322,7 @@ internal object LibraryRepository {
                         .putStringSet("hidden_history", hidden(context) + item.uri)
                         .commit()
                 )
+                updateSourceHistory { DownloadHistory.remove(context, item.uri) }
             }
         }
 
@@ -331,6 +340,7 @@ internal object LibraryRepository {
                         )
                         .commit()
                 )
+                DownloadHistory.clear(context)
             }
         }
 

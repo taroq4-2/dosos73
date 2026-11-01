@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="offline_convert">Convert video to MP3</string>
+    <string name="offline_pick_video">Choose a video</string>
+    <string name="offline_convert_description">Create an MP3 V0 from a video on your device. The original video is kept. No internet connection is needed.</string>
+    <string name="offline_input_details">%1$s · %2$s</string>
+    <string name="offline_video_name">Selected video</string>
+    <string name="offline_error_video">Choose a supported video file.</string>
+    <string name="offline_error_no_audio">This video has no audio track.</string>
+    <string name="offline_error_empty">The selected file or converted audio is empty.</string>
+    <string name="offline_error_read">Cannot read the selected video. Choose the file again.</string>
+    <string name="offline_error_convert">Could not convert this video to MP3. Try another video.</string>
+</resources>

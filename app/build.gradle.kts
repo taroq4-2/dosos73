@@ -12,8 +12,8 @@ android {
         applicationId = "com.os73.dosos73"
         minSdk = 29
         targetSdk = 35
-        versionCode = 13
-        versionName = "1.2.1-rc.1"
+        versionCode = 14
+        versionName = "1.3.0-rc.1"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         val supportedAbis = listOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
         val selectedAbi = providers.gradleProperty("targetAbi").orNull
@@ -81,16 +81,19 @@ dependencies {
 
 // Catch missing translations in local checks and CI without a runtime dependency.
 val verifyTranslations by tasks.registering {
-    inputs.files("src/main/res/values/strings.xml", "src/main/res/values-ar/strings.xml")
+    inputs.files(fileTree("src/main/res/values") { include("*.xml") },
+        fileTree("src/main/res/values-ar") { include("*.xml") })
     doLast {
-        fun keys(path: String): Set<String> {
-            val document = javax.xml.parsers.DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(file(path))
-            val strings = document.getElementsByTagName("string")
-            val keys = (0 until strings.length).map { (strings.item(it) as org.w3c.dom.Element).getAttribute("name") }
-            check(keys.size == keys.toSet().size) { "Duplicate string keys in $path" }
+        fun keys(directory: String): Set<String> {
+            val keys = file(directory).listFiles().orEmpty().filter { it.extension == "xml" }.flatMap { source ->
+                val document = javax.xml.parsers.DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(source)
+                val strings = document.getElementsByTagName("string")
+                (0 until strings.length).map { (strings.item(it) as org.w3c.dom.Element).getAttribute("name") }
+            }
+            check(keys.size == keys.toSet().size) { "Duplicate string keys in $directory" }
             return keys.toSet()
         }
-        check(keys("src/main/res/values/strings.xml") == keys("src/main/res/values-ar/strings.xml")) { "Arabic and English string keys differ" }
+        check(keys("src/main/res/values") == keys("src/main/res/values-ar")) { "Arabic and English string keys differ" }
     }
 }
 tasks.named("preBuild") { dependsOn(verifyTranslations) }

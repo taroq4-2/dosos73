@@ -1,0 +1,26 @@
+<resources>
+    <string name="preset_title">Saved presets</string>
+    <string name="preset_save">Save preset</string>
+    <string name="preset_manage">Apply or delete</string>
+    <string name="preset_name">Preset name</string>
+    <string name="preset_save_hint">Saves this type, format, quality and current folder. Saving the same name replaces that preset.</string>
+    <string name="preset_confirm_save">Save</string>
+    <string name="preset_cancel">Cancel</string>
+    <string name="preset_close">Close</string>
+    <string name="preset_apply">Apply</string>
+    <string name="preset_delete">Delete</string>
+    <string name="preset_retry">Retry</string>
+    <string name="preset_empty">No saved presets yet.</string>
+    <string name="preset_saved">Preset saved.</string>
+    <string name="preset_deleted">Preset deleted.</string>
+    <string name="preset_limit">You can save up to 20 presets. Delete one to add another.</string>
+    <string name="preset_storage_error">Presets could not be read or saved. Try again.</string>
+    <string name="preset_unavailable">This preset’s exact format and quality are unavailable for this link. Your selection has not changed.</string>
+    <string name="preset_summary">%1$s · %2$s · %3$s</string>
+    <string name="preset_video">Video</string>
+    <string name="preset_audio">Audio</string>
+    <string name="preset_file">File</string>
+    <string name="preset_original">Original</string>
+    <string name="preset_default_folder">Downloads folder</string>
+    <string name="preset_custom_folder">Saved custom folder</string>
+</resources>

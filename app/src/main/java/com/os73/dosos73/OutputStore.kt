@@ -18,11 +18,14 @@ class OutputStore(
     private val context: Context,
     private val onCommitted: (Uri, String) -> Unit = { _, _ -> },
 ) {
+    var committedBytes: Long? = null
+        private set
     suspend fun recover(task: DownloadTask): Pair<Uri, String>? =
         withContext(Dispatchers.IO) {
             val receipt = PublicationReceipt(context, task.id)
             receipt.recover()?.also { (uri, mime) ->
                 // Deliver the commit before a cancelled dispatcher return can discard it.
+                committedBytes = receipt.recoveredBytes
                 onCommitted(uri, mime)
                 runCatching {
                     val bytes = checkNotNull(receipt.recoveredBytes)
@@ -175,6 +178,7 @@ class OutputStore(
                 val finalUri = receipt.publishVerified(uri).first
                 // This callback is synchronous: the caller owns the committed URI even if
                 // withContext subsequently resumes it with CancellationException.
+                committedBytes = expected.bytes
                 onCommitted(finalUri, mime)
                 runCatching {
                     LibraryRepository.remember(context, finalUri, mime, name, file.length())

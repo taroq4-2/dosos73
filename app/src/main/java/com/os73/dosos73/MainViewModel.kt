@@ -20,6 +20,9 @@ data class ScreenState(
 )
 
 class MainViewModel(app: Application) : AndroidViewModel(app) {
+    companion object {
+        @Volatile internal var analysisForTests: (suspend (String) -> Analysis)? = null
+    }
     private val mutable = MutableStateFlow(ScreenState())
     val state = mutable.asStateFlow()
     private var job: Job? = null
@@ -190,6 +193,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     private val media = MediaEngine(app)
 
     private suspend fun analyzeSource(url: String): Analysis = withTimeout(120_000) {
+        if (BuildConfig.DEBUG) analysisForTests?.let { return@withTimeout it(url) }
         val app = getApplication<Application>()
         NetworkSettings.requireSource(app, url, Stage.EXTRACT)
         val downloader = directForNetwork()
