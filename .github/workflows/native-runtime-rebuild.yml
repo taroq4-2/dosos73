@@ -35,8 +35,18 @@ jobs:
           CONTAINER_NAME: dosos-native-${{ matrix.arch }}
         run: |
           set -o pipefail
-          cd native-trial/termux
-          ./scripts/run-docker.sh env TERMUX_PKG_API_LEVEL=29 SOURCE_DATE_EPOCH=1793577600 TERMUX_PKG_MAKE_PROCESSES=2 ./build-package.sh -a '${{ matrix.arch }}' -F python libc++ 2>&1 | tee ../../native-evidence/build.log
+          curl --fail --location --retry 3 https://dl.google.com/android/repository/android-ndk-r28c-linux.zip -o native-trial/android-ndk.zip
+          echo 'dfb20d396df28ca02a8c708314b814a4d961dc9074f9a161932746f815aa552f  native-trial/android-ndk.zip' | sha256sum --check
+          unzip -q native-trial/android-ndk.zip -d native-trial
+          rm native-trial/android-ndk.zip
+          docker run --detach --init --name "$CONTAINER_NAME" --tty \
+            --volume "$PWD/native-trial/termux:/home/builder/termux-packages" \
+            --volume "$PWD/native-trial/android-ndk-r28c:/home/builder/lib/android-ndk-r28c:ro" \
+            --security-opt "seccomp=$PWD/native-trial/termux/scripts/profile.json" \
+            "$TERMUX_BUILDER_IMAGE_NAME"
+          docker exec --env CI=true --workdir /home/builder/termux-packages "$CONTAINER_NAME" \
+            env TERMUX_PKG_API_LEVEL=29 SOURCE_DATE_EPOCH=1793577600 TERMUX_PKG_MAKE_PROCESSES=2 \
+            ./build-package.sh -a '${{ matrix.arch }}' -F python libc++ 2>&1 | tee native-evidence/build.log
       - name: Collect core runtime and enforce static parity
         env:
           CONTAINER_NAME: dosos-native-${{ matrix.arch }}

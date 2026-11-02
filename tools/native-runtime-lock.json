@@ -3,6 +3,8 @@
   "as_of": "2026-11-02",
   "source_date_epoch": 1793577600,
   "ndk": "28c",
+  "ndk_source_url": "https://dl.google.com/android/repository/android-ndk-r28c-linux.zip",
+  "ndk_archive_sha256": "dfb20d396df28ca02a8c708314b814a4d961dc9074f9a161932746f815aa552f",
   "api": 29,
   "container": "ghcr.io/termux/package-builder@sha256:e2de051a518d8b188c59c4a1ecf357d373b9ccf48d6c06d7681fdc3f61a77287",
   "sources": {
