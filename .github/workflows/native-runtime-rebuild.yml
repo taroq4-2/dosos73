@@ -1,0 +1,52 @@
+name: Pinned Python native runtime rebuild
+on:
+  push:
+    branches: ['runtime/**']
+    paths: ['tools/*native*', '.github/workflows/native-runtime-rebuild.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: native-runtime-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  native:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 150
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {abi: arm64-v8a, arch: aarch64}
+          - {abi: armeabi-v7a, arch: arm}
+          - {abi: x86, arch: i686}
+          - {abi: x86_64, arch: x86_64}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Prepare exact source inputs and Android patches
+        run: |
+          mkdir -p native-evidence
+          python3 tools/prepare_native_runtime.py native-trial | tee native-evidence/preparation.txt
+          cp native-trial/preparation-proof.json native-evidence/
+          cp tools/native-runtime-lock.json native-evidence/
+      - name: Build pinned source dependency closure
+        env:
+          TERMUX_BUILDER_IMAGE_NAME: ghcr.io/termux/package-builder@sha256:e2de051a518d8b188c59c4a1ecf357d373b9ccf48d6c06d7681fdc3f61a77287
+          CONTAINER_NAME: dosos-native-${{ matrix.arch }}
+        run: |
+          set -o pipefail
+          cd native-trial/termux
+          ./scripts/run-docker.sh env TERMUX_PKG_API_LEVEL=29 SOURCE_DATE_EPOCH=1793577600 TERMUX_PKG_MAKE_PROCESSES=2 ./build-package.sh -a '${{ matrix.arch }}' -F python 2>&1 | tee ../../native-evidence/build.log
+      - name: Collect core runtime and enforce static parity
+        env:
+          CONTAINER_NAME: dosos-native-${{ matrix.arch }}
+        run: |
+          docker exec "$CONTAINER_NAME" bash -lc 'cd /home/builder/termux-packages && python3 package_native_runtime.py --abi "${{ matrix.abi }}" --readelf "$HOME/lib/android-ndk-r28c/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-readelf"' | tee native-evidence/packaging.txt
+          cp -r native-trial/termux/native-runtime-out native-evidence/
+          docker exec "$CONTAINER_NAME" bash -lc 'find /home/builder/.cache/termux-build -maxdepth 3 -type f \( -name "*.tar.*" -o -name "*.zip" -o -name "config.log" -o -name "pyconfig.h" \) -print0 | sort -z | xargs -0 -r sha256sum' > native-evidence/cached-input-hashes.txt
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: native-core-candidate-${{ matrix.abi }}
+          path: native-evidence/
+          if-no-files-found: error

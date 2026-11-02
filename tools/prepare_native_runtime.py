@@ -1,0 +1,115 @@
+"""Prepare a pinned Termux source rebuild; never install downloaded target code."""
+import argparse
+import hashlib
+import json
+from pathlib import Path
+import re
+import shutil
+import tarfile
+import urllib.request
+
+
+def digest(path):
+    with path.open('rb') as stream:
+        return hashlib.file_digest(stream, 'sha256').hexdigest()
+
+
+def fetch(item, path):
+    if not path.exists():
+        with urllib.request.urlopen(item['url'], timeout=120) as source, path.open('xb') as output:
+            shutil.copyfileobj(source, output)
+    if digest(path) != item['sha256']:
+        raise ValueError('Source digest mismatch: ' + str(path))
+
+
+def replace_once(text, pattern, replacement, label):
+    result, count = re.subn(pattern, lambda match: replacement, text, flags=re.MULTILINE)
+    if count != 1:
+        raise ValueError(f'Expected exactly one {label}, found {count}')
+    return result
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('output', type=Path)
+    args = parser.parse_args()
+    root = Path(__file__).resolve().parent.parent
+    lock = json.loads((root / 'tools/native-runtime-lock.json').read_text())
+    args.output.mkdir(parents=True, exist_ok=True)
+    cache = args.output / 'sources'
+    cache.mkdir(exist_ok=True)
+    archives = {}
+    for name in ('framework', 'readline_framework'):
+        archives[name] = cache / (name + '.tar.gz')
+        fetch(lock['sources'][name], archives[name])
+    destination = args.output / 'termux'
+    if destination.exists():
+        raise ValueError('Use a fresh preparation directory')
+    extracted = args.output / 'extracted'
+    extracted.mkdir()
+    with tarfile.open(archives['framework']) as archive:
+        archive.extractall(extracted, filter='data')
+    candidates = list(extracted.iterdir())
+    if len(candidates) != 1:
+        raise ValueError('Unexpected framework archive structure')
+    candidates[0].rename(destination)
+    # Retain the already accepted Readline/History patch level rather than
+    # regressing it with the older base framework's recipe.
+    with tarfile.open(archives['readline_framework']) as archive:
+        for member in archive.getmembers():
+            marker = '/packages/readline/'
+            if marker not in member.name or not member.isfile():
+                continue
+            suffix = member.name.split(marker, 1)[1]
+            target = destination / 'packages/readline' / suffix
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes(archive.extractfile(member).read())
+    for package in ('python', 'openssl', 'libexpat'):
+        p = destination / 'packages' / package / 'build.sh'
+        text = p.read_text()
+        item = lock['sources'][package]
+        text = replace_once(text, r'^TERMUX_PKG_VERSION=.*$', 'TERMUX_PKG_VERSION="' + item['version'] + '"', package + ' version')
+        text = replace_once(text, r'^TERMUX_PKG_SHA256=.*$', 'TERMUX_PKG_SHA256=' + item['sha256'], package + ' digest')
+        text = replace_once(text, r'^TERMUX_PKG_SRCURL=.*$', 'TERMUX_PKG_SRCURL=' + item['url'], package + ' URL')
+        if package == 'python':
+            # _tkinter is absent from every inherited ABI (required module
+            # manifest). Avoid adding an unused X11/Tk build graph, not a feature.
+            text = replace_once(text, r'^TERMUX_PKG_BUILD_DEPENDS="tk"$', 'TERMUX_PKG_BUILD_DEPENDS=""', 'unused Tk build dependency')
+            text = text.replace('_sqlite3 _ssl _tkinter zlib', '_sqlite3 _ssl zlib')
+        p.write_text(text)
+    patch = destination / 'packages/python/0001-fix-hardcoded-paths.patch'
+    text = patch.read_text()
+    start = text.index('--- a/Lib/mimetypes.py\n')
+    end = text.index('--- a/Lib/posixpath.py\n', start)
+    # 3.12.16 indents knownfiles under the non-Windows branch for a security
+    # fix. Preserve that branch and adapt only the Termux path addition.
+    replacement = '''--- a/Lib/mimetypes.py
++++ b/Lib/mimetypes.py
+@@ -61,6 +61,7 @@
+         "/usr/local/lib/netscape/mime.types",
+         "/usr/local/etc/httpd/conf/mime.types",     # Apache 1.2
+         "/usr/local/etc/mime.types",                # Apache 1.3
++        "@TERMUX_PREFIX@/etc/mime.types",           # Termux
+         ]
+ 
+ inited = False
+'''
+    patch.write_text(text[:start] + replacement + text[end:])
+    # Record every recipe/patch after the explicit overrides. The full pinned
+    # framework archive is the source lock for recursively built dependencies.
+    files = {}
+    for p in sorted((destination / 'packages').rglob('*')):
+        if p.is_file() and not p.is_symlink():
+            files[p.relative_to(destination).as_posix()] = digest(p)
+    proof = {'status': 'prepared, not built', 'source_lock': lock,
+             'recipe_files': files, 'changed_python_patch': digest(patch),
+             'omitted_build_only_dependency': 'Tk: no inherited _tkinter module, no app Tk function'}
+    (args.output / 'preparation-proof.json').write_text(json.dumps(proof, indent=2) + '\n')
+    shutil.copyfile(root / 'tools/native-required-modules.json', destination / 'native-required-modules.json')
+    shutil.copyfile(root / 'tools/package_native_runtime.py', destination / 'package_native_runtime.py')
+    shutil.copyfile(root / 'tools/native-runtime-lock.json', destination / 'native-runtime-lock.json')
+    print(destination)
+
+
+if __name__ == '__main__':
+    main()
