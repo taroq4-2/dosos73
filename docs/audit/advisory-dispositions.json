@@ -1,0 +1,15 @@
+{
+  "scope": "Only exact package/version/advisory records with owner, reason, evidence and non-expired review are accepted. Empty means no exceptions.",
+  "dispositions": [
+    {
+      "id": "GHSA-r937-wjx7-w2jp",
+      "package": {"ecosystem": "Maven", "name": "org.jetbrains.kotlin:kotlin-gradle-plugin"},
+      "version": "2.0.21",
+      "status": "not_affected",
+      "owner": "Virtual security/build review functions 10 and 36 (Codex)",
+      "reason": "The upstream fix is confined to KAPT incremental-cache deserialization. This project applies no KAPT plugin, tasks, configurations or annotation processors. Gradle verifyNoKapt and the build-advisory source guard fail if that condition changes. This is not a declaration that the Kotlin package itself is patched.",
+      "evidence": "https://github.com/JetBrains/kotlin/commit/bf51df665b458fda7c3eaf436c4d88dc119d7ec6 ; build.gradle.kts verifyNoKapt ; tools/check_build_advisories.py ; tools/test_build_advisories.py",
+      "expires": "2026-12-02"
+    }
+  ]
+}

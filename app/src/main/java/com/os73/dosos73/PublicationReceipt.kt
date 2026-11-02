@@ -4,6 +4,7 @@ import android.content.ContentValues
 import android.content.Context
 import android.net.Uri
 import android.provider.MediaStore
+import android.provider.DocumentsContract
 import androidx.documentfile.provider.DocumentFile
 import java.io.File
 import org.json.JSONObject
@@ -155,7 +156,14 @@ internal class PublicationReceipt(private val context: Context, private val id: 
             uri
         } else {
             if (actualName == final) uri else try {
-                android.provider.DocumentsContract.renameDocument(resolver, uri, final) ?: review()
+                val renamed = android.provider.DocumentsContract.renameDocument(resolver, uri, final) ?: review()
+                // A provider may already have renamed the verified file before returning
+                // a bad URI. Preserve the plan, but never commit an unrelated destination.
+                if (renamed.scheme != "content" || renamed.authority != tree.authority ||
+                    !DocumentsContract.isTreeUri(renamed) ||
+                    DocumentsContract.getTreeDocumentId(renamed) != DocumentsContract.getTreeDocumentId(tree) ||
+                    renamed != DocumentsContract.buildDocumentUriUsingTree(tree, DocumentsContract.getDocumentId(renamed))) review()
+                renamed
             } catch (error: Exception) { review(error) }
         }
         value.put("uri", result.toString()).put("ready", true)

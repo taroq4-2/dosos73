@@ -7,13 +7,13 @@ plugins {
 }
 android {
     namespace = "com.os73.dosos73"
-    compileSdk = 35
+    compileSdk = 36
     defaultConfig {
         applicationId = "com.os73.dosos73"
         minSdk = 29
-        targetSdk = 35
-        versionCode = 14
-        versionName = "1.3.0-rc.1"
+        targetSdk = 36
+        versionCode = 15
+        versionName = "1.3.0-rc.2"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         val supportedAbis = listOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
         val selectedAbi = providers.gradleProperty("targetAbi").orNull

@@ -1,0 +1,8 @@
+{
+  "scope": "Known packaged Python distributions only. Does not model arbitrary native ELF components as PyPI packages.",
+  "pypi": [
+    {"name": "yt-dlp", "version": "2026.10.21", "evidence": "EngineRuntime.kt pinned official zipapp and artifact-bound runtime proof"},
+    {"name": "mutagen", "version": "1.47.0", "evidence": "docs/launch/NATIVE_SOURCES.md; 57 packaged Python files matched to official PyPI source"}
+  ],
+  "native_review": "SECURITY_REVIEW.md; exact producer-lock and complete current native advisory triage remain release gates"
+}

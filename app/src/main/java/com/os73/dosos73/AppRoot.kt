@@ -1,7 +1,6 @@
 package com.os73.dosos73
 
 import android.Manifest
-import android.app.LocaleManager
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -9,37 +8,21 @@ import android.content.Context.MODE_PRIVATE
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
-import android.os.Bundle
-import android.os.LocaleList
-import androidx.activity.ComponentActivity
-import androidx.activity.SystemBarStyle
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.activity.viewModels
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import java.text.DateFormat
-import java.util.Date
-import java.util.Locale
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -372,60 +355,19 @@ internal fun MainActivity.AppScreen(model: MainViewModel, sharedGeneration: Int,
         containerColor = Neon.Background,
         snackbarHost = { SnackbarHost(snackbar) },
         bottomBar = {
-            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
-                NavigationBar(
-                    containerColor = Color(0xFF040E20),
-                    tonalElevation = 0.dp,
-                    modifier = Modifier.navigationBarsPadding().heightIn(
-                        min = (80 + 24 * (LocalConfiguration.current.fontScale - 1f).coerceAtLeast(0f)).dp
-                    ),
-                    windowInsets = WindowInsets(0, 0, 0, 0),
-                ) {
-                    listOf(
-                            Triple("home", R.string.nav_home, Glyph.HOME),
-                            Triple("downloads", R.string.downloads, Glyph.DOWNLOAD),
-                            Triple("files", R.string.nav_files, Glyph.FOLDER),
-                            Triple("more", R.string.more, Glyph.MORE),
-                        )
-                        .forEach { (key, label, icon) ->
-                            NavigationBarItem(
-                                selected = page == key,
-                                onClick = {
-                                    focus.clearFocus()
-                                    keyboard?.hide()
-                                    page = key
-                                    query = ""
-                                    searching = false
-                                    if (key == "files") refresh()
-                                },
-                                icon = {
-                                    Symbol(
-                                        icon,
-                                        color = if (page == key) Neon.Cyan else Neon.Muted,
-                                    )
-                                },
-                                label = {
-                                    Text(
-                                        stringResource(label),
-                                        maxLines = 1,
-                                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-                                        style = MaterialTheme.typography.labelSmall,
-                                    )
-                                },
-                                colors =
-                                    NavigationBarItemDefaults.colors(
-                                        indicatorColor = Color.Transparent,
-                                        selectedTextColor = Neon.Cyan,
-                                        unselectedTextColor = Neon.Muted,
-                                    ),
-                                modifier = Modifier.testTag("nav_$key"),
-                            )
-                        }
-                }
+            AppNavigation(page) { key ->
+                focus.clearFocus()
+                keyboard?.hide()
+                page = key
+                query = ""
+                searching = false
+                if (key == "files") refresh()
             }
         },
     ) { padding ->
-        Column(Modifier.fillMaxSize().padding(padding).statusBarsPadding().imePadding()) {
+        Column(Modifier.fillMaxSize().padding(padding)
+            .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal))
+            .imePadding()) {
             if (presetApplying) {
                 LinearProgressIndicator(Modifier.fillMaxWidth())
                 Text(stringResource(R.string.tools_preset_checking), Modifier.padding(12.dp),
@@ -644,63 +586,15 @@ internal fun MainActivity.AppScreen(model: MainViewModel, sharedGeneration: Int,
         }
     }
     if (screen.quick) {
-        val compactQuick = LocalConfiguration.current.screenHeightDp < 420
-        AlertDialog(
-            modifier = (if (compactQuick) Modifier.widthIn(max = 640.dp).fillMaxWidth()
-                .padding(vertical = 24.dp) else Modifier)
-                .testTag("quick_dialog"),
-            properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = !compactQuick),
-            onDismissRequest = model::closeQuick,
-            title = {
-                Text(stringResource(R.string.quick_entry_label), maxLines = if (compactQuick) 1 else Int.MAX_VALUE,
-                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
-            },
-            text = {
-                Column(Modifier.heightIn(max = 460.dp).verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text(screen.url, maxLines = if (compactQuick) 1 else 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-                        style = MaterialTheme.typography.bodySmall, color = Neon.Secondary)
-                    if (screen.busy) LinearProgressIndicator(Modifier.fillMaxWidth())
-                    screen.error?.let { Text(stringResource(it), color = MaterialTheme.colorScheme.error) }
-                    AnalysisOptions(screen, tree != null, model::select, { picker.launch(tree) }, {
-                        tree = null
-                        preferences.edit().remove("tree").apply()
-                    }, ::applyPreset)
-                }
-            },
-            confirmButton = {
-                TextButton(::requestStart, enabled = !screen.busy && screen.selected != null &&
-                    !submitting && !requestingNotifications && !presetApplying, modifier = Modifier.testTag("quick_start")) {
-                    Symbol(Glyph.DOWNLOAD)
-                    Spacer(Modifier.width(8.dp))
-                    Text(stringResource(R.string.start_short))
-                }
-            },
-            dismissButton = { TextButton(model::closeQuick, Modifier.testTag("quick_close")) { Text(stringResource(R.string.cancel)) } },
-        )
+        QuickDownloadReview(screen, tree != null,
+            startEnabled = !submitting && !requestingNotifications && !presetApplying,
+            onChoice = model::select,
+            onFolder = { picker.launch(tree) },
+            onDefaultFolder = { tree = null; preferences.edit().remove("tree").apply() },
+            onPreset = ::applyPreset, onStart = ::requestStart, onClose = model::closeQuick)
     }
     duplicate?.let { (item, answer) ->
-        val compactHistory = LocalConfiguration.current.screenHeightDp < 420
-        AlertDialog(
-            modifier = (if (compactHistory) Modifier.widthIn(max = 640.dp).fillMaxWidth()
-                .padding(vertical = 24.dp) else Modifier).testTag("history_dialog"),
-            properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = !compactHistory),
-            onDismissRequest = { answer.complete(0) },
-            title = { Text(stringResource(R.string.history_downloaded_before),
-                maxLines = if (compactHistory) 1 else Int.MAX_VALUE,
-                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis) },
-            text = { Column(Modifier.heightIn(max = 460.dp).verticalScroll(rememberScrollState())) {
-                Text(stringResource(R.string.history_downloaded_before_message))
-                Text(item.name, maxLines = 3, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
-                TextButton({ answer.complete(2) }, Modifier.testTag("history_open")) {
-                    Text(stringResource(R.string.history_open_existing))
-                }
-            } },
-            confirmButton = { TextButton({ answer.complete(1) }, Modifier.testTag("history_again")) {
-                Text(stringResource(R.string.history_download_again))
-            } },
-            dismissButton = { TextButton({ answer.complete(0) }) { Text(stringResource(R.string.cancel)) } },
-        )
+        DownloadHistoryReview(item) { answer.complete(it) }
     }
     preview?.let { item ->
         OfflinePreview(
@@ -731,22 +625,7 @@ internal fun MainActivity.AppScreen(model: MainViewModel, sharedGeneration: Int,
                 TextButton({ source = null }) { Text(stringResource(R.string.got_it)) }
             },
         )
-    if (details)
-        AlertDialog(
-            onDismissRequest = { details = false },
-            title = { Text(transfer.title) },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text(stringResource(phaseText(transfer.phase)))
-                    Text(transfer.detail)
-                    Text(bytesLabel(transfer.bytes, LocalConfiguration.current.locales[0]))
-                    Text(stringResource(R.string.pause_explanation), color = Neon.Secondary)
-                }
-            },
-            confirmButton = {
-                TextButton({ details = false }) { Text(stringResource(R.string.close)) }
-            },
-        )
+    if (details) TransferDetailsDialog(transfer) { details = false }
     fileAction?.let { (item, type) ->
         AlertDialog(
             onDismissRequest = { fileAction = null },

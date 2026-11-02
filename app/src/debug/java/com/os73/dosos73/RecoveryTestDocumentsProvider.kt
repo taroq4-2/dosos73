@@ -2,6 +2,8 @@ package com.os73.dosos73
 
 import android.database.Cursor
 import android.database.MatrixCursor
+import android.net.Uri
+import android.os.Bundle
 import android.os.CancellationSignal
 import android.os.ParcelFileDescriptor
 import android.provider.DocumentsContract.Document
@@ -16,6 +18,7 @@ class RecoveryTestDocumentsProvider : DocumentsProvider() {
     companion object {
         val entries = java.util.concurrent.ConcurrentHashMap<String, Entry>()
         var failAfterRename = false
+        @Volatile var renamedUriOverride: Uri? = null
         @Volatile var onRead: (() -> Unit)? = null
         @Volatile var afterRename: (() -> Unit)? = null
         var rootWritable = true
@@ -29,11 +32,20 @@ class RecoveryTestDocumentsProvider : DocumentsProvider() {
         var renames = 0
         fun reset() {
             entries.values.forEach { it.file.delete() }; entries.clear()
-            afterRename = null; onRead = null; rootWritable = true; rootFlagsOverride = null
+            afterRename = null; onRead = null; renamedUriOverride = null; rootWritable = true; rootFlagsOverride = null
             failAfterRename = false; rejectRename = false; unknownSize = false; denyRead = false; denyQuery = false; emptyQuery = false; deletes = 0; renames = 0
         }
     }
     override fun onCreate() = true
+    override fun call(method: String, arg: String?, extras: Bundle?): Bundle? {
+        val result = super.call(method, arg, extras)
+        // Exercise a misbehaving provider's actual DocumentsContract return boundary,
+        // after the provider has already changed the document identity.
+        if (method == "android:renameDocument") renamedUriOverride?.let { uri ->
+            return (result ?: Bundle()).apply { putParcelable("uri", uri) }
+        }
+        return result
+    }
     private val columns get() = arrayOf(Document.COLUMN_DOCUMENT_ID, Document.COLUMN_DISPLAY_NAME,
         Document.COLUMN_MIME_TYPE, Document.COLUMN_SIZE, Document.COLUMN_FLAGS)
     override fun queryRoots(projection: Array<out String>?) = MatrixCursor(projection ?: emptyArray())
