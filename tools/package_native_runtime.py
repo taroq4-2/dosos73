@@ -20,11 +20,16 @@ def sha(data):
     return hashlib.sha256(data).hexdigest()
 
 
-def elf(path, readelf):
+def elf(path, readelf, abi):
     data = path.read_bytes()
     if not data.startswith(b'\x7fELF'):
         return None
     bits, endian = data[4] * 32, {1: '<', 2: '>'}[data[5]]
+    expected_bits, expected_machine = {'armeabi-v7a': (32, 40), 'arm64-v8a': (64, 183),
+                                       'x86': (32, 3), 'x86_64': (64, 62)}[abi]
+    machine = struct.unpack_from(endian + 'H', data, 18)[0]
+    if (bits, machine) != (expected_bits, expected_machine):
+        raise ValueError('ELF architecture mismatch: ' + str(path))
     phoff = struct.unpack_from(endian + ('Q' if bits == 64 else 'I'), data, 32 if bits == 64 else 28)[0]
     size, count = struct.unpack_from(endian + 'HH', data, 54 if bits == 64 else 42)
     loads, interpreter = [], False
@@ -41,7 +46,7 @@ def elf(path, readelf):
     needed = re.findall(r'\(NEEDED\).*?\[(.*?)\]', dynamic)
     if bits == 64 and (not loads or not all(loads)):
         raise ValueError('64-bit ELF lacks 16KB alignment: ' + str(path))
-    return {'bits': bits, 'soname': soname[0] if soname else None, 'needed': needed,
+    return {'bits': bits, 'machine': machine, 'soname': soname[0] if soname else None, 'needed': needed,
             'has_interpreter': interpreter, 'sha256': sha(data), 'bytes': len(data),
             'alignment_16k': bool(loads) and all(loads)}
 
@@ -68,7 +73,7 @@ def main():
             if '.so' in candidate.name and 'python3.12' not in candidate.parts:
                 paths.add(candidate)
     launcher = args.prefix / 'bin/python3.12'
-    launcher_info = elf(launcher, args.readelf)
+    launcher_info = elf(launcher, args.readelf, args.abi)
     if not launcher_info or not launcher_info['has_interpreter']:
         raise ValueError('libpython.so must be a launchable Android executable, not a DSO')
     records, sonames, providers = [], set(), set()
@@ -81,7 +86,7 @@ def main():
             records.append({'path': relative, 'symlink': target})
             providers.add(path.name)
             continue
-        info = elf(path, args.readelf)
+        info = elf(path, args.readelf, args.abi)
         record = {'path': relative, 'sha256': sha(path.read_bytes()), 'bytes': path.stat().st_size}
         if info:
             record['elf'] = info
