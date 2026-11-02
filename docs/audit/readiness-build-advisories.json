@@ -1,5 +1,5 @@
 {
-  "checked_at_utc": "2026-11-02T14:06:17.692645+00:00",
+  "checked_at_utc": "2026-11-02T14:07:45.718878+00:00",
   "scope": "Exact Gradle wrapper and AGP/Kotlin plugin Maven coordinates; not all transitive build dependencies",
   "inputs": {
     "gradle\\wrapper\\gradle-wrapper.properties": "6736572fe78abecf2d90fd73abc2b793586bd381bf124020e10202a0d2a638b5",
@@ -8,6 +8,7 @@
     "app\\build.gradle.kts": "2e131789138cea4b2878810967c327ad5477f1a5d5afcf7a6738e57f3cb87677"
   },
   "kapt_source_guard": "No KAPT plugin/configuration declarations; run Gradle verifyNoKapt for resolved task graph",
+  "dispositions_sha256": "7ddcd61149f58bd9fd6a9338aa907875ec386860128defb525038a1d3710c390",
   "queries": [
     {
       "package": {

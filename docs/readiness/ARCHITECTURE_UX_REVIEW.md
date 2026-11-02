@@ -136,3 +136,38 @@ and controlled battery tests remain necessary for full A07 closure.
 Root release owner must cross-review extracted callback equivalence and record
 the actual build/device results before changing “pending” to passed. These
 functions share evidence and are not represented as independent human approvals.
+
+## Cross-review of A02 release tooling
+
+The release owner requested a separate review of the new APK/AAB assembler,
+verifier, synthetic tamper tests and CI. Three reproducible verification gaps
+were corrected in `tools/verify_bundle.py`:
+
+1. Comparing only native files present in the bundle accepted a missing
+   executable while all four ABI directories remained. The verifier now checks
+   exact native path-set equality against the compact APK before byte equality.
+2. `jarsigner -verify` can exit zero and print `jar verified.` after an unsigned
+   entry is appended. This was reproduced with a real ephemeral JDK-signed JAR;
+   the fixed verifier rejects its unsigned-entry warning. A self-signed upload
+   certificate remains valid for this integrity check; public CA trust is
+   explicitly not claimed. The owner must compare its certificate fingerprint.
+3. The observed `versionName` was reported but not checked against the expected
+   release. It is now a required `--version-name` argument alongside versionCode,
+   package ID, minimum and target SDK.
+
+Security-relevant assertions in this verifier now raise explicit exceptions so
+Python optimization cannot disable them. `tools/test_release_packaging.py`
+contains **12 passing tests** (four original and eight added), run both normally
+and with `python -O`. Added cases cover a missing executable with every ABI still
+present, extra native paths, changed shared runtime, the expected version name,
+and unsigned/partially signed versus self-signed complete JAR outputs. The
+empirical unsigned-entry fixture record is stored in the owner's raw work
+evidence; it contains no production key or credentials.
+
+The assembler retains AGP's proto manifest/resources and mapping, binds DEX and
+assets to the original APK and enforces the exact native path set. Bundletool
+validation and signed derived-APK installation remain separate acceptance steps;
+these host tamper tests do not themselves establish device delivery or Play
+approval. The pinned-action/read-only CI builds both lint variants and the AAB,
+records unsigned CI status honestly, and retains API29–36 device jobs. Final
+workflow success and signed-artifact acceptance must be recorded by the owner.

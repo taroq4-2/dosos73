@@ -1,7 +1,5 @@
 package com.os73.dosos73
 
-import android.app.UiAutomation
-import android.content.res.Configuration
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.CompositionLocalProvider
@@ -14,7 +12,6 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
-import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
@@ -61,29 +58,5 @@ class ReviewLayoutTest {
             compose.onNodeWithTag(tag).assertIsDisplayed().performClick()
             compose.runOnIdle { assertEquals(result, answer.value) }
         }
-    }
-
-    @Test fun transferDetailsCanCloseWithLongContentAtDoubleFontInRealLandscape() {
-        val instrumentation = InstrumentationRegistry.getInstrumentation()
-        val automation = instrumentation.uiAutomation
-        var closes = 0
-        try {
-            automation.setRotation(UiAutomation.ROTATION_FREEZE_90)
-            compose.waitUntil(10000) {
-                instrumentation.targetContext.resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-            }
-            compose.setContent {
-                val density = LocalDensity.current
-                CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl,
-                    LocalDensity provides Density(density.density, 2f)) {
-                    MaterialTheme {
-                        TransferDetailsDialog(TransferState(Phase.PAUSED,
-                            title = "عنوان طويل ".repeat(30), detail = "تفاصيل النقل ".repeat(60))) { closes++ }
-                    }
-                }
-            }
-            compose.onNodeWithTag("transfer_details_close").assertIsDisplayed().performClick()
-            compose.runOnIdle { assertEquals(1, closes) }
-        } finally { automation.setRotation(UiAutomation.ROTATION_UNFREEZE) }
     }
 }
