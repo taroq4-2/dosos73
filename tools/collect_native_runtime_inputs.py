@@ -51,7 +51,7 @@ def collect(framework, build_root, ndk, prefix, host_source, abi):
             recipes += [framework / 'x11-packages' / item / 'build.sh' for item in ('kitty', 'alacritty')]
         for path in candidates:
             record = pinned_record(path, recipes)
-            if package in ('python', 'openssl', 'libexpat') and record['sha256'] != lock['sources'][package]['sha256']:
+            if package in lock['sources'] and record['sha256'] != lock['sources'][package]['sha256']:
                 raise ValueError(f'Input digest differs from runtime lock: {path}')
             files[path.relative_to(build_root).as_posix()] = record
 

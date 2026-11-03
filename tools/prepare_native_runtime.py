@@ -74,7 +74,7 @@ def main():
         raise ValueError('Unexpected Readline source and patch URLs')
     # Use the upstream GNU server for the same pinned, checksum-verified bytes.
     readline.write_text(text.replace(old_mirror, 'https://ftp.gnu.org/gnu/readline/'))
-    for package in ('python', 'openssl', 'libexpat'):
+    for package in ('python', 'openssl', 'libexpat', 'liblzma'):
         p = destination / 'packages' / package / 'build.sh'
         text = p.read_text()
         item = lock['sources'][package]
@@ -103,6 +103,13 @@ def main():
     text = replace_once(text, r'^-# define DEVRANDOM_EGD ', '-#define DEVRANDOM_EGD ', 'OpenSSL old EGD directive')
     text = replace_once(text, r'^\+# define DEVRANDOM_EGD ', '+#define DEVRANDOM_EGD ', 'OpenSSL new EGD directive')
     openssl_rand.write_text(text)
+    # XZ 5.8.4 adds an unrelated host case in the Android SONAME patch context.
+    # Keep Termux's versioned SONAME to avoid resolving Android's liblzma.
+    xz_configure = destination / 'packages/liblzma/configure.patch'
+    text = replace_once(xz_configure.read_text(), r'^ linux\* \| k\*bsd\*-gnu \| kopensolaris\*-gnu \| gnu\*\)$',
+                        ' linux* | ironclad*-gnu | k*bsd*-gnu | kopensolaris*-gnu | gnu*)',
+                        'XZ Linux case context')
+    xz_configure.write_text(text)
     # The pinned foot archive no longer matches its upstream digest. It is
     # only used to compile optional terminal descriptions, not ncurses code
     # or Python modules. Leave the checksum check enabled for every input.
