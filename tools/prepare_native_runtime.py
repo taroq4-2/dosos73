@@ -64,6 +64,13 @@ def main():
             target = destination / 'packages/readline' / suffix
             target.parent.mkdir(parents=True, exist_ok=True)
             target.write_bytes(archive.extractfile(member).read())
+    readline = destination / 'packages/readline/build.sh'
+    text = readline.read_text()
+    old_mirror = 'https://mirrors.kernel.org/gnu/readline/'
+    if text.count(old_mirror) != 2:
+        raise ValueError('Unexpected Readline source and patch URLs')
+    # Use the upstream GNU server for the same pinned, checksum-verified bytes.
+    readline.write_text(text.replace(old_mirror, 'https://ftp.gnu.org/gnu/readline/'))
     for package in ('python', 'openssl', 'libexpat'):
         p = destination / 'packages' / package / 'build.sh'
         text = p.read_text()
