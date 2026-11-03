@@ -37,6 +37,7 @@ jobs:
           set -o pipefail
           curl --fail --location --retry 3 https://dl.google.com/android/repository/android-ndk-r28c-linux.zip -o native-trial/android-ndk.zip
           echo 'dfb20d396df28ca02a8c708314b814a4d961dc9074f9a161932746f815aa552f  native-trial/android-ndk.zip' | sha256sum --check
+          sha256sum native-trial/android-ndk.zip > native-evidence/ndk-archive-sha256.txt
           unzip -q native-trial/android-ndk.zip -d native-trial
           rm native-trial/android-ndk.zip
           docker run --detach --init --name "$CONTAINER_NAME" --tty \
@@ -69,7 +70,11 @@ jobs:
           set -o pipefail
           docker exec "$CONTAINER_NAME" bash -lc 'cd /home/builder/termux-packages && python3 package_native_runtime.py --abi "${{ matrix.abi }}" --readelf "$HOME/lib/android-ndk-r28c/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-readelf"' | tee native-evidence/packaging.txt
           cp -r native-trial/termux/native-runtime-out native-evidence/
-          docker exec "$CONTAINER_NAME" bash -lc 'find /home/builder/.cache/termux-build -maxdepth 3 -type f \( -name "*.tar.*" -o -name "*.zip" -o -name "config.log" -o -name "pyconfig.h" \) -print0 | sort -z | xargs -0 -r sha256sum' > native-evidence/cached-input-hashes.txt
+          docker exec -i --workdir /home/builder/termux-packages "$CONTAINER_NAME" \
+            python3 - --abi '${{ matrix.abi }}' < tools/collect_native_runtime_inputs.py > native-evidence/source-receipt.json
+          test -s native-evidence/source-receipt.json
+          docker cp "$CONTAINER_NAME:/home/builder/.termux-build/python/build/config.log" native-evidence/target-python-config.log
+          docker cp "$CONTAINER_NAME:/home/builder/.termux-build/python/build/pyconfig.h" native-evidence/target-python-pyconfig.h
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:
