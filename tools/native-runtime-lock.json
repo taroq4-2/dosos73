@@ -44,6 +44,18 @@
       "signature_url": "https://github.com/tukaani-project/xz/releases/download/v5.8.4/xz-5.8.4.tar.xz.sig",
       "signing_key_url": "https://tukaani.org/misc/lasse_collin_pubkey.txt",
       "signing_key_fingerprint": "3690C240CE51B4670D30AD1C38EE757D69184620"
+    },
+    "libsqlite": {
+      "version": "3.54.1",
+      "url": "https://www.sqlite.org/2026/sqlite-src-3540100.zip",
+      "sha256": "387e7f6cad4797b17848c07d453dc6606917bb356a6cfe5a3abafd38c240c71b",
+      "sha3_256": "877c6f4996ce7adb368686bce21638de9e3d91534832ad3d9d119037d1bc22ad",
+      "hash_evidence": "https://www.sqlite.org/download.html",
+      "recipe_evidence": "https://github.com/termux/termux-packages/tree/aa3da71fdcf6b47c8da80ee6cdc12273d627081a/packages/libsqlite",
+      "android_patch": {
+        "url": "https://raw.githubusercontent.com/termux/termux-packages/aa3da71fdcf6b47c8da80ee6cdc12273d627081a/packages/libsqlite/src-os_unix.c.patch",
+        "sha256": "53f11ac44477b14ff3dc3ac3e2ac31b7fb2e2c13d29b42f7a738494add9824cf"
+      }
     }
   }
 }

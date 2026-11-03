@@ -74,7 +74,7 @@ def main():
         raise ValueError('Unexpected Readline source and patch URLs')
     # Use the upstream GNU server for the same pinned, checksum-verified bytes.
     readline.write_text(text.replace(old_mirror, 'https://ftp.gnu.org/gnu/readline/'))
-    for package in ('python', 'openssl', 'libexpat', 'liblzma'):
+    for package in ('python', 'openssl', 'libexpat', 'liblzma', 'libsqlite'):
         p = destination / 'packages' / package / 'build.sh'
         text = p.read_text()
         item = lock['sources'][package]
@@ -88,6 +88,12 @@ def main():
             # as a package name. Omit the declaration to express no dependency.
             text = replace_once(text, r'^TERMUX_PKG_BUILD_DEPENDS="tk"\n', '', 'unused Tk build dependency')
             text = replace_once(text, r'_sqlite3 _ssl _tkinter zlib', '_sqlite3 _ssl zlib', 'unused Tk module check')
+        if package == 'libsqlite':
+            # The upstream installation no longer leaves Tcl duplicates here.
+            # Retain the existing configure flags and explicit Tcl installation.
+            text = replace_once(text, r'^_SQLITE_YEAR=2025\n', '', 'unused SQLite source year')
+            text = replace_once(text, r'\n\t# Remove duplicates\n\trm "\$TERMUX_PREFIX/lib"/\{pkgIndex\.tcl,libtclsqlite3\.so\}\n',
+                                '', 'obsolete SQLite Tcl duplicate cleanup')
         p.write_text(text)
     # The root package's build graph also includes its subpackages' dependencies.
     # Keep the split recipe so the same pure-Python files stay out of the core.
@@ -110,6 +116,12 @@ def main():
                         ' linux* | ironclad*-gnu | k*bsd*-gnu | kopensolaris*-gnu | gnu*)',
                         'XZ Linux case context')
     xz_configure.write_text(text)
+    sqlite = destination / 'packages/libsqlite'
+    sqlite_android_patch = cache / 'sqlite-src-os_unix.c.patch'
+    fetch(lock['sources']['libsqlite']['android_patch'], sqlite_android_patch)
+    shutil.copyfile(sqlite_android_patch, sqlite / 'src-os_unix.c.patch')
+    # SQLite 3.54.1 already accepts a target tclConfig.sh with a host tclsh.
+    (sqlite / 'backport-tool-buildtclext.tcl.patch').unlink()
     # The pinned foot archive no longer matches its upstream digest. It is
     # only used to compile optional terminal descriptions, not ncurses code
     # or Python modules. Leave the checksum check enabled for every input.
