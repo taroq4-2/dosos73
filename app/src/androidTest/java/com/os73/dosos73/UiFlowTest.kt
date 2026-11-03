@@ -5,6 +5,10 @@ import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.test.platform.app.InstrumentationRegistry
 import java.io.File
+import kotlinx.coroutines.CompletableDeferred
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Rule
 import org.junit.Test
 
@@ -105,6 +109,46 @@ class UiFlowTest {
             // ActivityScenario identifies lifecycle events by the launch intent's action.
             // onNewIntent correctly updates the real Activity intent; restore the harness identity.
             compose.runOnIdle { activity.intent = launchIntent }
+        }
+    }
+
+    @Test
+    fun cancellingPendingShareKeepsCurrentAnalysisAndSelection() {
+        val model = androidx.lifecycle.ViewModelProvider(compose.activity)[MainViewModel::class.java]
+        compose.waitUntil(10000) { !model.batchSaving.value }
+        assertFalse("Draft restoration must succeed", model.batchStorageError.value)
+        val activeUrl = "https://example.com/current-review"
+        val incomingUrl = "https://example.net/new-share"
+        val choice = Choice("fixture", Kind.VIDEO, "mp4", "720p")
+        val analysis = Analysis(activeUrl, "Current review", listOf(choice), false)
+        val releaseAnalysis = CompletableDeferred<Unit>()
+        val previousAnalysis = MainViewModel.analysisForTests
+        try {
+            MainViewModel.analysisForTests = { url ->
+                assertEquals(activeUrl, url)
+                releaseAnalysis.await()
+                analysis
+            }
+            compose.runOnIdle {
+                model.edit(activeUrl)
+                model.analyze()
+                model.receive(incomingUrl)
+                assertEquals(incomingUrl, model.state.value.pendingShared)
+            }
+            releaseAnalysis.complete(Unit)
+            compose.waitUntil(10000) { model.state.value.analysis == analysis && !model.state.value.busy }
+            compose.onNodeWithTag("pending_share_discard").assertIsDisplayed().performClick()
+            compose.onNodeWithTag("pending_share_dialog").assertDoesNotExist()
+            compose.runOnIdle {
+                assertEquals(activeUrl, model.state.value.url)
+                assertEquals(analysis, model.state.value.analysis)
+                assertEquals(choice, model.state.value.selected)
+                assertNull(model.state.value.pendingShared)
+            }
+        } finally {
+            releaseAnalysis.complete(Unit)
+            MainViewModel.analysisForTests = previousAnalysis
+            compose.runOnIdle { model.cancelAnalysis() }
         }
     }
 

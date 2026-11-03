@@ -38,6 +38,8 @@ class ParallelDownloaderTest {
                         val first = match.groupValues[1].toInt()
                         val last = match.groupValues[2].toInt()
                         val probe = first == 0 && last == 0
+                        if ((probe && mode == "limited-probe") || (!probe && mode == "limited-range"))
+                            return MockResponse().setResponseCode(429).setHeader("Retry-After", "60")
                         val response =
                             MockResponse()
                                 .setResponseCode(206)
@@ -118,6 +120,22 @@ class ParallelDownloaderTest {
             assertArrayEquals(hash(bytes), hash(file.readBytes()))
             assertEquals(2, server.requestCount)
         }
+
+    @Test
+    fun rateLimitStopsParallelDownloadWithoutAFullGet() {
+        for (mode in listOf("limited-probe", "limited-range")) fixture(mode) { engine, file, server ->
+            file.writeText("existing")
+            val error = runCatching {
+                engine.download("https://example.com/file", file, connections = 2) { _, _, _ -> }
+            }.exceptionOrNull()
+            assertEquals(FailureCode.HTTP_429, (error as PipelineException).code)
+            assertEquals("existing", file.readText())
+            assertEquals(listOf("out.bin"), file.parentFile!!.list()!!.toList())
+            val expectedRequests = if (mode == "limited-probe") 1..1 else 2..3
+            assertTrue(server.requestCount in expectedRequests)
+            repeat(server.requestCount) { assertNotNull(server.takeRequest().getHeader("Range")) }
+        }
+    }
 
     @Test
     fun mismatchedRangeAndValidatorAndEncodingFallbackSafely() {

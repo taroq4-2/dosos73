@@ -606,16 +606,8 @@ internal fun MainActivity.AppScreen(model: MainViewModel, sharedGeneration: Int,
             },
         )
     }
-    if (screen.pendingShared != null && !screen.quick && !screen.busy && !batchBusy) {
-        AlertDialog(
-            onDismissRequest = {},
-            title = { Text(stringResource(R.string.pending_link)) },
-            text = { Text(stringResource(R.string.pending_link_hint)) },
-            confirmButton = {
-                TextButton(model::acceptPending) { Text(stringResource(R.string.batch_review)) }
-            },
-        )
-    }
+    PendingSharedReview(screen, batchBusy, batchSaving, batchStorageError,
+        onReview = model::acceptPending, onDiscard = model::discardPending)
     if (source != null)
         AlertDialog(
             onDismissRequest = { source = null },

@@ -140,6 +140,7 @@ class DirectDownloader(private val client: OkHttpClient = secureClient()) {
         destination: File,
         awaitReady: suspend () -> Unit = {},
         connections: Int = 1,
+        expectsBinary: Boolean = false,
         progress: (Long, Long?, Long) -> Unit,
     ) =
         withContext(Dispatchers.IO) {
@@ -152,7 +153,7 @@ class DirectDownloader(private val client: OkHttpClient = secureClient()) {
                 parallel = accelerator
                 if (cancelled.get()) accelerator.cancel()
                 try {
-                    if (accelerator.download(url, destination, awaitReady, progress))
+                    if (accelerator.download(url, destination, awaitReady, expectsBinary, progress))
                         return@withContext
                 } finally {
                     parallel = null
@@ -180,7 +181,11 @@ class DirectDownloader(private val client: OkHttpClient = secureClient()) {
                     journal.clear()
                     response = request(url)
                 }
-                HttpRepresentation.requireIdentity(response)
+                // Preserve status-specific failures even when the error body is HTML,
+                // compressed, or uses headers which cannot describe a successful file.
+                if (response.code != 200 && response.code != 206)
+                    throw IOException("HTTP ${response.code}")
+                HttpRepresentation.requireIdentity(response, expectsBinary)
                 val body = response.body ?: throw IOException("Empty response")
                 val bodyLength = body.contentLength().takeIf { it >= 0 }
                 val targetHash = ResumeCheckpoint.hash(response.request.url.toString())
@@ -206,7 +211,7 @@ class DirectDownloader(private val client: OkHttpClient = secureClient()) {
                     offset = prior.offset
                     total = prior.total
                 } else {
-                    if (response.code != 200 || response.header("Content-Range") != null)
+                    if (response.header("Content-Range") != null)
                         throw IOException("HTTP ${response.code}")
                     // Range ignored or If-Range changed: replace, never append the full
                     // representation.

@@ -174,6 +174,80 @@ class DirectDownloaderTest {
     }
 
     @Test
+    fun binaryHeadFollowedBySuccessfulErrorBodyCannotReplaceStaging() = fixture { server, engine, file ->
+        val url = "https://example.com/manual.pdf"
+        server.enqueue(MockResponse().setHeader("Content-Type", "application/pdf"))
+        val choice = engine.analyze(url)!!.choices.single()
+        assertEquals("pdf", choice.extension)
+        file.writeText("existing verified prefix")
+        for ((mime, body) in listOf(
+            "Application/Problem+JSON; charset=utf-8" to "{\"error\":\"Expired URL\"}",
+            "application/xml" to "<Error>Access denied</Error>",
+            "text/plain" to "Temporary gateway error",
+        )) {
+            server.enqueue(MockResponse().setHeader("Content-Type", mime).setBody(body))
+            val result = runCatching {
+                engine.download(url, file, expectsBinary = DirectFileName.expectsBinary(choice)) { _, _, _ -> }
+            }
+            assertEquals(mime, "Unexpected response type", result.exceptionOrNull()?.message)
+            assertEquals("existing verified prefix", file.readText())
+        }
+    }
+
+    @Test
+    fun structuredErrorInMatchingRangeLeavesDurableCheckpointUntouched() = fixture { server, engine, file ->
+        seed(server, file)
+        val journal = ResumeJournal(file)
+        val before = journal.read()
+        server.enqueue(MockResponse().setResponseCode(206)
+            .setHeader("Content-Type", "application/problem+xml")
+            .setHeader("ETag", "\"v1\"")
+            .setHeader("Content-Range", "bytes 4-9/10")
+            .setBody("<bad/>"))
+        val result = runCatching {
+            engine.download("https://example.com/file", file, expectsBinary = true) { _, _, _ -> }
+        }
+        assertEquals("Unexpected response type", result.exceptionOrNull()?.message)
+        assertEquals("0123uncommitted-tail", file.readText())
+        assertEquals(before, journal.read())
+        assertEquals("bytes=4-", server.takeRequest().getHeader("Range"))
+    }
+
+    @Test
+    fun errorStatusIsPreservedEvenWhenItsBodyIsHtmlOrCompressed() = fixture { server, engine, file ->
+        file.writeText("retained bytes")
+        for ((status, code) in listOf(403 to FailureCode.HTTP_403, 404 to FailureCode.HTTP_404,
+            429 to FailureCode.HTTP_429, 503 to FailureCode.HTTP_SERVER)) {
+            server.enqueue(MockResponse().setResponseCode(status).setHeader("Content-Type", "text/html")
+                .setHeader("Content-Encoding", "gzip").setBody("origin error"))
+            val error = checkNotNull(runCatching {
+                engine.download("https://example.com/file", file, expectsBinary = true) { _, _, _ -> }
+            }.exceptionOrNull())
+            assertEquals(code, FailureClassifier.classify(Stage.TRANSFER, error).code)
+            assertEquals("retained bytes", file.readText())
+        }
+    }
+
+    @Test
+    fun explicitGenericFilesAndOpaqueBinaryResponsesRemainSupported() = fixture { server, engine, file ->
+        for ((ext, mime, body) in listOf(
+            Triple("json", "application/json", "{\"fixture\":true}"),
+            Triple("xml", "application/xml", "<fixture/>"),
+            Triple("pdf", "application/octet-stream", "%PDF-fixture"),
+        )) {
+            val url = "https://example.com/file.$ext"
+            // A generic origin can advertise octet-stream metadata, then specify
+            // its real content type on the transfer response.
+            server.enqueue(MockResponse().setHeader("Content-Type", "application/octet-stream"))
+            val choice = engine.analyze(url)!!.choices.single()
+            assertEquals(ext, choice.extension)
+            server.enqueue(MockResponse().setHeader("Content-Type", mime).setBody(body))
+            engine.download(url, file, expectsBinary = DirectFileName.expectsBinary(choice)) { _, _, _ -> }
+            assertEquals(body, file.readText())
+        }
+    }
+
+    @Test
     fun rejectsHttpsDowngrade() = fixture { server, engine, file ->
         server.enqueue(
             MockResponse().setResponseCode(302).setHeader("Location", "http://example.com/unsafe")

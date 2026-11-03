@@ -382,6 +382,8 @@ class BatchHandoffTest {
             withContext(Dispatchers.Main) {
                 model.receive(incoming)
                 model.acceptPending()
+                model.edit("https://example.org/current-input")
+                assertEquals("https://example.org/current-input", model.state.value.url)
                 assertEquals(incoming, model.state.value.pendingShared)
                 assertTrue(model.batch.value.isEmpty())
             }

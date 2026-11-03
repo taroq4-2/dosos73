@@ -142,7 +142,7 @@
     <string name="batch_ready">Analyzed and ready</string>
     <string name="batch_queue">Download selected ready items</string>
     <string name="pending_link">A new link was received</string>
-    <string name="pending_link_hint">Your incoming text was kept while analysis was running. Review it now.</string>
+    <string name="pending_link_hint">Review the incoming link or cancel to keep your current work.</string>
     <string name="preview">Local preview</string>
     <string name="preview_local">Local preview only. No source is contacted.</string>
     <string name="preview_unsupported">This file cannot be previewed here. Try an external app.</string>

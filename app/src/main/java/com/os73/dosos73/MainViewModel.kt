@@ -216,7 +216,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     fun edit(url: String) {
         if (mutable.value.busy || batchBusyMutable.value) return
-        mutable.value = ScreenState(url.take(8192))
+        // Draft recovery can be visible while a shared link is still staged.
+        mutable.value = ScreenState(url.take(8192), pendingShared = mutable.value.pendingShared)
     }
 
     fun receive(text: String) {
@@ -229,7 +230,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             return
         }
         try {
-            edit(Safety.shared(text))
+            mutable.value = ScreenState(Safety.shared(text).take(8192))
             analyze()
         } catch (_: Exception) {
             mutable.value = mutable.value.copy(error = R.string.error_url)
@@ -250,6 +251,10 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         val pending = mutable.value.pendingShared ?: return
         mutable.value = mutable.value.copy(pendingShared = null)
         receive(pending)
+    }
+
+    internal fun discardPending() {
+        mutable.value = mutable.value.copy(pendingShared = null)
     }
 
     fun prepareBatch(text: String) {

@@ -1,12 +1,15 @@
 package com.os73.dosos73
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.unit.Density
@@ -58,5 +61,28 @@ class ReviewLayoutTest {
             compose.onNodeWithTag(tag).assertIsDisplayed().performClick()
             compose.runOnIdle { assertEquals(result, answer.value) }
         }
+    }
+
+    @Test fun pendingShareDoesNotCoverDraftRecovery() {
+        val saving = mutableStateOf(true)
+        val storageError = mutableStateOf(false)
+        var reviewed = false
+        compose.setContent {
+            MaterialTheme {
+                Box {
+                    Button({}, Modifier.testTag("draft_retry_fixture")) { Text("Retry draft") }
+                    PendingSharedReview(ScreenState(pendingShared = "https://example.com/new"),
+                        batchBusy = false, batchSaving = saving.value, batchStorageError = storageError.value,
+                        onReview = { reviewed = true }, onDiscard = {})
+                }
+            }
+        }
+        compose.onNodeWithTag("pending_share_dialog").assertDoesNotExist()
+        compose.runOnIdle { storageError.value = true; saving.value = false }
+        compose.onNodeWithTag("pending_share_dialog").assertDoesNotExist()
+        compose.onNodeWithTag("draft_retry_fixture").assertIsDisplayed().assertIsEnabled()
+        compose.runOnIdle { storageError.value = false }
+        compose.onNodeWithTag("pending_share_review").assertIsDisplayed().performClick()
+        compose.runOnIdle { assertEquals(true, reviewed) }
     }
 }

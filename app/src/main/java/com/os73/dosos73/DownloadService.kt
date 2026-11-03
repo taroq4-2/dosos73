@@ -220,6 +220,7 @@ class DownloadService : Service() {
                         task.analysis.url,
                         file,
                         connections = if (NetworkSettings.parallelConnections(this@DownloadService)) 2 else 1,
+                        expectsBinary = DirectFileName.expectsBinary(task.choice),
                         progress = { bytes, total, speed ->
                             publish(
                                 TransferState(

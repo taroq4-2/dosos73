@@ -142,7 +142,7 @@
     <string name="batch_ready">تم التحليل وجاهز</string>
     <string name="batch_queue">تنزيل العناصر الجاهزة المحددة</string>
     <string name="pending_link">وصل رابط جديد</string>
-    <string name="pending_link_hint">حُفظ النص الوارد أثناء التحليل. يمكنك مراجعته الآن.</string>
+    <string name="pending_link_hint">راجع الرابط الوارد أو ألغِه لمتابعة عملك الحالي.</string>
     <string name="preview">معاينة محلية</string>
     <string name="preview_local">معاينة محلية فقط دون الاتصال بالمصدر.</string>
     <string name="preview_unsupported">تعذّرت معاينة الملف هنا. جرّب تطبيقًا خارجيًا.</string>

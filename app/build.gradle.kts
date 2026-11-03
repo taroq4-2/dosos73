@@ -1,4 +1,5 @@
 import java.security.MessageDigest
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
 
 plugins {
     id("com.android.application")
@@ -50,6 +51,8 @@ android {
     testOptions { unitTests.isReturnDefaultValues = true }
     lint { abortOnError = true }
 }
+// The HTTP fixture must exercise the same transport version as the application.
+val okhttpVersion = "4.12.0"
 dependencies {
     // Override obsolete transitive archive/JSON dependencies carried by the native wrapper.
     implementation(platform("com.fasterxml.jackson:jackson-bom:2.22.4"))
@@ -67,17 +70,38 @@ dependencies {
     implementation("androidx.core:core-ktx:1.15.0")
     implementation("androidx.documentfile:documentfile:1.0.1")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
-    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation("com.squareup.okhttp3:okhttp:$okhttpVersion")
     implementation("io.github.junkfood02.youtubedl-android:library:0.18.1")
     implementation("io.github.junkfood02.youtubedl-android:ffmpeg:0.18.1")
     testImplementation("junit:junit:4.13.2")
-    testImplementation("com.squareup.okhttp3:mockwebserver:4.12.0")
+    testImplementation("com.squareup.okhttp3:mockwebserver:$okhttpVersion")
     androidTestImplementation("androidx.test.ext:junit:1.2.1")
     androidTestImplementation("androidx.test:runner:1.6.2")
     androidTestImplementation(platform("androidx.compose:compose-bom:2024.10.01"))
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
 }
+
+val verifyNetworkTestStack by tasks.registering {
+    group = "verification"
+    description = "Checks the resolved OkHttp and MockWebServer versions in production and JVM tests."
+    doLast {
+        val transport = setOf("okhttp", "okhttp-android", "okhttp-jvm", "mockwebserver")
+        for (name in listOf("releaseRuntimeClasspath", "debugUnitTestRuntimeClasspath")) {
+            val components = configurations.getByName(name).incoming.resolutionResult.allComponents
+                .mapNotNull { it.id as? ModuleComponentIdentifier }
+                .filter { it.group == "com.squareup.okhttp3" && it.module in transport }
+            check(components.any { it.module != "mockwebserver" }) { "OkHttp transport missing from $name" }
+            check(components.any { it.module == "mockwebserver" } == (name == "debugUnitTestRuntimeClasspath")) {
+                "MockWebServer must be present only on the test runtime, not $name"
+            }
+            check(components.all { it.version == okhttpVersion }) {
+                "OkHttp stack in $name must use $okhttpVersion; selected ${components.joinToString()}"
+            }
+        }
+    }
+}
+tasks.matching { it.name == "testDebugUnitTest" }.configureEach { dependsOn(verifyNetworkTestStack) }
 
 // Catch missing translations in local checks and CI without a runtime dependency.
 val verifyTranslations by tasks.registering {

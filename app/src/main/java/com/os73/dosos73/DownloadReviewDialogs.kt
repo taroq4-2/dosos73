@@ -101,3 +101,23 @@ internal fun TransferDetailsDialog(transfer: TransferState, onClose: () -> Unit)
 
 private fun compactReviewModifier(compact: Boolean): Modifier =
     if (compact) Modifier.widthIn(max = 640.dp).fillMaxWidth().padding(vertical = 24.dp) else Modifier
+
+@Composable
+internal fun PendingSharedReview(screen: ScreenState, batchBusy: Boolean, batchSaving: Boolean,
+    batchStorageError: Boolean, onReview: () -> Unit, onDiscard: () -> Unit) {
+    // When the ViewModel cannot accept the link, do not cover the draft retry UI.
+    if (screen.pendingShared == null || screen.quick || screen.busy || batchBusy || batchSaving || batchStorageError) return
+    AlertDialog(
+        modifier = Modifier.testTag("pending_share_dialog"),
+        properties = DialogProperties(dismissOnClickOutside = false),
+        onDismissRequest = onDiscard,
+        title = { Text(stringResource(R.string.pending_link)) },
+        text = { Text(stringResource(R.string.pending_link_hint)) },
+        confirmButton = {
+            TextButton(onReview, Modifier.testTag("pending_share_review")) { Text(stringResource(R.string.batch_review)) }
+        },
+        dismissButton = {
+            TextButton(onDiscard, Modifier.testTag("pending_share_discard")) { Text(stringResource(R.string.cancel)) }
+        },
+    )
+}

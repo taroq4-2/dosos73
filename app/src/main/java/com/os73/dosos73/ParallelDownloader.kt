@@ -30,10 +30,12 @@ internal class ParallelDownloader(
         url: String,
         destination: File,
         awaitReady: suspend () -> Unit,
+        expectsBinary: Boolean,
         progress: (Long, Long?, Long) -> Unit,
     ): Boolean {
         val parts = (0..1).map { File(destination.parentFile, destination.name + ".parallel-$it") }
         val merged = File(destination.parentFile, destination.name + ".parallel-merge")
+        val rateLimited = AtomicBoolean(false)
         try {
             awaitReady()
             currentCoroutineContext().ensureActive()
@@ -43,15 +45,16 @@ internal class ParallelDownloader(
             val tag: String
             val target: String
             probe.use { response ->
-                HttpRepresentation.requireIdentity(response)
+                if (response.code == 429) throw PipelineException(Stage.TRANSFER, FailureCode.HTTP_429)
+                if (response.code != 206) return false
+                HttpRepresentation.requireIdentity(response, expectsBinary)
                 val match =
                     Regex("bytes 0-0/([0-9]+)")
                         .matchEntire(response.header("Content-Range").orEmpty())
                 total = match?.groupValues?.get(1)?.toLongOrNull() ?: return false
                 tag = ResumeCheckpoint.strongTag(response.header("ETag")) ?: return false
                 if (
-                    response.code != 206 ||
-                        total < minimumBytes ||
+                    total < minimumBytes ||
                         response.body?.contentLength() != 1L
                 )
                     return false
@@ -83,7 +86,10 @@ internal class ParallelDownloader(
                                 )
                             workers[index].request(url, resume = checkpoint, rangeEnd = end).use {
                                 response ->
-                                HttpRepresentation.requireIdentity(response)
+                                if (response.code == 429) {
+                                    rateLimited.set(true)
+                                    throw PipelineException(Stage.TRANSFER, FailureCode.HTTP_429)
+                                }
                                 if (
                                     response.code != 206 ||
                                         response.header("ETag") != tag ||
@@ -93,6 +99,7 @@ internal class ParallelDownloader(
                                             "bytes $start-$end/$total"
                                 )
                                     throw IOException("Incompatible parallel range")
+                                HttpRepresentation.requireIdentity(response, expectsBinary)
                                 val body =
                                     response.body ?: throw IOException("Empty parallel response")
                                 val expected = end - start + 1
@@ -180,6 +187,7 @@ internal class ParallelDownloader(
         } catch (error: IOException) {
             currentCoroutineContext().ensureActive()
             if (cancelled.get()) throw error
+            if (rateLimited.get()) throw PipelineException(Stage.TRANSFER, FailureCode.HTTP_429)
             return false // One sequential fallback, never mix unvalidated pieces.
         } finally {
             workers.forEach { it.cancel() }

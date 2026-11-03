@@ -7,7 +7,7 @@ internal object HttpRepresentation {
     private val range = Regex("bytes ([0-9]+)-([0-9]+)/([0-9]+)")
     data class ByteRange(val first: Long, val last: Long, val total: Long)
 
-    fun requireIdentity(response: Response) {
+    fun requireIdentity(response: Response, expectsBinary: Boolean = false) {
         val encodings = response.headers.values("Content-Encoding").flatMap { it.split(',') }.map { it.trim() }
         if (encodings.any { it.isNotEmpty() && !it.equals("identity", true) })
             throw IOException("Unsupported content encoding")
@@ -16,10 +16,19 @@ internal object HttpRepresentation {
             val values = response.headers.values(name).map { it.trim() }
             if (values.distinct().size > 1) throw IOException("Conflicting $name headers")
         }
-        val mime = response.header("Content-Type").orEmpty().trim()
-        if (mime.startsWith("text/html", true) || mime.startsWith("multipart/byteranges", true))
+        val mime = response.header("Content-Type").orEmpty().substringBefore(';').trim().lowercase()
+        // An error envelope can use HTTP 200 or even masquerade as a valid range.
+        // Apply the extra constraint only to known binary choices; generic downloads
+        // retain support for JSON/XML, untyped payloads and octet-stream origins.
+        val textEnvelope = mime.startsWith("text/") || mime.endsWith("+json") || mime.endsWith("+xml") ||
+            mime in structuredTextTypes
+        if (mime.startsWith("text/html") || mime.startsWith("multipart/byteranges") || (expectsBinary && textEnvelope))
             throw IOException("Unexpected response type")
     }
+
+    private val structuredTextTypes = setOf(
+        "application/json", "application/xml", "application/x-json", "application/json-seq", "application/x-ndjson",
+    )
 
     fun parseRange(value: String?): ByteRange? {
         val parts = range.matchEntire(value.orEmpty()) ?: return null

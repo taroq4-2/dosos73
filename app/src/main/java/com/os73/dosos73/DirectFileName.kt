@@ -21,6 +21,11 @@ internal object DirectFileName {
             "application/x-7z-compressed" to "7z",
         )
 
+    private val binaryExtensions = extensions.values.toSet()
+
+    fun expectsBinary(choice: Choice): Boolean =
+        choice.kind != Kind.FILE || choice.extension.lowercase() in binaryExtensions
+
     fun resolve(disposition: String?, path: String, mime: String): Pair<String, String> {
         val header = disposition.orEmpty().take(8192)
         val encoded =
