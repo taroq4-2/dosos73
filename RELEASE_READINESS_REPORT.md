@@ -1,6 +1,6 @@
 # Release readiness — dosos73 1.3.0-rc.2
 
-Execution date: 2 November 2026. Working branch: `release/production-readiness`.
+Execution dates: 2–3 November 2026. Working branch: `release/production-readiness`.
 Baseline code: `bcfcdbdf46ba0f9e18dcfad50fa8fb8220312b9e` (1.3.0-rc.1),
 not the audit's older 1.2.0. Default branch inspected at
 `2efeb7f1271516b13c3fc2ab767fe81753df81ac`; tag/public release v1.2.0 retained.
@@ -14,6 +14,14 @@ Production **NO-GO** until the native component/provenance and physical-device
 acceptance gaps and owner-controlled Play requirements are satisfied. Local
 implementation and test-candidate preparation continue independently. No public
 release, Play upload, signing-key change or stable-release deletion is performed.
+
+The signed local candidate is `1.3.0-rc.2` (code 15, Android 10 minimum,
+Android 16 target) from production source `e599d58b058006a7c44fec8bd84307b0f68dcf04`.
+The signed universal APK is 62,116,918 bytes, and the signed AAB is
+62,696,449 bytes. Both contain all four supported architectures and the same
+native files and shared runtime as rc.1. The experimental security rebuild runs
+separately; it is not included in these deliverables. The API29–36 matrix and
+local acceptance are tracked separately from the signature and package checks.
 
 ## Traceability register
 

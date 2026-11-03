@@ -1,5 +1,20 @@
 # Release-readiness security review
 
+**Source rebuild follow-up (3 November):** The separate
+[`runtime/security-20261102`](https://github.com/taroq4-2/dosos73/tree/runtime/security-20261102)
+branch pins CPython 3.12.16, OpenSSL 3.5.9, Expat 2.9.0, the Android NDK,
+the builder image, and the source recipes. The build-order error from an empty
+optional Tk dependency was corrected. An unrelated `foot` terminal description
+archive changed checksum; the experiment omits that auxiliary terminfo input
+and retains checksum enforcement and the ncurses library. See the
+[four-ABI build trial](https://github.com/taroq4-2/dosos73/actions/runs/41637410970).
+ARM64 progressed to fetching the pinned Readline patches, but the mirror reset
+the connection. The next trial uses the GNU upstream host after confirming
+the exact failed patch has the expected SHA-256; verification remains enabled.
+The signed rc.2 artifacts retain the previously tested runtime byte for byte;
+the experimental core must still build, pass module/ELF and application tests,
+and establish matching source/notice evidence before it can replace it.
+
 Reviewed 2 November 2026 on `release/production-readiness`, based on `bcfcdbdf46ba0f9e18dcfad50fa8fb8220312b9e` plus the changes identified in the release report. This is a source/component review by virtual specialist functions, not a penetration-test certificate. Final build identity and executed device-test counts belong in `QA_TEST_MATRIX.md` and `RELEASE_READINESS_REPORT.md`.
 
 ## Decision

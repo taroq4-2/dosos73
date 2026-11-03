@@ -1,6 +1,6 @@
 # Readiness QA matrix
 
-Date: 2 November 2026. Package: `com.os73.dosos73`, candidate1.3.0-rc.2,
+Date: 2–3 November 2026. Package: `com.os73.dosos73`, candidate1.3.0-rc.2,
 code15, min29, target36. Source/build identity and exact executed counts are
 recorded with the candidate verification file. Previous rc.1 results are
 historical evidence and do not replace this candidate's acceptance.
@@ -22,18 +22,35 @@ from passing tests; they are not skipped to hide a failure.
 
 | Area | Coverage and evidence | Candidate execution state |
 |---|---|---|
-| JVM | URL/IP/file names, HTTP200/206/416, Range/ETag, integrity/checkpoint state | Baseline116pass; final refreshed run pending |
-| Host tools | Advisory failure/expiry/pagination, build coordinates/KAPT guard, AAB tamper boundaries, performance parsers | 21pass on integrated tools |
-| Android versions | Full instrumentation on API29–36 | New CI run pending |
-| New storage boundary | `PublicationUriBoundaryTest`, foreign/malformed rename results and recoverability | 2methods pending |
-| Controlled recovery | `StorageRecoverySoakTest`,100seeded provider/journal reconstruction cases and SHA256 | 1method/100cases pending; not real OS process-kill |
-| New adaptive UI | `ReviewLayoutTest`:48dp RTL200%, duplicate actions, real landscape long details | 3methods pending |
-| Existing features | OfflineAudio, LocalReplay/TaskJournal, Presets, History, real MediaToolsFlow, QuickLaunch | Full regression pending |
-| Network/security | PublicProxy/Lifecycle/Transport, LiteralNetworkBoundary, TlsVersion, NetworkRecovery, DirectDownloader | Full regression pending |
-| Storage/queue/native | Publication/RenameRecovery, ServiceLease/NetworkDeferral, Journal/Failure retention, NativeProcess ownership/cancel | Full regression pending |
-| Signed release | Signature, source/runtime correspondence, install/upgrade, retained media hashes, direct transfer and MP3 playback | Pending exact candidate |
-| AAB delivery | bundletool validate, identity/ABI/mapping; build/extract native split and install as upgrade | Prototype validation passed; signed candidate pending |
-| Package size/performance | Universal bytes; per-ABI device delivery sizes; matched startup/PSS/raw records | Pending signed candidate |
+| JVM | URL/IP/file names, HTTP200/206/416, Range/ETag, integrity/checkpoint state | 116 passed on the release source; zero failures |
+| Host tools | Advisory failure/expiry/pagination, build coordinates/KAPT guard, AAB tamper boundaries, performance parsers | 29 passed on integrated tools |
+| Android versions | Full instrumentation on API29–36 | All eight device jobs passed on [`40fa614`](https://github.com/taroq4-2/dosos73/actions/runs/41637321085) |
+| New storage boundary | `PublicationUriBoundaryTest`, foreign/malformed rename results and recoverability | 2 methods passed on API35 |
+| Controlled recovery | `StorageRecoverySoakTest`,100seeded provider/journal reconstruction cases and SHA256 | [100/100, zero lost/corrupt/duplicate](docs/readiness/storage-soak-api35.json); not real OS process-kill |
+| New adaptive UI | `ReviewLayoutTest` and `LandscapeReviewLayoutTest`:48dp RTL200%, duplicate actions, real landscape long details | Previous 2 layout checks passed; the corrected landscape window fixture passed a targeted API35 run |
+| Existing features | OfflineAudio, LocalReplay/TaskJournal, Presets, History, real MediaToolsFlow, QuickLaunch | Automated regression passed; all three OfflineAudio tests passed on local API35 |
+| Network/security | PublicProxy/Lifecycle/Transport, LiteralNetworkBoundary, TlsVersion, NetworkRecovery, DirectDownloader | Automated regression passed; optional external-source fixtures not run locally |
+| Storage/queue/native | Publication/RenameRecovery, ServiceLease/NetworkDeferral, Journal/Failure retention, NativeProcess ownership/cancel | CI passed; local runtime inventory Python launch timed out once |
+| Signed release | Signature, source/runtime correspondence, install/upgrade and retained media hashes | Exact APK installed and opened; 6 retained files preserved. New live network download/playback on this signed APK not rerun |
+| AAB delivery | bundletool validate, identity/ABI/mapping; build/extract native split and install as upgrade | Signed AAB validated; all native/shared files match APK; locally signed x86-64 derived splits installed and opened; all 6 media hashes matched |
+| Package size/performance | Universal bytes; per-ABI device delivery sizes; matched startup/PSS/raw records | 62,116,918-byte APK; AAB estimates in performance record |
+
+The signed APK and AAB embed `e599d58b058006a7c44fec8bd84307b0f68dcf04`.
+The follow-up test-only change keeps the component Activity mounted while its
+actual window rotates. The targeted run required landscape resources and a
+window wider than tall before testing Close. The earlier prelaunch configuration
+broadcast timed out; that failed run is preserved. No production source or
+release build inputs changed in the follow-up test/CI commits.
+
+The complete local repeat (`readiness-fixture-full-instrument.log`) reported
+181 cases: 175 passed, five optional fixture cases skipped and one failed.
+`RuntimeInventoryTest.bundledComponentsExecute` exceeded its 15-second Python
+startup limit, although it passed in the eight CI device jobs. The same debug
+APK and isolated test passed on the same local API35 emulator (JUnit elapsed
+14.279 s); the original timeout is retained, with no timeout increase. The three layout
+cases and 100 storage recovery scenarios all passed locally. Signed delivery
+checks exercised launch and upgrade on the same emulator; they are not a fresh
+live source download or a physical ARM device certification.
 
 ## Explicit NOT RUN / external gates
 
