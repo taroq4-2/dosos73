@@ -84,10 +84,12 @@ jobs:
         env:
           TEST_API: ${{ matrix.api }}
         run: |
-          (set +o pipefail; yes | sdkmanager --licenses >/dev/null)
+          sdkmanager="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          test -x "$sdkmanager"
+          (set +o pipefail; yes | "$sdkmanager" --licenses >/dev/null)
           image="system-images;android-${TEST_API};default;x86_64"
           for attempt in 1 2 3; do
-            if sdkmanager --install platform-tools 'platforms;android-36' 'build-tools;35.0.0' emulator "$image" &&
+            if "$sdkmanager" --install platform-tools 'platforms;android-36' 'build-tools;35.0.0' emulator "$image" &&
               test -x "$ANDROID_HOME/emulator/emulator" &&
               test -s "$ANDROID_HOME/system-images/android-${TEST_API}/default/x86_64/system.img"; then
               exit 0
