@@ -86,6 +86,14 @@ def main():
             text = replace_once(text, r'^TERMUX_PKG_BUILD_DEPENDS="tk"\n', '', 'unused Tk build dependency')
             text = text.replace('_sqlite3 _ssl _tkinter zlib', '_sqlite3 _ssl zlib')
         p.write_text(text)
+    # 3.5.9 reformatted the preprocessor directive; the EGD fallback and its
+    # Termux path relocation are unchanged. Keep the relocation in the patch
+    # rather than dropping the patch or accepting fuzz on a crypto header.
+    openssl_rand = destination / 'packages/openssl/include-crypto-rand.h.patch'
+    text = openssl_rand.read_text()
+    text = replace_once(text, r'^-# define DEVRANDOM_EGD ', '-#define DEVRANDOM_EGD ', 'OpenSSL old EGD directive')
+    text = replace_once(text, r'^\+# define DEVRANDOM_EGD ', '+#define DEVRANDOM_EGD ', 'OpenSSL new EGD directive')
+    openssl_rand.write_text(text)
     # The pinned foot archive no longer matches its upstream digest. It is
     # only used to compile optional terminal descriptions, not ncurses code
     # or Python modules. Leave the checksum check enabled for every input.
@@ -124,6 +132,7 @@ def main():
             files[p.relative_to(destination).as_posix()] = digest(p)
     proof = {'status': 'prepared, not built', 'source_lock': lock,
              'recipe_files': files, 'changed_python_patch': digest(patch),
+             'rebased_openssl_egd_patch': digest(openssl_rand),
              'omitted_build_only_dependency': 'Tk: no inherited _tkinter module, no app Tk function',
              'omitted_auxiliary_source': 'foot: optional terminfo only; checksum mismatch; no ncurses library or Python module removed'}
     (args.output / 'preparation-proof.json').write_text(json.dumps(proof, indent=2) + '\n')
