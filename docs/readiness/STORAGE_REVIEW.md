@@ -59,6 +59,66 @@ This count is not an execution result. Retain instrumentation output and the JSO
 report with the exact candidate commit. Also run existing publication/rename/commit
 race tests and the full regression suite before accepting the patch.
 
+## Actual API 35 execution evidence
+
+The root runner executed the storage soak on the owned API 35 emulator and
+extracted the application-private JSON report. A separate review of the extracted
+artifact confirmed all of the following; it did not rerun the device test:
+
+- `state: passed`, `expectedRuns: 100`, `completedRuns: 100`, and exactly 100 rows.
+- Sequential run numbers 1–100; each of the ten scenarios appears exactly ten times.
+- Every row reports `passed`, equal source/output SHA-256, unchanged unrelated
+  sibling, and idempotent replay. All 100 source hashes are distinct.
+- Aggregate lost fixture files, corrupt fixture files and duplicate outputs are
+  each zero.
+
+Retained evidence: [`storage-soak-api35.json`](storage-soak-api35.json), copied
+byte-for-byte from the extracted `work/readiness-storage-soak.json`.
+SHA-256: `ba49742b78a80cc0e950f3abcc478bacdeedd4f6b1da1c87dc1781862beca016`.
+The raw fixture report does not encode a build commit; use the root QA matrix and
+instrumentation/build logs for that binding. This report must not be silently
+attributed to a later rebuilt candidate without that evidence.
+
+This closes the **100 controlled fixture-run artifact** portion of A04-SOAK for
+that tested build. It does not close actual OS process-kill, reboot, physical ARM,
+true ENOSPC or real cloud/removable-provider acceptance. It is not a declaration
+that the full instrumentation suite passed. The root's first full run encountered
+unrelated SystemUI/quick-launch failures; their diagnosis and reruns are recorded
+separately in the root QA report.
+
+Security cross-review agreed that the URI guard is appropriately narrow and
+preserves the plan after a provider rename side effect. Canonical comparison
+intentionally rejects query/fragment/alternate-path forms. It does not establish
+trust in a fully malicious provider with the same authority.
+
+### Quick-entry/native fixture cleanup review
+
+Reviewed `QuickLaunchTest.prepareIsolatedFlow/restoreUserState`,
+`QuickColdLaunchTest.verifyColdLaunch`, and all four `NativeCancellationTest`
+methods after the run failures were reported. This was source review only, with
+no additional device state changes:
+
+- Quick-entry tests snapshot nullable preferences (preserving absent keys), alias
+  component state, clipboard and the relevant launch intent, then restore them.
+  `QuickColdLaunchTest` restores preferences/alias in a nested `finally`, even if
+  its visible-activity clipboard restoration fails. No queue, MediaStore or app
+  data reset is used.
+- Clipboard restoration needs a focused foreground activity on Android 10+.
+  SystemUI ANR or a lifecycle timeout can prevent that restoration; this is a
+  harness/environment cleanup limit, not proof that the user clipboard is always
+  restored after a failed run. The runner must check/reset only recorded test
+  settings before rerunning. No broad user-data clear is justified.
+- Native tests use UUID-owned directories and `NativeProcessSession` instances.
+  Their `finally` blocks close those sessions and remove only their fixture
+  directories; the forged-session test deletes only its deliberately forged
+  session record. The intentional shared process-group lock is not deleted.
+  The forged-record regression checks that cancelling one test session leaves
+  the other live group running, then explicitly closes both owned sessions.
+- Tests sharing clipboard, alias settings or provider fault controls must run
+  serially per app/device. Separate CI emulator jobs have separate state. This
+  review did not certify arbitrary concurrent instrumentation on one installed
+  app, nor dismiss native failures without their actual log evidence.
+
 ## Virtual review functions 11–25
 
 | Role / accountable function | Concrete reviewed location or contribution | Evidence / cross-review disposition |

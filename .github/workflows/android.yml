@@ -80,6 +80,22 @@ jobs:
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
+      - name: Provision emulator SDK packages
+        env:
+          TEST_API: ${{ matrix.api }}
+        run: |
+          (set +o pipefail; yes | sdkmanager --licenses >/dev/null)
+          image="system-images;android-${TEST_API};default;x86_64"
+          for attempt in 1 2 3; do
+            if sdkmanager --install platform-tools 'platforms;android-36' 'build-tools;35.0.0' emulator "$image" &&
+              test -x "$ANDROID_HOME/emulator/emulator" &&
+              test -s "$ANDROID_HOME/system-images/android-${TEST_API}/default/x86_64/system.img"; then
+              exit 0
+            fi
+            echo "SDK package acquisition failed (attempt $attempt/3)." >&2
+            if [ "$attempt" -lt 3 ]; then sleep 10; fi
+          done
+          exit 1
       - uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2
         with:
           api-level: ${{ matrix.api }}
