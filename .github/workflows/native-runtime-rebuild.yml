@@ -66,6 +66,7 @@ jobs:
         env:
           CONTAINER_NAME: dosos-native-${{ matrix.arch }}
         run: |
+          set -o pipefail
           docker exec "$CONTAINER_NAME" bash -lc 'cd /home/builder/termux-packages && python3 package_native_runtime.py --abi "${{ matrix.abi }}" --readelf "$HOME/lib/android-ndk-r28c/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-readelf"' | tee native-evidence/packaging.txt
           cp -r native-trial/termux/native-runtime-out native-evidence/
           docker exec "$CONTAINER_NAME" bash -lc 'find /home/builder/.cache/termux-build -maxdepth 3 -type f \( -name "*.tar.*" -o -name "*.zip" -o -name "config.log" -o -name "pyconfig.h" \) -print0 | sort -z | xargs -0 -r sha256sum' > native-evidence/cached-input-hashes.txt

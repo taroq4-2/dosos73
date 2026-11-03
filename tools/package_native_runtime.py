@@ -65,7 +65,11 @@ def main():
     missing = set(required['extension_modules']) - actual_modules
     if missing:
         raise ValueError('Missing previously shipped modules: ' + str(sorted(missing)))
-    paths = set(x for x in python.rglob('*') if x.is_file() or x.is_symlink())
+    # CPython installs static-link development files, including a relocatable
+    # python.o, here. No inherited Android runtime ships this directory.
+    development = python / 'config-3.12'
+    paths = {path for path in python.rglob('*')
+             if not path.is_relative_to(development) and (path.is_file() or path.is_symlink())}
     # Include all native libraries/links from the rebuilt dependency prefix,
     # preserving dynamic modules/providers as well as the root SONAME aliases.
     for candidate in lib.rglob('*'):
