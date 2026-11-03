@@ -79,6 +79,18 @@ def main():
             text = replace_once(text, r'^TERMUX_PKG_BUILD_DEPENDS="tk"\n', '', 'unused Tk build dependency')
             text = text.replace('_sqlite3 _ssl _tkinter zlib', '_sqlite3 _ssl zlib')
         p.write_text(text)
+    # The pinned foot archive no longer matches its upstream digest. It is
+    # only used to compile optional terminal descriptions, not ncurses code
+    # or Python modules. Leave the checksum check enabled for every input.
+    ncurses = destination / 'packages/ncurses/build.sh'
+    text, count = re.subn(r'\n[ \t]+"[^\n]*x11-packages/foot/build\.sh[^\n]+\)$',
+                          ')', ncurses.read_text(), flags=re.MULTILINE)
+    if count != 3:
+        raise ValueError(f'Expected three optional foot source references, found {count}')
+    text = replace_once(text, r'^\tcp [^\n]*/full-terminfo/f/foot[^\n]*\n', '', 'foot terminfo copy')
+    text = replace_once(text, r'^\t# Upstream instructions for building foot\x27s terminfo\n[^\n]*\n[^\n]*\n[^\n]*\n',
+                        '', 'foot terminfo generation')
+    ncurses.write_text(text)
     patch = destination / 'packages/python/0001-fix-hardcoded-paths.patch'
     text = patch.read_text()
     start = text.index('--- a/Lib/mimetypes.py\n')
@@ -105,7 +117,8 @@ def main():
             files[p.relative_to(destination).as_posix()] = digest(p)
     proof = {'status': 'prepared, not built', 'source_lock': lock,
              'recipe_files': files, 'changed_python_patch': digest(patch),
-             'omitted_build_only_dependency': 'Tk: no inherited _tkinter module, no app Tk function'}
+             'omitted_build_only_dependency': 'Tk: no inherited _tkinter module, no app Tk function',
+             'omitted_auxiliary_source': 'foot: optional terminfo only; checksum mismatch; no ncurses library or Python module removed'}
     (args.output / 'preparation-proof.json').write_text(json.dumps(proof, indent=2) + '\n')
     shutil.copyfile(root / 'tools/native-required-modules.json', destination / 'native-required-modules.json')
     shutil.copyfile(root / 'tools/package_native_runtime.py', destination / 'package_native_runtime.py')
