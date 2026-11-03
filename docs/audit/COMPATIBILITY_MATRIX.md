@@ -6,6 +6,10 @@ Mission baseline `1e46c56ce6028bdbae51ae1f80091115cd614e0b`. The source declares
 
 The [previous readiness CI run 41637321085](https://github.com/taroq4-2/dosos73/actions/runs/41637321085) passed all eight x86-64 debug device jobs on `40fa61478e3f47a1a7413d7c266357e0b7299b61`. These historical results predate this mission's changes. The older [v1.2.0 matrix](device-matrix.json) uses a different source revision and test count. Consult [TEST_EVIDENCE.md](TEST_EVIDENCE.md) for new runs.
 
+[Remediation run 41712135377](https://github.com/taroq4-2/dosos73/actions/runs/41712135377) also passed every API 29–36 x86-64 emulator job on `96337091f968ee36714e1adcb9b215d43191cd77`, and the build job passed. The table below records device-specific limits that persist after both matrices.
+
+The exact signed universal APK from the remediation source was installed as an update and resumed on a local API 35 x86-64 emulator with 4096-byte pages. Six retained files matched their pre-update hashes. This acceptance is independent of the debug instrumentation matrix.
+
 | Android | API | Prior x86-64 emulator CI | Specific source/coverage boundary |
 |---|---:|---|---|
 | 10 | 29 | Passed | Minimum SDK; MediaStore/SAF and scoped-storage transitions matter. No physical API29 result. |

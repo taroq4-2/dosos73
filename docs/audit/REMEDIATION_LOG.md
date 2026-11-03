@@ -1,6 +1,6 @@
 # Remediation log
 
-Baseline `1e46c56ce6028bdbae51ae1f80091115cd614e0b`. The code changes and their regression fixtures share the implementation commit in this branch. See [TEST_EVIDENCE.md](TEST_EVIDENCE.md) for the tested revision.
+Baseline `1e46c56ce6028bdbae51ae1f80091115cd614e0b`. App and CI changes and their regression fixtures are in `96337091f968ee36714e1adcb9b215d43191cd77`. See [TEST_EVIDENCE.md](TEST_EVIDENCE.md) for results.
 
 | ID / severity | Confirmed behavior | Remediation and regression |
 |---|---|---|
@@ -10,6 +10,7 @@ Baseline `1e46c56ce6028bdbae51ae1f80091115cd614e0b`. The code changes and their 
 | UI-01 / Medium | A non-dismissible pending-share dialog could cover batch-draft recovery while its only action was disabled by state. | Wait until review is possible. Provide Cancel and Back, preserving the current result and draft. Tests exercise recovery, UI dismissal and preservation during manual edits. |
 | CI-01 / Medium | A unilateral MockWebServer upgrade pulled an incompatible Android transport onto the SDK 36 build path. | Keep test and app versions aligned and verify the resolved dependency graphs. Update independent CI action pins on the readiness branch. See [dependency review](DEPENDENCY_REVIEW.md). |
 | QA-01 / Medium | The native instrumentation probe waited for exit before draining a pipe. A child with a full pipe could block until the parent timeout. | Drain concurrently with a 4 KiB retention cap and a shared timeout. Add deterministic tests for a 1 MiB child stream and a sleeping child. The JVM reproduction establishes the pipe issue independently of earlier Python startup timeouts. |
-| NATIVE-01 / High release blocker | The OpenSSL 3.5.9 rebuild failed when applying stale context in a Termux patch. | Isolated commit `db9bf1998c1766a51ed754b65b0b39bd12880e61` updates the context. The next four-ABI run still failed and native integration remains blocked. See [run 41641954791](https://github.com/taroq4-2/dosos73/actions/runs/41641954791). |
+| NATIVE-01 / High release blocker | The OpenSSL 3.5.9 rebuild failed when applying stale context in a Termux patch. After correction, all four jobs got past OpenSSL and failed configuring unused X11 dependency `xcb-proto` with the wrong host Python. | Isolated commit `db9bf1998c1766a51ed754b65b0b39bd12880e61` updates the patch. Follow-up `da14c10a2a6464e06f7ace92a43b25e19e4508b4` prunes the unused Tk dependency edges and provisions the host CPython from the verified 3.12.16 source. Native integration remains gated by [the new four-ABI run](https://github.com/taroq4-2/dosos73/actions/runs/41712501784). |
+| NATIVE-02 / High release blocker | x86 and ARMv7 passed on `da14c10a`. ARM64 and x86-64 failed after compilation because collection applied the load-segment gate to an unlinked CPython development object, `config-3.12/python.o`. | Isolated SHA `490c5ba3be12d770edc8d3361c7d0453ed2f1534` excludes only the static development directory, which is absent from the inherited archive on all four ABIs. The alignment gate still rejects nonconforming executable/shared load segments. See [local regression and new run](TEST_EVIDENCE.md). |
 
 Each scope and remaining risk is documented in the [master audit](MASTER_AUDIT_REPORT.md).
