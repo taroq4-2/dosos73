@@ -74,7 +74,9 @@ def main():
         if package == 'python':
             # _tkinter is absent from every inherited ABI (required module
             # manifest). Avoid adding an unused X11/Tk build graph, not a feature.
-            text = replace_once(text, r'^TERMUX_PKG_BUILD_DEPENDS="tk"$', 'TERMUX_PKG_BUILD_DEPENDS=""', 'unused Tk build dependency')
+            # The framework's build-order parser treats a quoted empty value
+            # as a package name. Omit the declaration to express no dependency.
+            text = replace_once(text, r'^TERMUX_PKG_BUILD_DEPENDS="tk"\n', '', 'unused Tk build dependency')
             text = text.replace('_sqlite3 _ssl _tkinter zlib', '_sqlite3 _ssl zlib')
         p.write_text(text)
     patch = destination / 'packages/python/0001-fix-hardcoded-paths.patch'
