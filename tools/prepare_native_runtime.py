@@ -42,6 +42,9 @@ def main():
     for name in ('framework', 'readline_framework'):
         archives[name] = cache / (name + '.tar.gz')
         fetch(lock['sources'][name], archives[name])
+    # Cross-building needs a Linux interpreter of the matching Python version.
+    # Build it from the same digest-pinned archive as the Android interpreter.
+    fetch(lock['sources']['python'], cache / 'python.tar.xz')
     destination = args.output / 'termux'
     if destination.exists():
         raise ValueError('Use a fresh preparation directory')
@@ -84,8 +87,14 @@ def main():
             # The framework's build-order parser treats a quoted empty value
             # as a package name. Omit the declaration to express no dependency.
             text = replace_once(text, r'^TERMUX_PKG_BUILD_DEPENDS="tk"\n', '', 'unused Tk build dependency')
-            text = text.replace('_sqlite3 _ssl _tkinter zlib', '_sqlite3 _ssl zlib')
+            text = replace_once(text, r'_sqlite3 _ssl _tkinter zlib', '_sqlite3 _ssl zlib', 'unused Tk module check')
         p.write_text(text)
+    # The root package's build graph also includes its subpackages' dependencies.
+    # Keep the split recipe so the same pure-Python files stay out of the core.
+    tkinter = destination / 'packages/python/python-tkinter.subpackage.sh'
+    text = replace_once(tkinter.read_text(), r'^TERMUX_SUBPKG_DEPENDS="tcl, tk"\n',
+                        '', 'unused Tk subpackage dependencies')
+    tkinter.write_text(text)
     # 3.5.9 reformatted the preprocessor directive; the EGD fallback and its
     # Termux path relocation are unchanged. Keep the relocation in the patch
     # rather than dropping the patch or accepting fuzz on a crypto header.

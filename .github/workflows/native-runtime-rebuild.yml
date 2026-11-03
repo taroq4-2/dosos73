@@ -42,11 +42,26 @@ jobs:
           docker run --detach --init --name "$CONTAINER_NAME" --tty \
             --volume "$PWD/native-trial/termux:/home/builder/termux-packages" \
             --volume "$PWD/native-trial/android-ndk-r28c:/home/builder/lib/android-ndk-r28c:ro" \
+            --volume "$PWD/native-trial/sources/python.tar.xz:/tmp/native-python.tar.xz:ro" \
             --security-opt "seccomp=$PWD/native-trial/termux/scripts/profile.json" \
             "$TERMUX_BUILDER_IMAGE_NAME"
+          docker exec "$CONTAINER_NAME" bash -lc '
+            set -euo pipefail
+            build_python="$HOME/native-build-python"
+            mkdir -p "$build_python/src"
+            tar -xJf /tmp/native-python.tar.xz --directory "$build_python/src" --strip-components=1
+            cd "$build_python/src"
+            ./configure --prefix="$build_python" --without-ensurepip
+            make -j2
+            make altinstall
+            "$build_python/bin/python3.12" --version
+          ' 2>&1 | tee native-evidence/build-python.log
           docker exec --env CI=true --workdir /home/builder/termux-packages "$CONTAINER_NAME" \
             env TERMUX_PKG_API_LEVEL=29 SOURCE_DATE_EPOCH=1793577600 TERMUX_PKG_MAKE_PROCESSES=2 \
-            ./build-package.sh -a '${{ matrix.arch }}' -F python libc++ 2>&1 | tee native-evidence/build.log
+            bash -c '
+              export PATH="$HOME/native-build-python/bin:$PATH"
+              exec ./build-package.sh -a "$1" -F python libc++
+            ' _ '${{ matrix.arch }}' 2>&1 | tee native-evidence/build.log
       - name: Collect core runtime and enforce static parity
         env:
           CONTAINER_NAME: dosos-native-${{ matrix.arch }}
