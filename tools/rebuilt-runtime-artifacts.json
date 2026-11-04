@@ -1,0 +1,32 @@
+{
+  "schema": "dosos73-rebuilt-artifacts-v1",
+  "repository": "taroq4-2/dosos73",
+  "run_id": 41730382903,
+  "producer": "79893270b85278b71d02a7aae0f4143921c2f6ac",
+  "artifacts": [
+    {
+      "abi": "armeabi-v7a",
+      "id": 13278038113,
+      "bytes": 71732143,
+      "sha256": "937719ea62a547abd367b9b422397cdccd0e9b74b93ed7d2036df784f25f1bb3"
+    },
+    {
+      "abi": "arm64-v8a",
+      "id": 13278202239,
+      "bytes": 74064457,
+      "sha256": "0682e1ef8cde967bd9adf8b423a6ac043674356165123e6362fa8f0ebd74550b"
+    },
+    {
+      "abi": "x86",
+      "id": 13278182656,
+      "bytes": 72623075,
+      "sha256": "88a236a7c6c33ec75fe6c149e98f3a05848a2d61a74fd39411d170c7a66945a7"
+    },
+    {
+      "abi": "x86_64",
+      "id": 13276627067,
+      "bytes": 73622145,
+      "sha256": "26b76ec68e200e05463943404350eeda69aa6ccfa6adad17dfb197303b8b9df3"
+    }
+  ]
+}
