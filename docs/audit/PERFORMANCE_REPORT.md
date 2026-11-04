@@ -1,5 +1,39 @@
 # Performance and package size
 
+The 4 November source-built signed candidate is **62,051,382 bytes**, which is
+69,632 bytes smaller than the 62,121,014-byte signed remediation APK.
+It retains all four ABIs. The producer's raw Python core archives were
+79–82 MB per ABI; selecting the shipped runtime modules, sharing identical
+Python source files and removing non-runtime symbol information avoids
+embedding that build tree.
+
+The final APK preserves 485 non-Python APK entries byte-for-byte, including app
+code/resources, FFmpeg and QuickJS. Selected inherited vendor modules and trust
+store retain their bytes. ELF stripping checks preserve dynamic symbols,
+dependency names and load segments; kernel/runtime checks are documented in
+[TEST_EVIDENCE.md](TEST_EVIDENCE.md). Current single install/open timings provide
+diagnostic samples. Comparative hardware speed and battery measurements remain open.
+
+## Current signed-APK emulator comparison
+
+The same owned API35 x86-64 emulator ran ten process-cold launches for each
+signed APK with two seconds of settling and retained app data. The baseline
+was measured first, followed by the rebuilt candidate. OS disk caches were
+retained and all samples were saved.
+
+| Measure | Previous signed APK | Source-built candidate |
+|---|---:|---:|
+| APK bytes | 62,121,014 | 62,051,382 |
+| Median launch TotalTime | 4069.5 ms | 2930.5 ms |
+| Launch p95 | 7902 ms | 4383 ms |
+| Median settled TOTAL PSS | 29,078 KiB | 30,704.5 KiB |
+| PSS range | 26,541–38,100 KiB | 30,346–39,682 KiB |
+
+The memory median rose by 1,626.5 KiB (about 1.59 MiB). Launch times were
+variable. These observations cover activity startup in this emulator and its
+current state. Hardware energy, sustained native workloads and long-transfer
+performance remain open measurements.
+
 Readiness baseline `1e46c56ce6028bdbae51ae1f80091115cd614e0b`. Artifact and device measurements in this document are reported with their evidence scope.
 
 | Measurement | Evidence |

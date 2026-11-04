@@ -2,6 +2,20 @@
 
 Baseline `1e46c56ce6028bdbae51ae1f80091115cd614e0b`. App and CI changes and their regression fixtures are in `96337091f968ee36714e1adcb9b215d43191cd77`. See [TEST_EVIDENCE.md](TEST_EVIDENCE.md) for results.
 
+## Source-built core follow-up
+
+Producer `79893270b85278b71d02a7aae0f4143921c2f6ac` passed all four ABIs.
+The candidate and corresponding-source supplement are bound by SHA-256 in
+[TEST_EVIDENCE.md](TEST_EVIDENCE.md).
+
+| ID | Confirmed defect and correction |
+|---|---|
+| NATIVE-03 | A wrong build-cache path and a masked pipeline failure produced empty source-input hash files. SHA 1f0faa9 adds fail-closed receipt checks for actual inputs, target config/header and NDK libc++ correspondence. |
+| NATIVE-04 | The first rebuilt core still carried XZ 5.8.1 and SQLite 3.50.4. SHAs 590e0a8 and 7989327 update the verified source inputs and reviewed Android patches to XZ 5.8.4 and SQLite 3.54.1 while retaining configured runtime features. |
+| CI-02 | An interrupted official NDK download failed with curl92. SHA ec52d38 adds bounded transport retries and keeps checksum verification. |
+| PACK-01 | The raw build tree was too large for the universal APK. SHA 5838095 selects the inherited runtime feature set, follows rebuilt stable-library aliases, verifies symbol removal and shares identical Python files. Signed size is 62,051,382 bytes. |
+| CI-03 | Resolving LLVM's readelf symlink selected readobj's structured output, causing a Linux-only packaging failure. SHA 24bfa90 preserves invocation aliases, requests GNU symbol output and compares binary ELF headers, with focused regression tests. |
+
 | ID / severity | Confirmed behavior | Remediation and regression |
 |---|---|---|
 | DL-01 / Medium | Successful binary download responses could carry explicit textual error envelopes. The baseline staging checks could publish those bytes under a binary filename. | Use the selected representation at the transfer boundary. Reject explicit incompatible text MIME before modifying staging, including a resumed range. JVM fixtures cover the false success, checkpoint preservation and legitimate text downloads. |

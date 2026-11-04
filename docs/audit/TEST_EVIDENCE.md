@@ -1,5 +1,35 @@
 # Test evidence
 
+## Source-built runtime acceptance on 4 November 2026
+
+App code/resources remain at `96337091f968ee36714e1adcb9b215d43191cd77`.
+Packaging and inventory tools are at `5838095749af15e1e8553545b02cddca885e6c23`.
+The four-ABI native producer `79893270b85278b71d02a7aae0f4143921c2f6ac`
+passed [run 41730382903](https://github.com/taroq4-2/dosos73/actions/runs/41730382903).
+The following results describe the new signed candidate, separate from the earlier audit below.
+
+| Check | Executed result |
+|---|---|
+| Signed universal APK | 62,051,382 bytes, SHA-256 `195bb74228ebeb59519513dd49790075d7fd12b9906c4ac470a8c013b53c741d`. Existing signing certificate retained. |
+| Producer and selected payload | All four artifact digests, member digests, ELF architecture, safe symlinks and static dependency closure independently checked. Each source receipt verifies 27 source/tool/config records, host/target Python input, target config/header and the exact NDK libc++ member. |
+| Packaging consistency | A second local assembly with the checked tools produced the identical unsigned APK, SHA-256 `c145ac534a3b8f67ea4b2d9deebdd662022734568ca1ceeb5ecffe358f6c1c9e`. Dynamic symbols, loader identity and load segments were checked before and after symbol removal. This demonstrates local packaging consistency. |
+| Static alignment | 608 ELF files checked, zero 64-bit alignment failures. |
+| Strict 16 KiB emulator | Android API 35 x86-64, `getconf PAGE_SIZE=16384`. Both linker and package-manager compatibility modes disabled. Runner reported `OK (185 tests)`: 180 passed and five optional live fixtures skipped. The source-built debug test package was followed by install/open of the exact signed release APK. |
+| Standard 4 KiB emulator | API 35 x86-64. Five focused engine/shared-runtime/MP3 tests passed. Exact signed release APK installed and opened. |
+| Loaded component versions | Confirmed under the app UID on both emulators: CPython 3.12.16, OpenSSL 3.5.9, Expat 2.9.0, SQLite 3.54.1 and XZ 5.8.4. LZMA round trip, SQLite FTS5, inherited AES round trip, GDBM import and the selected CA store passed. |
+| Packaging tools | 44 Python tests passed, including invalid source receipts, native file changes, missing ABIs, ZIP path rejection and changed inherited app/vendor bytes. |
+| Linux packaging follow-up, 5 November | Initial source-built matrix 41844483616 failed because resolving `llvm-readelf` to `llvm-readobj` changed LLVM's output mode. Alias-preserving invocation, explicit GNU output and direct binary program-header comparison were added at 24bfa90. All 48 tooling tests passed locally, including the symlink and binary-header regressions. Reassembly after the fix produced the same unsigned APK hash. |
+| SBOM | 704 CycloneDX components bound to the signed APK hash. Selected inherited CA and producer-build CA are recorded separately. |
+| Supplemental sources | 189,067,594-byte source/notices ZIP, SHA-256 `18d393c195ff4de9bbed50f329f1b26906865df5771b68b9afc47bd67a129a84`. 264 manifest entries checked, including effective recipes, receipts, source inputs, inherited notices and matching packaging tools. |
+| Latest live YouTube attempt | FAILED / external authentication challenge. A diagnostic invocation returned `EXTRACT:AUTHENTICATION_REQUIRED` with YouTube's sign-in/bot-verification message. UI trials first reported unavailable formats. No cookies, login or challenge workaround was used. Earlier successful fixtures below remain historical results. |
+| W3 live fixture | FAILED / HTTP 403 Cloudflare challenge. No impersonation workaround was used. |
+| Public GitHub native video fixture | PASS: the existing optional `LiveDownloadTest.mediaExtractorAndNativeDownload` downloaded and validated the repository's default public MP4. A second invocation requesting audio failed because that fixture's metadata had no matching audio choice. This is retained as a failed optional fixture selection. The local MP3 encoding test passed. |
+| New runtime API matrix | PASS: [run 41932324505](https://github.com/taroq4-2/dosos73/actions/runs/41932324505) at 24bfa90 passed packaging and every API 29–36 x86-64 device job. It uses one same-run signed debug test pair with the pinned rebuilt Python core; its upstream FFmpeg test input differs from the compact release FFmpeg checked locally. |
+| Regular Android verification | PASS: [run 41932324600](https://github.com/taroq4-2/dosos73/actions/runs/41932324600) at 24bfa90 passed the regular build and eight API jobs. |
+| Comparative emulator measurement | Ten process-cold launches per signed APK on the same API35 x86-64 test device, two-second settling, app data retained. Previous/current median TotalTime: 4069.5/2930.5 ms. Median TOTAL PSS: 29078/30704.5 KiB. All samples and outliers retained. See [performance report](PERFORMANCE_REPORT.md). |
+
+Remaining acceptance and provenance limits are in [REMAINING_ISSUES.md](REMAINING_ISSUES.md).
+
 Reference SHA `1e46c56ce6028bdbae51ae1f80091115cd614e0b`. This file distinguishes reference, remediation and external evidence.
 
 Remediation source: `96337091f968ee36714e1adcb9b215d43191cd77`. [Android verification run 41712135377](https://github.com/taroq4-2/dosos73/actions/runs/41712135377) passed the build job and all eight x86-64 emulator jobs.

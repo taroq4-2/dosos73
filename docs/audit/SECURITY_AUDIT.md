@@ -1,5 +1,23 @@
 # Security audit — Android application boundaries
 
+## Source-built core update on 4 November
+
+Producer `79893270b85278b71d02a7aae0f4143921c2f6ac` passed all four ABIs.
+It replaces the inherited CPython/OpenSSL/Expat core and upgrades XZ to 5.8.4
+and SQLite to 3.54.1. The component source/download/configuration receipts
+were checked independently, and loaded versions were confirmed on 4 KiB and
+strict 16 KiB emulators. This closes the specific old-core build failure and
+version-upgrade work for this candidate. The [XZ advisory](https://github.com/tukaani-project/xz/security/advisories/GHSA-5qpq-xqfv-j9pg)
+and [SQLite security records](https://sqlite.org/cves.html) describe the
+upstream fixes and their triggering conditions.
+
+The final candidate's source/notices supplement and SBOM bind to its APK hash.
+The inherited Cryptodome native and QuickJS Android producer histories remain
+outside the rebuilt-core receipts. Repeated local packaging produced identical
+bytes, while a separate identical native compiler rebuild remains unverified.
+No new application exploit or universal security guarantee is inferred from
+these results.
+
 Mission baseline: `1e46c56ce6028bdbae51ae1f80091115cd614e0b` on `release/production-readiness`. This is an independent source inspection of the application security, networking and storage workstream, with a proposed remediation tested by deterministic fixtures. Build/run results are recorded centrally in [TEST_EVIDENCE.md](TEST_EVIDENCE.md); prior CI and packaging evidence is not a new test result.
 
 ## Findings and controls

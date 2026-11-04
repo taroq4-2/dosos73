@@ -1,5 +1,18 @@
 # Android compatibility and device evidence
 
+On 4 November, the new source-built candidate was tested on an API 35 x86-64
+16 KiB emulator with compatibility mode disabled. The 185-test runner result
+included 180 passes and five optional fixture skips. Five focused engine tests
+also passed on a standard 4 KiB emulator. Both installed and opened the signed
+62,051,382-byte universal APK. Loaded versions and actual kernel properties
+are recorded in [TEST_EVIDENCE.md](TEST_EVIDENCE.md).
+The updated Python runtime passed all API 29–36 x86-64 jobs in
+[run 41932324505](https://github.com/taroq4-2/dosos73/actions/runs/41932324505)
+on source 24bfa90, after the first Linux packaging attempt failed. Its debug
+test pair retains the upstream test FFmpeg input; the compact signed release
+FFmpeg was checked in the local 4/16 KiB trials.
+The older tables below remain evidence of their named source revisions.
+
 Mission baseline `1e46c56ce6028bdbae51ae1f80091115cd614e0b`. The source declares min SDK 29, compile/target SDK 36 and the four default native ABIs `armeabi-v7a`, `arm64-v8a`, `x86`, `x86_64` in `app/build.gradle.kts`. This is a supported build configuration; it is not a claim that every OEM device, kernel, file provider or media source passed.
 
 ## API and ABI matrix
@@ -27,7 +40,7 @@ The exact signed universal APK from the remediation source was installed as an u
 | ARM64 | Universal candidate and bundle include the ABI; ELF static checks are available | **NOT VERIFIED** on a physical ARM64 device in this workstream |
 | x86 | Universal candidate and bundle include the ABI | **NOT VERIFIED** with a standalone 32-bit x86 runtime |
 | x86-64 | Universal candidate, AAB and x86-64 derived split payload were compared | Prior API29–36 CI plus API35 installed acceptance, scoped to the candidate documented in [readiness QA](../../QA_TEST_MATRIX.md) |
-| 16 KB runtime | Prior candidate ELF audit reported 608 checked ELFs and zero 64-bit alignment failures | **NOT VERIFIED** on a booted 16 KB kernel; alignment and install evidence from a normal emulator do not certify it |
+| 16 KB runtime | Current candidate ELF audit checked 608 ELFs with zero 64-bit alignment failures | PASS on an API35 x86-64 16 KiB emulator with compatibility disabled. Physical 16 KiB ARM acceptance remains NOT VERIFIED. |
 
 The previous signed candidate source is `e599d58b058006a7c44fec8bd84307b0f68dcf04`, separate from the CI-only follow-up commits. Its local full instrumented run recorded 175 passed, five optional fixture skips and a Python startup timeout; the same focused test passed in isolation. Retain both observations. Prior universal and split install success applies to x86-64 API35, not an ARM or Play installation.
 

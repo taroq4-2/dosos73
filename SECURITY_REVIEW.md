@@ -1,5 +1,15 @@
 # Release-readiness security review
 
+**4 November source-built candidate update.** The signed universal candidate
+SHA-256 `195bb74228ebeb59519513dd49790075d7fd12b9906c4ac470a8c013b53c741d`
+uses the verified four-ABI producer `79893270b85278b71d02a7aae0f4143921c2f6ac`,
+with CPython 3.12.16, OpenSSL 3.5.9, Expat 2.9.0, XZ 5.8.4 and SQLite 3.54.1.
+It passed standard and strict 16 KiB emulator checks. A matching source/notices
+supplement and current SBOM were generated. The old-core version findings and
+build failures below describe the earlier candidate. Current evidence and
+remaining limits are in [the audit](docs/audit/TEST_EVIDENCE.md) and
+[open gates](docs/audit/REMAINING_ISSUES.md).
+
 **Source rebuild follow-up (3 November):** The separate
 [`runtime/security-20261102`](https://github.com/taroq4-2/dosos73/tree/runtime/security-20261102)
 branch pins CPython 3.12.16, OpenSSL 3.5.9, Expat 2.9.0, the Android NDK,
