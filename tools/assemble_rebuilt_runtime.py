@@ -16,6 +16,7 @@ from pathlib import Path, PurePosixPath
 import posixpath
 import re
 import stat
+import struct
 import subprocess
 import tempfile
 from zipfile import ZIP_DEFLATED, ZipFile, ZipInfo
@@ -186,12 +187,37 @@ def select_runtime(old, new, records, launcher_record):
 
 
 def dynamic_identity(readelf, path):
-    output = subprocess.run([str(readelf), '-d', str(path)], check=True, capture_output=True, text=True).stdout
+    output = subprocess.run([str(readelf), '--elf-output-style=GNU', '-d', str(path)],
+                            check=True, capture_output=True, text=True).stdout
     return re.findall(r'\((NEEDED|SONAME|RPATH|RUNPATH)\).*?\[(.*?)\]', output)
 
 
+def load_segment_identity(data):
+    if len(data) < 52 or data[:4] != b'\x7fELF' or data[4] not in (1, 2) or data[5] not in (1, 2):
+        raise ValueError('Invalid ELF header')
+    order = '<' if data[5] == 1 else '>'
+    if data[4] == 2:
+        if len(data) < 64:
+            raise ValueError('Truncated ELF64 header')
+        offset = struct.unpack_from(order + 'Q', data, 32)[0]
+        size, count = struct.unpack_from(order + 'HH', data, 54)
+        layout = order + 'IIQQQQQQ'
+    else:
+        offset = struct.unpack_from(order + 'I', data, 28)[0]
+        size, count = struct.unpack_from(order + 'HH', data, 42)
+        layout = order + 'IIIIIIII'
+    if not count or size < struct.calcsize(layout) or offset + size * count > len(data):
+        raise ValueError('Missing or truncated ELF program headers')
+    headers = [struct.unpack_from(layout, data, offset + size * i) for i in range(count)]
+    segments = [header for header in headers if header[0] in (1, 2, 3, 0x6474E552)]
+    if not any(header[0] == 1 for header in segments):
+        raise ValueError('ELF has no load segment')
+    elf_type, machine = struct.unpack_from(order + 'HH', data, 16)
+    return data[4], data[5], elf_type, machine, segments
+
+
 def runtime_identity(readelf, path):
-    output = subprocess.run([str(readelf), '-W', '-d', '-l', '--dyn-syms', str(path)],
+    output = subprocess.run([str(readelf), '--elf-output-style=GNU', '-W', '-d', '--dyn-syms', str(path)],
                             check=True, capture_output=True, text=True).stdout
     dependencies = re.findall(r'\((NEEDED|SONAME|RPATH|RUNPATH)\).*?\[(.*?)\]', output)
     symbols = re.findall(
@@ -199,16 +225,12 @@ def runtime_identity(readelf, path):
         output, re.MULTILINE)
     symbols = [(value, size, kind, binding, visibility, 'DEF' if section.isdigit() else section, name.strip())
                for value, size, kind, binding, visibility, section, name in symbols]
-    segments = [' '.join(line.split()) for line in output.splitlines()
-                if line.lstrip().startswith(('LOAD ', 'INTERP ', 'DYNAMIC ', 'GNU_RELRO '))]
-    if not segments:
-        raise ValueError(f'Cannot verify ELF load segments: {path}')
-    return dependencies, symbols, segments
+    return dependencies, symbols, load_segment_identity(path.read_bytes())
 
 
-def strip_symbols(data, scratch, strip, readelf, mode):
+def strip_symbols(data, scratch, strip, readelf, mode, label):
     with tempfile.TemporaryDirectory(dir=scratch) as folder:
-        path = Path(folder) / 'native.so'
+        path = Path(folder) / PurePosixPath(label).name
         path.write_bytes(data)
         before = runtime_identity(readelf, path)
         subprocess.run([str(strip), '--strip-' + mode, str(path)], check=True, capture_output=True)
@@ -287,6 +309,15 @@ def rewrite_apk(source, output, replacement):
     return preserved
 
 
+def tool_path(path):
+    # LLVM chooses readelf/strip compatibility from the invoked filename.
+    # Resolving its final symlink can change the executable's command mode.
+    tool = path.absolute()
+    if not tool.is_file():
+        raise FileNotFoundError(tool)
+    return tool
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--apk', type=Path, required=True, help='Previously compacted universal APK')
@@ -296,13 +327,13 @@ def main():
     parser.add_argument('--run-id', type=int, required=True)
     parser.add_argument('--producer', required=True, help='Exact successful producer commit')
     parser.add_argument('--strip-tool', type=Path, required=True)
-    parser.add_argument('--readelf-tool', type=Path, required=True)
+    parser.add_argument('--readelf-tool', type=Path, required=True, help='NDK llvm-readelf executable')
     parser.add_argument('--output', type=Path, required=True, help='New output directory')
     args = parser.parse_args()
     if not re.fullmatch('[a-f0-9]{40}', args.producer) or args.run_id <= 0:
         parser.error('Producer must be a full commit hash and run ID must be positive')
-    strip = args.strip_tool.resolve(strict=True)
-    readelf = args.readelf_tool.resolve(strict=True)
+    strip = tool_path(args.strip_tool)
+    readelf = tool_path(args.readelf_tool)
     baseline = args.apk.resolve(strict=True)
     debug = args.debug_apk.resolve(strict=True) if args.debug_apk else None
     output = args.output
@@ -336,7 +367,7 @@ def main():
             for name, entry in candidate.items():
                 if 'elf' not in records[name]:
                     continue
-                compact = strip_symbols(entry.data, output, strip, readelf, args.strip_mode)
+                compact = strip_symbols(entry.data, output, strip, readelf, args.strip_mode, name)
                 candidate[name] = Entry(compact, entry.mode)
                 if compact != entry.data:
                     stripped[name] = {'source_sha256': sha(entry.data), 'sha256': sha(compact),
