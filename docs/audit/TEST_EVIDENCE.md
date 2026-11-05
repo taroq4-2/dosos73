@@ -1,5 +1,9 @@
 # Test evidence
 
+The [5 November source-runtime verification](NATIVE_SOURCE_UPDATES_20261105.md)
+describes the current APK and the passing Android 10–16 matrix. The older
+candidate and its local full-suite results below remain historical.
+
 ## Source-built runtime acceptance on 4 November 2026
 
 App code/resources remain at `96337091f968ee36714e1adcb9b215d43191cd77`.
