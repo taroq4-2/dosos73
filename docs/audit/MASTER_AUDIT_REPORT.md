@@ -2,10 +2,11 @@
 
 Baseline readiness SHA `1e46c56ce6028bdbae51ae1f80091115cd614e0b`. Public default SHA `2efeb7f1271516b13c3fc2ab767fe81753df81ac`, published `v1.2.0` at `852f269be743e394159cbbba4e465a2e80244801`. Decision: **NO-GO** for production publication.
 
-The [5 November native source update](NATIVE_SOURCE_UPDATES_20261105.md) records
-the latest **60,851,254-byte** signed validation candidate, its restricted
-QuickJS and rebuilt Cryptodome, the exact independent four-ABI rebuild, and
-the distinction between offline and live YouTube evidence.
+The [RC.3 report](MEDIA_RESPONSE_RECOVERY_20261105.md) records the current
+**60,810,294-byte** signed candidate, the interrupted response recovery and
+successful live YouTube MP3 and MP4 tests. The [earlier native source
+update](NATIVE_SOURCE_UPDATES_20261105.md) records the restricted QuickJS and
+rebuilt Cryptodome, and the exact independent four-ABI core rebuild.
 
 The previous signed validation APK was **62,051,382 bytes** at SHA-256
 `195bb74228ebeb59519513dd49790075d7fd12b9906c4ac470a8c013b53c741d`.
@@ -35,10 +36,9 @@ The app, runtime and presentation scopes were investigated independently by virt
 Confirmed remediation covers a false-success response that could alter staged
 output, an immediate fallback request after origin throttling, inaccessible
 pending-share recovery, a dependency graph mismatch, blocked native test output,
-and a source-built core with updated native security dependencies. The current
-candidate passed strict 16 KiB Android 16 instrumentation and a signed live
-YouTube MP4 test. Live YouTube MP3 encountered unavailable formats and a
-provider verification prompt. See [remaining release gates](REMAINING_ISSUES.md).
+and a source-built core with updated native security dependencies. RC.3 passed
+strict 16 KiB Android 16 instrumentation and signed live YouTube MP3 and MP4
+tests. See [remaining release gates](REMAINING_ISSUES.md).
 
 ## Engineering appendix
 
@@ -49,7 +49,7 @@ provider verification prompt. See [remaining release gates](REMAINING_ISSUES.md)
 | Software architecture and code quality | Baseline source ownership and I/O boundaries were examined. The focused UI extraction keeps service and journal ownership intact. |
 | Application security | See [security audit](SECURITY_AUDIT.md) for SSRF, redirect, DNS, process and publication controls and their limits. |
 | Download engineering | See [DL-01–03](DOWNLOAD_ENGINE_REVIEW.md) for response validation, fallback, staging and resume evidence. |
-| YouTube and external sources | The latest signed candidate downloaded the authorized YouTube trailer as verified MP4 with audio on the strict Android 16 AVD. The short-link MP3 attempt encountered unavailable formats, and the full-link retry reached an authentication challenge. Local MP3 conversion passed. |
+| YouTube and external sources | The signed RC.3 downloaded the authorized YouTube trailer as fully decoded MP3 and verified MP4 with audio on the strict Android 16 AVD. Local MP3 conversion passed. |
 | Networking | Validated address policy and Android network binding are covered in the [security audit](SECURITY_AUDIT.md). Hostile real DNS, DNS64 and radio handover are separate checks. |
 | Native libraries and FFmpeg | Two independent same-commit builds produced identical core and launcher bytes for all four ABIs. The latest candidate replaces the inherited QuickJS and Cryptodome outputs with source-built artifacts; see the latest evidence above. |
 | Storage and integrity | [Download review](DOWNLOAD_ENGINE_REVIEW.md) records journal, hashing, staging, MediaStore and SAF boundaries. OEM and real removable-storage failure testing remains open. |
