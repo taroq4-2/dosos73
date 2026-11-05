@@ -63,6 +63,7 @@ jobs:
           api-level: 29
           arch: x86_64
           script: |
+            set -e
             python3 tools/quickjs/smoke_android.py quickjs-out/libqjs.so ejs.whl > quickjs-smoke.json
             cat quickjs-smoke.json
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
