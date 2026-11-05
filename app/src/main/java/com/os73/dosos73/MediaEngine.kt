@@ -79,7 +79,9 @@ class MediaEngine(
         }
     }
 
-    suspend fun analyze(url: String): Analysis =
+    suspend fun analyze(url: String): Analysis = retryInterruptedMediaProbe { analyzeOnce(url) }
+
+    private suspend fun analyzeOnce(url: String): Analysis =
         invocation { active ->
             initialize()
             val dir = File(context.cacheDir, "analysis-${active.id}").apply { mkdirs() }
@@ -120,6 +122,14 @@ class MediaEngine(
         }
 
     suspend fun download(
+        task: DownloadTask,
+        directory: File,
+        progress: (Float?, Boolean) -> Unit,
+    ): File = retryInterruptedMediaProbe(
+        canRetry = { withContext(Dispatchers.IO) { directory.list()?.isEmpty() == true } },
+    ) { downloadOnce(task, directory, progress) }
+
+    private suspend fun downloadOnce(
         task: DownloadTask,
         directory: File,
         progress: (Float?, Boolean) -> Unit,

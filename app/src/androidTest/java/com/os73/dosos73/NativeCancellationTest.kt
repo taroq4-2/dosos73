@@ -9,6 +9,38 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class NativeCancellationTest {
+    @Test fun interruptedFormatProbeRestartsNativeProcessWithTheSameSelection() = runBlocking {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        EngineRuntime.initialize(context)
+        val folder = File(context.cacheDir, "native-probe-test-${java.util.UUID.randomUUID()}").apply { mkdirs() }
+        val requests = File(folder, "requests")
+        val script = File(folder, "fixture.py").apply { writeText("""
+            from pathlib import Path
+            import sys
+            requests = Path(sys.argv[1])
+            first = not requests.exists()
+            with requests.open('a') as output:
+                print(sys.argv[2], file=output)
+            if first:
+                print('WARNING: Failed to load player for JS challenge (caused by <IncompleteRead: 51 bytes read>)')
+                print('WARNING: Only images are available for download.')
+                print('ERROR: Requested format is not available.')
+                sys.exit(1)
+        """.trimIndent()) }
+        val selection = MediaEngine.formatSelector("251")
+        try {
+            retryInterruptedMediaProbe {
+                withContext(Dispatchers.IO) {
+                    NativeProcessSession(context, script).use { session ->
+                        try { session.execute(listOf(requests.absolutePath, selection)) }
+                        catch (error: java.io.IOException) { throw FailureClassifier.classify(Stage.TRANSFER, error) }
+                    }
+                }
+            }
+            assertEquals(listOf(selection, selection), requests.readLines())
+        } finally { folder.deleteRecursively() }
+    }
+
     @Test fun cancellingOwnedPythonStopsItsHelperAndLeavesNoSessionFile() = runBlocking {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         EngineRuntime.initialize(context)

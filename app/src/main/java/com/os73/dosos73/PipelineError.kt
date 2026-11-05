@@ -38,6 +38,20 @@ class PipelineException(val stage: Stage, val code: FailureCode, cause: Throwabl
     Exception("${stage.name}:${code.name}", cause)
 
 object FailureClassifier {
+    private fun requiresAuthentication(message: String): Boolean =
+        "sign in to confirm" in message || "only works when logged-in" in message ||
+            "login required" in message
+
+    private fun interruptedFormatDiscovery(output: String): Boolean =
+        "only images are available for download" in output &&
+            !requiresAuthentication(output) &&
+            !Regex("(?:http(?: error)?|status(?: code)?)[ :]+(?:403|429)\\b").containsMatchIn(output) &&
+            output.lineSequence().any { line ->
+                "incompleteread" in line &&
+                    ("unable to download api page" in line || "unable to download webpage" in line ||
+                        "failed to load player for js challenge" in line)
+            }
+
     fun classify(stage: Stage, error: Throwable): PipelineException {
         if (error is PipelineException) return error
         val full = error.message.orEmpty().lowercase()
@@ -49,9 +63,7 @@ object FailureClassifier {
                 "enospc" in message || "no space left on device" in message ->
                     FailureCode.STORAGE_FULL
                 error is SecurityException -> FailureCode.STORAGE_PERMISSION_DENIED
-                "sign in to confirm" in message ||
-                    "only works when logged-in" in message ||
-                    "login required" in message -> FailureCode.AUTHENTICATION_REQUIRED
+                requiresAuthentication(message) -> FailureCode.AUTHENTICATION_REQUIRED
                 error is javax.net.ssl.SSLException ||
                     "[ssl]" in message ||
                     "certificate verify failed" in message -> FailureCode.NETWORK_TLS
@@ -59,7 +71,9 @@ object FailureClassifier {
                     FailureCode.HTTP_403
                 Regex("(?:http(?: error)?|status(?: code)?)[ :]+429\\b").containsMatchIn(message) ->
                     FailureCode.HTTP_429
-                "requested format is not available" in message -> FailureCode.FORMAT_UNAVAILABLE
+                "requested format is not available" in message ->
+                    if (stage in setOf(Stage.EXTRACT, Stage.TRANSFER) && interruptedFormatDiscovery(full))
+                        FailureCode.DOWNLOAD_INTERRUPTED else FailureCode.FORMAT_UNAVAILABLE
                 "no supported javascript runtime" in message -> FailureCode.JS_RUNTIME_UNAVAILABLE
                 "ejs" in message && ("not found" in message || "unavailable" in message) ->
                     FailureCode.EJS_COMPONENT_UNAVAILABLE
@@ -103,6 +117,7 @@ fun PipelineException.messageResource(): Int =
         FailureCode.STORAGE_PERMISSION_DENIED,
         FailureCode.OUTPUT_WRITE_FAILED -> R.string.error_storage
         FailureCode.NETWORK_TIMEOUT -> R.string.error_timeout
+        FailureCode.DOWNLOAD_INTERRUPTED -> R.string.error_incomplete_source
         FailureCode.EXTRACTION_FAILED -> R.string.error_analyze
         else -> R.string.error_download
     }

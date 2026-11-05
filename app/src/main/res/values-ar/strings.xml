@@ -9,6 +9,7 @@
     <string name="error_merge">تعذّر دمج الصوت والفيديو. لم يُحفظ ملف مكتمل.</string>
     <string name="error_verification">لم يجتز الملف فحص سلامة الوسائط. لم يُحفظ ملف مكتمل.</string>
     <string name="error_timeout">انتهت مهلة الاتصال. حاول مجددًا عند استقرار الشبكة.</string>
+    <string name="error_incomplete_source">انقطع الاتصال بالمصدر قبل وصول صيغ الوسائط. حاول مجددًا عند استقرار الاتصال.</string>
     <string name="app_name">Download open-source OS73</string>
     <string name="title">تحميل الوسائط</string>
     <string name="subtitle">شارك الرابط، اختر الصيغة، واحفظ الملف.</string>

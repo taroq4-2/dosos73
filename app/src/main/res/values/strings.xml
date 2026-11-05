@@ -9,6 +9,7 @@
     <string name="error_merge">The audio and video could not be merged. No completed file was saved.</string>
     <string name="error_verification">The downloaded output failed media validation. No completed file was saved.</string>
     <string name="error_timeout">The network connection timed out. Try again when the connection is stable.</string>
+    <string name="error_incomplete_source">The connection to the source ended before its media formats arrived. Try again when the connection is stable.</string>
     <string name="app_name">Download open-source OS73</string>
     <string name="title">Download media</string>
     <string name="subtitle">Share a link. Choose a format. Save your file.</string>

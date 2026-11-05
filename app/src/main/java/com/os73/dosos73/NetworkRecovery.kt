@@ -115,3 +115,16 @@ internal suspend fun <N, T> recoverNetwork(
         }
     }
 }
+
+/** A failed format probe can be restarted once before it writes any media. */
+internal suspend fun <T> retryInterruptedMediaProbe(
+    canRetry: suspend () -> Boolean = { true },
+    attempt: suspend () -> T,
+): T = try {
+    attempt()
+} catch (failure: PipelineException) {
+    currentCoroutineContext().ensureActive()
+    if (failure.code != FailureCode.DOWNLOAD_INTERRUPTED || !canRetry()) throw failure
+    delay(500)
+    attempt()
+}

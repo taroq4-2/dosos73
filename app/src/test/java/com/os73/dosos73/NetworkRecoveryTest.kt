@@ -9,6 +9,56 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class NetworkRecoveryTest {
+    @Test fun mediaProbeRetriesOneInterruptedResponseAndKeepsTheNextResult() = runBlocking {
+        var attempts = 0
+        val choice = Any()
+        val result = retryInterruptedMediaProbe {
+            if (++attempts == 1) throw PipelineException(Stage.EXTRACT, FailureCode.DOWNLOAD_INTERRUPTED)
+            choice
+        }
+        assertSame(choice, result)
+        assertEquals(2, attempts)
+        attempts = 0
+        val repeatedFailure = PipelineException(Stage.EXTRACT, FailureCode.DOWNLOAD_INTERRUPTED)
+        val failed = runCatching {
+            retryInterruptedMediaProbe {
+                attempts++
+                throw repeatedFailure
+            }
+        }
+        assertSame(repeatedFailure, failed.exceptionOrNull())
+        assertEquals(2, attempts)
+    }
+
+    @Test fun mediaProbeDoesNotRetryWithStagedDataOrAnAuthenticationChallenge() = runBlocking {
+        for ((code, canRetry) in listOf(FailureCode.DOWNLOAD_INTERRUPTED to false,
+            FailureCode.AUTHENTICATION_REQUIRED to true, FailureCode.FORMAT_UNAVAILABLE to true)) {
+            var attempts = 0
+            val first = PipelineException(Stage.TRANSFER, code)
+            val result = runCatching {
+                retryInterruptedMediaProbe(canRetry = { canRetry }) {
+                    attempts++
+                    throw first
+                }
+            }
+            assertSame(first, result.exceptionOrNull())
+            assertEquals(1, attempts)
+        }
+    }
+
+    @Test fun cancellationDuringProbeBackoffPreventsTheSecondAttempt() = runBlocking {
+        var attempts = 0
+        val first = PipelineException(Stage.TRANSFER, FailureCode.DOWNLOAD_INTERRUPTED)
+        val job = launch(start = CoroutineStart.UNDISPATCHED) {
+            retryInterruptedMediaProbe {
+                attempts++
+                throw first
+            }
+        }
+        job.cancelAndJoin()
+        assertEquals(1, attempts)
+    }
+
     @Test fun acquisitionFlapReselectsWithinTheSameBoundedRecovery() = runBlocking {
         var acquisitions = 0
         var waits = 0

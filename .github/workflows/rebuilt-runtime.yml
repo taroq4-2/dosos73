@@ -12,7 +12,10 @@ on:
       - 'tools/assemble_source_crypto.py'
       - 'tools/fetch_source_runtime_updates.py'
       - 'tools/source-runtime-update-artifacts.json'
-      - 'app/src/androidTest/java/com/os73/dosos73/RuntimeInventoryTest.kt'
+      - 'app/build.gradle.kts'
+      - 'app/src/main/**'
+      - 'app/src/test/**'
+      - 'app/src/androidTest/**'
   workflow_dispatch:
 concurrency:
   group: rebuilt-runtime-${{ github.ref }}
