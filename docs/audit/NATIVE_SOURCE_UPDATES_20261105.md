@@ -1,4 +1,4 @@
-# Native source verification — 5 November 2026
+# Native source verification on 5 November 2026
 
 The signed validation candidate is **60,851,254 bytes** at SHA-256
 `ef2e05196b271fb551cbe88338ecbb3d87ad1de26551b1ab480b188befd1f7e4`.
@@ -45,6 +45,10 @@ The controlled signed APK was installed and opened on Android 15 with
 4 KiB pages and with strict 16 KiB pages. The latter disabled both linker
 and package-manager compatibility. Six previously saved media fixtures
 retained their exact hashes after the 4 KiB upgrade.
+On the signed Android 15 installation, a 5,510,872-byte public video
+downloaded through the app matched the source byte for byte. The app then
+converted the saved video to a 1,047,849-byte MP3 containing 2,304 consecutive
+MPEG Layer III frames. The original video retained its exact digest.
 Its size and local smoke results do not establish a fresh
 on-device performance benchmark.
 
@@ -60,8 +64,22 @@ before running its first test. Crash logs from the same image also showed ART
 crashes in two Google system packages. All full attempts are retained as
 failed or interrupted evidence.
 
-The latest signed APK's live YouTube fixture did not complete analysis. The
-prior candidate's detailed diagnostic recorded a provider authentication
-challenge; the new release UI does not expose that diagnostic cause. There
-is no successful live YouTube download result for this candidate.
+An independent Android 16 x86-64 system image (API 36 revision 7) and stable
+Windows emulator (37.2.13) were verified against Google's repository metadata.
+The device reported 16,384-byte pages, disabled linker compatibility and
+disabled package manager compatibility. The rebuilt debug test pair reported
+`OK (185 tests)` in 141.17 seconds, and the controlled storage soak completed
+100 iterations. The exact release APK was then installed and opened, and the
+installed APK hash matched the delivery hash.
+
+The exact signed APK downloaded the authorized YouTube trailer as a
+12,051,617-byte MP4 on the strict Android 16 AVD. The file had a 1920 × 818
+video track and an audio track, and its SHA-256 was
+`f05ec12b13d960deb25f4891c247de250b0367fe084c769b8a728fa0ce6ca19c`.
+The short-link MP3 attempt ended with an unavailable-format error. A separate
+diagnostic on the matching debug runtime saw incomplete player and API
+responses before format discovery failed. A signed retry on the full link
+showed the provider's authentication or human-verification requirement at
+analysis. The live MP3 path therefore remains open. Local MP3 conversion is
+verified separately above.
 Public release approval remains open in [remaining issues](REMAINING_ISSUES.md).

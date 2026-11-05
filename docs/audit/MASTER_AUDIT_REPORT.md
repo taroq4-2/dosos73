@@ -36,9 +36,9 @@ Confirmed remediation covers a false-success response that could alter staged
 output, an immediate fallback request after origin throttling, inaccessible
 pending-share recovery, a dependency graph mismatch, blocked native test output,
 and a source-built core with updated native security dependencies. The current
-candidate has been selected for controlled testing. Live YouTube verification
-on the latest candidate encountered an authentication challenge. Remaining
-release gates are tracked in [REMAINING_ISSUES.md](REMAINING_ISSUES.md).
+candidate passed strict 16 KiB Android 16 instrumentation and a signed live
+YouTube MP4 test. Live YouTube MP3 encountered unavailable formats and a
+provider verification prompt. See [remaining release gates](REMAINING_ISSUES.md).
 
 ## Engineering appendix
 
@@ -49,7 +49,7 @@ release gates are tracked in [REMAINING_ISSUES.md](REMAINING_ISSUES.md).
 | Software architecture and code quality | Baseline source ownership and I/O boundaries were examined. The focused UI extraction keeps service and journal ownership intact. |
 | Application security | See [security audit](SECURITY_AUDIT.md) for SSRF, redirect, DNS, process and publication controls and their limits. |
 | Download engineering | See [DL-01–03](DOWNLOAD_ENGINE_REVIEW.md) for response validation, fallback, staging and resume evidence. |
-| YouTube and external sources | An earlier signed prototype downloaded one live authorized trailer as verified MP4 and MP3. The latest candidate's bundled solver passed its offline fixture; live link analysis did not finish. |
+| YouTube and external sources | The latest signed candidate downloaded the authorized YouTube trailer as verified MP4 with audio on the strict Android 16 AVD. The short-link MP3 attempt encountered unavailable formats, and the full-link retry reached an authentication challenge. Local MP3 conversion passed. |
 | Networking | Validated address policy and Android network binding are covered in the [security audit](SECURITY_AUDIT.md). Hostile real DNS, DNS64 and radio handover are separate checks. |
 | Native libraries and FFmpeg | Two independent same-commit builds produced identical core and launcher bytes for all four ABIs. The latest candidate replaces the inherited QuickJS and Cryptodome outputs with source-built artifacts; see the latest evidence above. |
 | Storage and integrity | [Download review](DOWNLOAD_ENGINE_REVIEW.md) records journal, hashing, staging, MediaStore and SAF boundaries. OEM and real removable-storage failure testing remains open. |
