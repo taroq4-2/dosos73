@@ -8,6 +8,11 @@ on:
       - 'tools/fetch_rebuilt_runtime.py'
       - 'tools/rebuilt-runtime-artifacts.json'
       - 'tools/test_rebuilt_runtime.py'
+      - 'tools/assemble_restricted_quickjs.py'
+      - 'tools/assemble_source_crypto.py'
+      - 'tools/fetch_source_runtime_updates.py'
+      - 'tools/source-runtime-update-artifacts.json'
+      - 'app/src/androidTest/java/com/os73/dosos73/RuntimeInventoryTest.kt'
   workflow_dispatch:
 concurrency:
   group: rebuilt-runtime-${{ github.ref }}
@@ -40,7 +45,9 @@ jobs:
       - name: Fetch verified native producer artifacts
         env:
           GH_TOKEN: ${{ github.token }}
-        run: python3 tools/fetch_rebuilt_runtime.py "$RUNNER_TEMP/rebuilt-native"
+        run: |
+          python3 tools/fetch_rebuilt_runtime.py "$RUNNER_TEMP/rebuilt-native"
+          python3 tools/fetch_source_runtime_updates.py "$RUNNER_TEMP/runtime-updates"
       - name: Assemble source-built compact debug runtime
         run: |
           python3 tools/fetch_runtime_overrides.py "$RUNNER_TEMP/runtime-overrides"
@@ -49,21 +56,28 @@ jobs:
           source_sha="$(python3 -c "import json; print(json.load(open('tools/rebuilt-runtime-artifacts.json'))['producer'])")"
           ndk_tools="$ANDROID_HOME/ndk/28.2.13676358/toolchains/llvm/prebuilt/linux-x86_64/bin"
           python3 tools/assemble_rebuilt_runtime.py --apk "$RUNNER_TEMP/compact-debug.apk" --artifacts "$RUNNER_TEMP/rebuilt-native" --run-id "$source_run" --producer "$source_sha" --strip-tool "$ndk_tools/llvm-strip" --readelf-tool "$ndk_tools/llvm-readelf" --output "$RUNNER_TEMP/rebuilt-output"
-          python3 tools/audit_elf_alignment.py "$RUNNER_TEMP/rebuilt-output/release-unsigned.apk" "$RUNNER_TEMP/rebuilt-output/elf-audit.json"
+          updated="$RUNNER_TEMP/runtime-updates"
+          core_apk="$RUNNER_TEMP/rebuilt-output/release-unsigned.apk"
+          patch_sha="$(python3 -c "import json; print(json.load(open('tools/source-runtime-update-artifacts.json'))['quickjs']['patch_sha256'])")"
+          python3 tools/assemble_restricted_quickjs.py --apk "$core_apk" --builds "$updated/quickjs" --output "$RUNNER_TEMP/rebuilt-output/quickjs-unsigned.apk" --proof "$RUNNER_TEMP/rebuilt-output/quickjs-proof.json" --readelf "$ndk_tools/llvm-readelf" --patch-sha256 "$patch_sha"
+          python3 tools/assemble_source_crypto.py --apk "$RUNNER_TEMP/rebuilt-output/quickjs-unsigned.apk" --receipt-baseline "$core_apk" --builds "$updated/crypto" --sdist "$updated/crypto/pycryptodomex-3.24.1.tar.gz" --output "$RUNNER_TEMP/rebuilt-output/updated-unsigned.apk" --proof "$RUNNER_TEMP/rebuilt-output/crypto-proof.json"
+          python3 tools/audit_elf_alignment.py "$RUNNER_TEMP/rebuilt-output/updated-unsigned.apk" "$RUNNER_TEMP/rebuilt-output/elf-audit.json"
       - name: Sign only the disposable test pair
         run: |
           delivery="$RUNNER_TEMP/rebuilt-test-inputs"
           mkdir -p "$delivery"
           keytool -genkeypair -keystore "$RUNNER_TEMP/rebuilt-test-key.jks" -storepass android -keypass android -alias androiddebugkey -dname CN=Android -keyalg RSA -keysize 2048 -validity 10000
-          "$ANDROID_HOME/build-tools/35.0.0/zipalign" -P 16 -f 4 "$RUNNER_TEMP/rebuilt-output/release-unsigned.apk" "$RUNNER_TEMP/rebuilt-debug-aligned.apk"
+          "$ANDROID_HOME/build-tools/35.0.0/zipalign" -P 16 -f 4 "$RUNNER_TEMP/rebuilt-output/updated-unsigned.apk" "$RUNNER_TEMP/rebuilt-debug-aligned.apk"
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" sign --ks "$RUNNER_TEMP/rebuilt-test-key.jks" --ks-key-alias androiddebugkey --ks-pass pass:android --out "$delivery/app.apk" "$RUNNER_TEMP/rebuilt-debug-aligned.apk"
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" sign --ks "$RUNNER_TEMP/rebuilt-test-key.jks" --ks-key-alias androiddebugkey --ks-pass pass:android --out "$delivery/tests.apk" app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify "$delivery/app.apk"
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify "$delivery/tests.apk"
           cp "$RUNNER_TEMP/rebuilt-output/integration-proof.json" "$delivery/integration-proof.json"
+          cp "$RUNNER_TEMP/rebuilt-output/quickjs-proof.json" "$delivery/quickjs-proof.json"
+          cp "$RUNNER_TEMP/rebuilt-output/crypto-proof.json" "$delivery/crypto-proof.json"
           cp "$RUNNER_TEMP/rebuilt-output/elf-audit.json" "$delivery/elf-audit.json"
           git rev-parse HEAD > "$delivery/source-commit.txt"
-          (cd "$delivery" && sha256sum app.apk tests.apk integration-proof.json elf-audit.json source-commit.txt > SHA256SUMS.txt)
+          (cd "$delivery" && sha256sum app.apk tests.apk integration-proof.json quickjs-proof.json crypto-proof.json elf-audit.json source-commit.txt > SHA256SUMS.txt)
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: rebuilt-runtime-test-inputs
@@ -71,6 +85,8 @@ jobs:
             ${{ runner.temp }}/rebuilt-test-inputs/app.apk
             ${{ runner.temp }}/rebuilt-test-inputs/tests.apk
             ${{ runner.temp }}/rebuilt-test-inputs/integration-proof.json
+            ${{ runner.temp }}/rebuilt-test-inputs/quickjs-proof.json
+            ${{ runner.temp }}/rebuilt-test-inputs/crypto-proof.json
             ${{ runner.temp }}/rebuilt-test-inputs/elf-audit.json
             ${{ runner.temp }}/rebuilt-test-inputs/source-commit.txt
             ${{ runner.temp }}/rebuilt-test-inputs/SHA256SUMS.txt
@@ -83,6 +99,8 @@ jobs:
           path: |
             app/build/reports/
             ${{ runner.temp }}/rebuilt-output/integration-proof.json
+            ${{ runner.temp }}/rebuilt-output/quickjs-proof.json
+            ${{ runner.temp }}/rebuilt-output/crypto-proof.json
             ${{ runner.temp }}/rebuilt-output/elf-audit.json
   devices:
     needs: package
@@ -143,7 +161,7 @@ jobs:
             adb shell getprop ro.build.version.sdk > rebuilt-reports/api.txt
             adb shell getprop ro.product.cpu.abilist > rebuilt-reports/abis.txt
             adb shell getconf PAGE_SIZE > rebuilt-reports/page-size.txt
-            adb shell am instrument -w com.os73.dosos73.test/androidx.test.runner.AndroidJUnitRunner | tee rebuilt-reports/instrumentation.txt
+            adb shell am instrument -w -e requireSourceUpdates true com.os73.dosos73.test/androidx.test.runner.AndroidJUnitRunner | tee rebuilt-reports/instrumentation.txt
             python3 -c "from pathlib import Path; import re; text=Path('rebuilt-reports/instrumentation.txt').read_text(); assert re.search(r'(?m)^OK \([0-9]+ tests?\)$', text) and not any(marker in text for marker in ('FAILURES!!!', 'INSTRUMENTATION_FAILED', 'Process crashed')), 'Instrumentation did not pass'"
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()

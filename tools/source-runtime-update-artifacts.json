@@ -1,0 +1,20 @@
+{
+  "quickjs": {
+    "run_id": 42033939945,
+    "producer": "f6295fc17e0c778527f0386d93842b7f38405f53",
+    "patch_sha256": "1fafd33c6888b1c4833ee027ff2ec6e99642845e5c5d662c00e2df3bfd2e5efc",
+    "artifacts": {
+      "quickjs-android-arm64-v8a": {"id": 13417436756, "bytes": 1099188, "sha256": "d848a2ade36ce116ef929b9d63d3678171b60150c349c8c6464dea5079d780ab"},
+      "quickjs-android-armeabi-v7a": {"id": 13417386692, "bytes": 1056351, "sha256": "35cbe4ab6bd2770a12a6525d2bec989469d488a78fa561200265d6bd52fb89ec"},
+      "quickjs-android-x86": {"id": 13416993235, "bytes": 1154128, "sha256": "64851e765639451c768ef43c3b10ba137ce4f89c95641f6be4f0f7e3b1e412cd"},
+      "quickjs-android-x86_64": {"id": 13417741389, "bytes": 1133146, "sha256": "cb78230ef55d22c7990b98d809a4d701fecac37f7f80b7819e27739293dbe19d"}
+    }
+  },
+  "crypto": {
+    "run_id": 42033504180,
+    "producer": "694dcae218409d1c12d05871ce787b12682640d7",
+    "artifacts": {
+      "cryptodomex-runtime-candidate": {"id": 13417760661, "bytes": 9782449, "sha256": "04978022421b963daffe3eb8220ced36653f27d7f586dd5fea5a2d967d6bac07"}
+    }
+  }
+}

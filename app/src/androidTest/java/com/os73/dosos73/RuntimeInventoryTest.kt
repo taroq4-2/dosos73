@@ -105,9 +105,24 @@ class RuntimeInventoryTest {
         assertTrue(versions.contains("1.47.0"))
         val qjs = run("$native/libqjs.so", "-e", "console.log('quickjs-execution-ok')")
         assertTrue(qjs.contains("quickjs-execution-ok"))
+        val sourceUpdates = if (InstrumentationRegistry.getArguments().getString("requireSourceUpdates") == "true") {
+            val crypto = run("$native/libpython.so", "-c",
+                "import Cryptodome; from Cryptodome.Cipher import AES; " +
+                    "assert Cryptodome.__version__ == '3.24.1'; " +
+                    "assert AES.new(bytes(16), AES.MODE_ECB).encrypt(bytes(16)).hex() == '66e94bd4ef8a2c3b884cfa59ca342b2e'; " +
+                    "print('Cryptodome 3.24.1 AES verified')")
+            assertTrue(crypto.contains("Cryptodome 3.24.1 AES verified"))
+            val restricted = run("$native/libqjs.so", "-e",
+                "if (typeof __loadScript !== 'undefined') throw Error('file loader exposed'); " +
+                    "Promise.all([import('std'), import('os')].map(p => p.then(" +
+                    "() => { throw Error('native module exposed'); }, () => true)))" +
+                    ".then(() => console.log('QuickJS host access blocked'));")
+            assertTrue(restricted.contains("QuickJS host access blocked"))
+            "$crypto\n$restricted\n"
+        } else ""
         val ffmpeg = run("$native/libffmpeg.so", "-version").lineSequence().first()
         val report =
-            "ABI=${android.os.Build.SUPPORTED_ABIS.first()}\nAndroid=${android.os.Build.VERSION.SDK_INT}\nInitializationMs=$initializationMs (existing installed engine/runtime files)\nPython, yt-dlp, EJS:\n$versions\n$qjs\n$ffmpeg\n"
+            "ABI=${android.os.Build.SUPPORTED_ABIS.first()}\nAndroid=${android.os.Build.VERSION.SDK_INT}\nInitializationMs=$initializationMs (existing installed engine/runtime files)\nPython, yt-dlp, EJS:\n$versions\n$qjs\n$sourceUpdates$ffmpeg\n"
         val folder = File(context.getExternalFilesDir(null), "evidence").apply { mkdirs() }
         File(folder, "runtime-inventory.txt").writeText(report)
     }
