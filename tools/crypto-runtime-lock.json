@@ -1,0 +1,16 @@
+{
+  "schema": "dosos73-cryptodomex-lock-v1",
+  "version": "3.24.1",
+  "source": {
+    "filename": "pycryptodomex-3.24.1.tar.gz",
+    "url": "https://files.pythonhosted.org/packages/f4/e7/50e72301e32acb73a314e663c2014e1ddefc019d5f434ff14ec89861d664/pycryptodomex-3.24.1.tar.gz",
+    "sha256": "09081666ffc599976c0b8b29caf2cf82212c0f05bed233c8f8ed53e4f6e1d356"
+  },
+  "license_sha256": "4e04660d77c1c64e89d79537919fb8240fa21484a7e3db29f358b2c7f84ea073",
+  "ndk": {
+    "revision": "28.2.13676358",
+    "linux_url": "https://dl.google.com/android/repository/android-ndk-r28c-linux.zip",
+    "linux_sha256": "dfb20d396df28ca02a8c708314b814a4d961dc9074f9a161932746f815aa552f",
+    "api_level": 29
+  }
+}

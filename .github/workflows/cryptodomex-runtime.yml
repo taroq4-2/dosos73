@@ -1,0 +1,53 @@
+name: Pinned Android Cryptodome build
+on:
+  push:
+    branches: ['runtime/**']
+    paths:
+      - '.github/workflows/cryptodomex-runtime.yml'
+      - 'tools/build_crypto_runtime.py'
+      - 'tools/crypto-runtime-lock.json'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: cryptodomex-runtime-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Fetch and verify upstream inputs
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP"
+          lock="$GITHUB_WORKSPACE/tools/crypto-runtime-lock.json"
+          source_url="$(jq -er '.source.url' "$lock")"
+          source_sha="$(jq -er '.source.sha256' "$lock")"
+          ndk_url="$(jq -er '.ndk.linux_url' "$lock")"
+          ndk_sha="$(jq -er '.ndk.linux_sha256' "$lock")"
+          curl --fail --location --retry 4 --retry-all-errors --connect-timeout 25 --max-time 600 "$source_url" -o cryptodomex.tar.gz
+          curl --fail --location --retry 4 --retry-all-errors --connect-timeout 25 --max-time 600 "$ndk_url" -o android-ndk.zip
+          printf '%s  cryptodomex.tar.gz\n%s  android-ndk.zip\n' "$source_sha" "$ndk_sha" | sha256sum --check
+          unzip -q android-ndk.zip
+      - name: Compile and compare two independent work directories
+        run: |
+          set -euo pipefail
+          first="$RUNNER_TEMP/cryptodomex-first"
+          second="$RUNNER_TEMP/cryptodomex-second"
+          python3 tools/build_crypto_runtime.py "$RUNNER_TEMP/cryptodomex.tar.gz" "$RUNNER_TEMP/android-ndk-r28c" "$first"
+          python3 tools/build_crypto_runtime.py "$RUNNER_TEMP/cryptodomex.tar.gz" "$RUNNER_TEMP/android-ndk-r28c" "$second"
+          diff -qr "$first" "$second"
+          printf '%s\n' "$GITHUB_SHA" > "$first/producer-commit.txt"
+          cd "$first"
+          find . -type f -print0 | sort -z | xargs -0 sha256sum > "$RUNNER_TEMP/cryptodomex-sha256.txt"
+          mv "$RUNNER_TEMP/cryptodomex-sha256.txt" SHA256SUMS.txt
+          sha256sum --check SHA256SUMS.txt
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: cryptodomex-runtime-candidate
+          path: ${{ runner.temp }}/cryptodomex-first/
+          if-no-files-found: error
