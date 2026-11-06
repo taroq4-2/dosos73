@@ -4,6 +4,12 @@ The application pins the official yt-dlp 2026.10.21 zipapp with EJS 0.8.0 inside
 
 First-party Kotlin, resources and build scripts are offered under GPL-3.0-or-later; see LICENSE. This does not relicense dependencies or third-party artwork.
 
+## Universal release candidate 1.3.0-rc.3
+
+The signed 1.3.0 package's artifact-bound SBOM identifies CPython 3.12.16, OpenSSL 3.5.9, Expat 2.10.0, SQLite 3.54.1, QuickJS 2026-06-04 with the restricted CLI patch, and PyCryptodomex 3.24.1. Its media tools use FFmpeg 9.0.2 with four security backports and LAME 3.100. The native source archive provides the Expat and FFmpeg replacements alongside the retained core, QuickJS, and PyCryptodomex source materials. Consult the SBOM and source archive paired with each APK for its exact components and notices. [Retained runtime source evidence](docs/audit/NATIVE_SOURCE_UPDATES_20261105.md)
+
+## Wrapper inputs and earlier delivery
+
 | Component | Version | Declared upstream license / source |
 |---|---|---|
 | youtubedl-android library + ffmpeg | 0.18.1 | GPL-3.0, https://github.com/yausername/youtubedl-android/tree/0.18.1 |

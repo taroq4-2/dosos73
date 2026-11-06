@@ -146,17 +146,27 @@ class QuickLaunchTest {
             .putExtra("url", "https://example.com/injected").putExtra("autoStart", true))
         compose.waitUntil(10000) { model.state.value.quick && !model.state.value.busy }
         compose.onNodeWithTag("quick_dialog").assertExists()
-        compose.onNodeWithTag("quick_start").assertIsNotEnabled()
+        compose.onNodeWithTag("quick_start").assertDoesNotExist()
         compose.runOnIdle {
             assertEquals(firstUrl, model.state.value.url)
-            assertEquals(R.string.error_cleartext_disabled, model.state.value.error)
+            assertTrue(model.state.value.quickNeedsConfirmation)
+            model.analyze()
+            assertFalse(model.state.value.busy)
+            assertNull(model.state.value.error)
             assertNull(model.state.value.analysis)
         }
         copy("http://example.com/must-not-be-read-on-rotation")
         compose.activityRule.scenario.recreate()
         compose.onNodeWithTag("quick_dialog").assertExists()
         val retainedModel = ViewModelProvider(compose.activity)[MainViewModel::class.java]
-        compose.runOnIdle { assertEquals(firstUrl, retainedModel.state.value.url) }
+        compose.runOnIdle {
+            assertEquals(firstUrl, retainedModel.state.value.url)
+            assertTrue(retainedModel.state.value.quickNeedsConfirmation)
+            assertNull(retainedModel.state.value.error)
+        }
+        compose.onNodeWithTag("quick_analyze").performClick()
+        compose.waitUntil(10000) { retainedModel.state.value.error == R.string.error_cleartext_disabled }
+        compose.onNodeWithTag("quick_start").assertIsNotEnabled()
         compose.onNodeWithTag("quick_close").performClick()
         compose.onNodeWithTag("quick_dialog").assertDoesNotExist()
         compose.runOnIdle {

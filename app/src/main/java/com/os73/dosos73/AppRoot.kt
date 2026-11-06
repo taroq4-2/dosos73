@@ -591,7 +591,8 @@ internal fun MainActivity.AppScreen(model: MainViewModel, sharedGeneration: Int,
             onChoice = model::select,
             onFolder = { picker.launch(tree) },
             onDefaultFolder = { tree = null; preferences.edit().remove("tree").apply() },
-            onPreset = ::applyPreset, onStart = ::requestStart, onClose = model::closeQuick)
+            onPreset = ::applyPreset, onStart = ::requestStart, onClose = model::closeQuick,
+            onAnalyze = model::confirmQuickAnalysis)
     }
     duplicate?.let { (item, answer) ->
         DownloadHistoryReview(item) { answer.complete(it) }

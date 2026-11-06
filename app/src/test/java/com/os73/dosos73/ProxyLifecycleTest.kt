@@ -19,6 +19,33 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class ProxyLifecycleTest {
+    @Test fun slowUnauthenticatedClientsLeaveRoomForAnAuthenticatedTunnel() {
+        val payload = "origin response".toByteArray()
+        Origin { peer -> peer.getOutputStream().write(payload) }.use { origin ->
+            PublicProxy(
+                resolve = { listOf(publicAddress()) },
+                socketFactory = LoopbackFactory(origin.port),
+                headerTimeoutMillis = 10_000,
+            ).use { proxy ->
+                val stalled = mutableListOf<Socket>()
+                try {
+                    repeat(8) {
+                        val socket = client(proxy)
+                        stalled += socket
+                        socket.getOutputStream().write('C'.code)
+                    }
+                    client(proxy).use { socket ->
+                        connectTunnel(proxy, socket)
+                        assertArrayEquals(payload, socket.getInputStream().readNBytes(payload.size))
+                    }
+                    origin.awaitCompletion()
+                } finally {
+                    stalled.forEach { it.close() }
+                }
+            }
+        }
+    }
+
     @Test fun tricklingUnauthenticatedHeaderHasAnAbsoluteDeadline() {
         val writerPool = Executors.newSingleThreadExecutor()
         try {

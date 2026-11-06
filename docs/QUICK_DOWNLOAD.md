@@ -4,13 +4,13 @@
 
 1. افتح **الإعدادات ← التنزيل السريع** وفعّل إجراء الرابط المنسوخ.
 2. اربط إيماءة الهاتف بإجراء **تنزيل الرابط المنسوخ** إن ظهر في قائمة الهاتف. في أجهزة Galaxy المدعومة استخدم Good Lock ثم RegiStar؛ وفي Pixel المدعوم استخدم System → Gestures → Quick Tap → Open app.
-3. انسخ رابطًا، وافتح قفل الهاتف، واستخدم الإيماءة. يظهر التطبيق ويحلل الرابط ثم يعرض النوع والصيغة والجودة ومكان الحفظ. يبدأ التنزيل بعد الضغط على «بدء» فقط.
+3. انسخ رابطًا، وافتح قفل الهاتف، واستخدم الإيماءة. راجع الرابط واضغط «تحليل» لعرض النوع والصيغة والجودة ومكان الحفظ. يبدأ التنزيل بعد الضغط على «بدء».
 
-يتطلب الربط اختيار المستخدم داخل إعدادات الهاتف. يتغير دعم الإيماءة وقائمة التطبيقات المتاحة حسب الجهاز والنظام والمنطقة. لا يستطيع التطبيق ضبط إيماءة جميع الهواتف تلقائيًا. عند تعذر اختيار الإجراء المنفصل، يوجد خيار إضافي معطل افتراضيًا لتحليل الرابط عند فتح التطبيق العادي أيضًا. ويمكن استخدام اختصار الشاشة الرئيسية أو زر اللصق بدلًا من الإيماءة.
+يتطلب الربط اختيار المستخدم داخل إعدادات الهاتف. يتغير دعم الإيماءة وقائمة التطبيقات المتاحة حسب الجهاز والنظام والمنطقة. عند تعذر اختيار الإجراء المنفصل، يوجد خيار إضافي معطل افتراضيًا لعرض الرابط للمراجعة عند فتح التطبيق بالطريقة العادية. ويمكن استخدام اختصار الشاشة الرئيسية أو زر اللصق بدلًا من الإيماءة.
 
 ## الخصوصية والخفة
 
-- الإجراء معطل افتراضيًا. تُقرأ لقطة نصية واحدة للحافظة بعد ظهور التطبيق وتركيزه وفتح قفل الجهاز، ويُتصل بالموقع لتحليل الرابط.
+- الإجراء معطل افتراضيًا. تُقرأ لقطة نصية واحدة للحافظة بعد ظهور التطبيق وتركيزه وفتح قفل الجهاز. يبدأ الاتصال بالموقع عند اختيار «تحليل».
 - لا توجد مراقبة للحافظة أو حساسات مستمرة أو خدمة وصول أو إذن للظهور فوق التطبيقات.
 - تُرفض عناصر الملفات وIntent والنصوص الحساسة والمحتوى الأكبر من 8192 حرفًا، ولا يُفتح مزود ملفات من الحافظة.
 - لا تؤدي استعادة التركيز أو دوران الشاشة إلى قراءة أخرى. تُرفض محاولة استبدال رابط مفتوح، وتُتجاهل بيانات التشغيل الخارجية. لا يبدأ تنزيل دون تأكيد.
@@ -18,9 +18,9 @@
 
 ## English
 
-Enable **Settings → Quick download**, then select **Download copied link** in your phone's gesture configuration when available. Copy a media URL, unlock the phone and invoke the action. The app reads one clipboard snapshot, analyzes the URL and shows its existing type, format, quality and destination controls. Downloading requires an explicit Start.
+Enable **Settings → Quick download**, then select **Download copied link** in your phone's gesture configuration when available. Copy a media URL, unlock the phone and invoke the action. The app shows one clipboard snapshot for review. Choose **Analyze** to contact the site and display the format, quality and destination controls. Choose **Start** to download.
 
-Back tap is provided by the phone: supported Galaxy devices use Good Lock/RegiStar, and supported Pixel devices use Quick Tap. Device, OS, region and app-picker support vary. Assignment requires a user step; there is no automatic universal assignment. A separately enabled fallback can analyze copied links on ordinary launcher openings too. Home-screen shortcuts and in-app Paste remain alternatives.
+Supported Galaxy devices provide back tap through Good Lock/RegiStar, and supported Pixel devices provide it through Quick Tap. Device, OS, region and app-picker support vary. Assign the action in your phone settings. A separately enabled fallback shows copied links for review on ordinary launcher openings. Home-screen shortcuts and in-app Paste remain alternatives.
 
 The feature adds no dependency, native payload, persistent sensor listener, clipboard monitor, accessibility service or overlay permission. Reads require an unlocked, resumed and focused activity. URI/Intent clipboard items and sensitive/oversized text are rejected without provider access. Rotation does not re-read the clipboard; busy input is preserved and rapid invocations do not stack download requests.
 

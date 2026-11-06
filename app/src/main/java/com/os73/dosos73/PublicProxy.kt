@@ -1,12 +1,14 @@
 package com.os73.dosos73
 
 import java.io.Closeable
+import java.io.InputStream
 import java.net.InetAddress
 import java.net.InetSocketAddress
 import java.net.ServerSocket
 import java.net.Socket
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
+import java.util.concurrent.RejectedExecutionException
 import java.util.concurrent.Semaphore
 
 /**
@@ -16,17 +18,18 @@ import java.util.concurrent.Semaphore
 class PublicProxy(
     private val resolve: (String) -> List<InetAddress> = Safety::resolve,
     private val socketFactory: javax.net.SocketFactory = javax.net.SocketFactory.getDefault(),
-    private val headerTimeoutMillis: Int = 10_000,
+    private val headerTimeoutMillis: Int = 2_000,
     private val originIdleTimeoutMillis: Int = 60_000,
 ) : Closeable {
     init {
         require(headerTimeoutMillis in 1..60_000)
         require(originIdleTimeoutMillis in 1..60_000)
     }
-    private val server = ServerSocket(0, 8, InetAddress.getByName("127.0.0.1"))
-    // One acceptor plus two directions per tunnel, with one spare worker.
-    private val pool = Executors.newFixedThreadPool(18)
-    private val slots = Semaphore(8)
+    private val server = ServerSocket(0, HEADER_CAPACITY, InetAddress.getByName("127.0.0.1"))
+    // The acceptor, pending headers, and both directions of every tunnel can run together.
+    private val pool = Executors.newFixedThreadPool(2 + HEADER_CAPACITY + 2 * TUNNEL_CAPACITY)
+    private val headerSlots = Semaphore(HEADER_CAPACITY)
+    private val tunnelSlots = Semaphore(TUNNEL_CAPACITY)
     private val sockets = ConcurrentHashMap.newKeySet<Socket>()
     private val credentials = "dosos73:${java.util.UUID.randomUUID()}"
     val url = "http://$credentials@127.0.0.1:${server.localPort}"
@@ -40,34 +43,46 @@ class PublicProxy(
                     } catch (_: Exception) {
                         break
                     }
-                if (!slots.tryAcquire()) {
+                if (!headerSlots.tryAcquire()) {
                     client.close()
                     continue
                 }
+                val headerDeadline = System.nanoTime() + headerTimeoutMillis * 1_000_000L
                 sockets.add(client)
-                try { pool.execute {
-                    try {
-                        if (server.isClosed) return@execute
-                        tunnel(client)
-                    } catch (_: Exception) {
-                        /* Reported by extractor as network failure. */
-                    } finally {
-                        sockets.remove(client)
-                        client.close()
-                        slots.release()
+                try {
+                    pool.execute {
+                        try {
+                            val input: InputStream
+                            val host = try {
+                                if (server.isClosed) return@execute
+                                input = client.getInputStream()
+                                readAuthorizedHost(client, input, headerDeadline) ?: return@execute
+                            } finally {
+                                headerSlots.release()
+                            }
+                            if (!tunnelSlots.tryAcquire()) return@execute
+                            try {
+                                tunnel(client, input, host)
+                            } finally {
+                                tunnelSlots.release()
+                            }
+                        } catch (_: Exception) {
+                            /* Reported by extractor as network failure. */
+                        } finally {
+                            sockets.remove(client)
+                            client.close()
+                        }
                     }
-                } } catch (_: java.util.concurrent.RejectedExecutionException) {
+                } catch (_: RejectedExecutionException) {
                     sockets.remove(client)
                     client.close()
-                    slots.release()
+                    headerSlots.release()
                 }
             }
         }
     }
 
-    private fun tunnel(client: Socket) {
-        val headerDeadline = System.nanoTime() + headerTimeoutMillis * 1_000_000L
-        val input = client.getInputStream()
+    private fun readAuthorizedHost(client: Socket, input: InputStream, headerDeadline: Long): String? {
         val header = StringBuilder()
         while (!header.endsWith("\r\n\r\n")) {
             require(header.length < 8192)
@@ -89,14 +104,19 @@ class PublicProxy(
                     "HTTP/1.1 407 Proxy Authentication Required\r\nProxy-Authenticate: Basic realm=\"dosos73\"\r\nContent-Length: 0\r\n\r\n"
                         .toByteArray()
                 )
-            return
+            return null
         }
         require(parts.size == 3 && parts[0] == "CONNECT" && parts[2] in setOf("HTTP/1.0", "HTTP/1.1"))
         val target = java.net.URI("https://${parts[1]}")
-        require(target.port == 443 && target.userInfo == null && !target.host.isNullOrBlank() &&
+        val host = target.host
+        require(target.port == 443 && target.userInfo == null && !host.isNullOrBlank() &&
             target.path.isNullOrEmpty() && target.rawQuery == null && target.rawFragment == null)
+        return host
+    }
+
+    private fun tunnel(client: Socket, input: InputStream, host: String) {
         // Validate the entire DNS answer before attempting any connection.
-        val addresses = Safety.checkedAddresses(resolve(target.host))
+        val addresses = Safety.checkedAddresses(resolve(host))
         connectPublic(addresses).use { remote ->
             try {
                 remote.soTimeout = originIdleTimeoutMillis
@@ -165,5 +185,10 @@ class PublicProxy(
         server.close()
         sockets.forEach { runCatching { it.close() } }
         pool.shutdownNow()
+    }
+
+    private companion object {
+        const val HEADER_CAPACITY = 12
+        const val TUNNEL_CAPACITY = 8
     }
 }

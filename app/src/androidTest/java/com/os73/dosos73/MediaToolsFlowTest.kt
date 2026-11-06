@@ -190,6 +190,7 @@ class MediaToolsFlowTest {
                 InstrumentationRegistry.getInstrumentation().callActivityOnNewIntent(context, QuickLaunch.intent(context))
             } finally { context.intent = harnessIntent }
         }
+        compose.onNodeWithTag("quick_analyze").performClick()
         awaitAnalysis(analysis, quick = true)
         compose.onNodeWithTag("quick_dialog").assertIsDisplayed()
     }

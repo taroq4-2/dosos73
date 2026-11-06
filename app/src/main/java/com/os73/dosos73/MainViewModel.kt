@@ -17,6 +17,7 @@ data class ScreenState(
     val error: Int? = null,
     val pendingShared: String? = null,
     val quick: Boolean = false,
+    val quickNeedsConfirmation: Boolean = false,
 )
 
 class MainViewModel(app: Application) : AndroidViewModel(app) {
@@ -377,7 +378,13 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     internal fun openQuick(url: String) {
         check(quickAvailable())
-        mutable.value = ScreenState(url = QuickLink.parse(url), quick = true)
+        mutable.value = ScreenState(url = QuickLink.parse(url), quick = true, quickNeedsConfirmation = true)
+    }
+
+    internal fun confirmQuickAnalysis() {
+        val screen = mutable.value
+        if (!screen.quick || !screen.quickNeedsConfirmation) return
+        mutable.value = screen.copy(quickNeedsConfirmation = false)
         analyze()
     }
 
@@ -388,7 +395,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun analyze() {
-        if (mutable.value.busy || batchBusyMutable.value || job?.isCompleted == false) return
+        if (mutable.value.quickNeedsConfirmation || mutable.value.busy ||
+            batchBusyMutable.value || job?.isCompleted == false) return
         val url =
             try {
                 Safety.url(mutable.value.url)

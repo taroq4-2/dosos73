@@ -220,7 +220,7 @@
     <string name="quick_explanation">Off by default. When you use the shortcut, dosos73 reads the copied link once and connects to its site to find download options. Choose the type, quality and format before downloading. No background clipboard monitoring.</string>
     <string name="quick_setup_title">Set up once on your phone</string>
     <string name="quick_fallback">Also read the link when opening the app</string>
-    <string name="quick_fallback_hint">Optional and off by default. Use this only if your phone can launch the main app but cannot select the copied-link action. While enabled, ordinary app launches also read the copied link once and connect to its site to analyze it.</string>
+    <string name="quick_fallback_hint">Optional and off by default. Use this if your phone can launch the main app but cannot select the copied-link action. While enabled, ordinary app launches show the copied link for review.</string>
     <string name="quick_setup">Open phone gesture setup</string>
     <string name="quick_pin">Add a home screen shortcut</string>
     <string name="quick_try">Try copied link</string>
@@ -229,7 +229,8 @@
     <string name="quick_step_two">2. On supported Galaxy phones, open Good Lock → RegiStar → Back-Tap action → Double Tap. On supported Pixel phones, open Settings → System → Gestures → Quick Tap → Open app. Select Download copied link if it is offered.</string>
     <string name="quick_step_three">3. Copy a media link, unlock your phone and try the assigned action. Review the download options before starting.</string>
     <string name="quick_pin_hint">The home screen shortcut provides the same action on phones without back-tap support. Its availability depends on your launcher.</string>
-    <string name="quick_try_hint">Enable the action and copy a link first. Trying it reads the clipboard and analyzes the link; downloading still requires your confirmation.</string>
+    <string name="quick_try_hint">Enable the action and copy a link first. Review it before choosing Analyze.</string>
+    <string name="quick_analyze_confirmation">Choose Analyze to contact the source and check the available formats.</string>
     <string name="quick_disabled">Enable the copied-link action in Quick download settings first.</string>
     <string name="quick_busy">Finish or cancel the current task, then try the copied link again.</string>
     <string name="quick_clipboard_error">Could not read the clipboard. Unlock your phone, copy the link again and retry.</string>

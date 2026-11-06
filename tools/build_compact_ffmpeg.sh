@@ -15,6 +15,7 @@ esac
 : "${ANDROID_NDK_HOME:?NDK required}"
 compiler="$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin"
 root="$PWD"
+patch_dir="$root/tools/patches/ffmpeg"
 mkdir -p native-build
 cd native-build
 if [ ! -d ffmpeg/.git ]; then git clone --filter=blob:none --no-checkout https://github.com/FFmpeg/FFmpeg.git ffmpeg; fi
@@ -33,8 +34,16 @@ CC="$compiler/${triple}29-clang" AR="$compiler/llvm-ar" RANLIB="$compiler/llvm-r
  --disable-frontend --disable-decoder --disable-gtktest --with-pic
 make -j2
 make install
-cd ../ffmpeg
-git checkout --detach 946fcce07b6dcd0331c8cc609192aeff5e1924f8
+cd "$root/native-build"
+git -C ffmpeg worktree add --detach "$root/native-build/ffmpeg-$abi" 946fcce07b6dcd0331c8cc609192aeff5e1924f8
+cd "ffmpeg-$abi"
+(cd "$patch_dir" && sha256sum --check SHA256SUMS.txt)
+git apply "$patch_dir/969c7eb091989a664cb7bf66a1f02051cc46cb52.patch"
+# The companion API was added on master. Keep the pinned branch's version header.
+git apply --exclude=doc/APIchanges --exclude=libavutil/version.h \
+  "$patch_dir/d1434518fbd03789e3e5dc0657a7a9f1123ce074.patch"
+git apply "$patch_dir/71403a21b02a92b925e26e609e9bd3e48df451cf.patch"
+git apply "$patch_dir/2c2f6e96e31795ae95a8f8323a493ffbc493111f.patch"
 ./configure "${extra_options[@]}" --target-os=android --arch="$arch" --cpu="$cpu" --enable-cross-compile \
   --cc="$compiler/${triple}29-clang" --cxx="$compiler/${triple}29-clang++" \
   --ar="$compiler/llvm-ar" --ranlib="$compiler/llvm-ranlib" --strip="$compiler/llvm-strip" \
@@ -50,6 +59,7 @@ git checkout --detach 946fcce07b6dcd0331c8cc609192aeff5e1924f8
 make -j2 ffmpeg ffprobe
 mkdir -p "$root/native-out/$abi"
 cp ffmpeg ffprobe config.h ffbuild/config.mak COPYING.LGPLv2.1 LICENSE.md "$root/native-out/$abi/"
+cp "$patch_dir/SHA256SUMS.txt" "$root/native-out/$abi/FFMPEG_SECURITY_PATCHES.txt"
 cp "$root/native-build/lame-$abi/COPYING" "$root/native-out/$abi/COPYING.LAME"
 mkdir -p "$root/native-out/$abi/usr/lib"
 while IFS= read -r lib; do

@@ -19,6 +19,7 @@ internal fun QuickDownloadReview(
     screen: ScreenState, customFolder: Boolean, startEnabled: Boolean,
     onChoice: (Choice) -> Unit, onFolder: () -> Unit, onDefaultFolder: () -> Unit,
     onPreset: (Choice, String?) -> Unit, onStart: () -> Unit, onClose: () -> Unit,
+    onAnalyze: () -> Unit,
 ) {
     val compact = LocalConfiguration.current.screenHeightDp < 420
     AlertDialog(
@@ -32,13 +33,21 @@ internal fun QuickDownloadReview(
                 verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(screen.url, maxLines = if (compact) 1 else 2, overflow = TextOverflow.Ellipsis,
                     style = MaterialTheme.typography.bodySmall, color = Neon.Secondary)
-                if (screen.busy) LinearProgressIndicator(Modifier.fillMaxWidth())
-                screen.error?.let { Text(stringResource(it), color = MaterialTheme.colorScheme.error) }
-                AnalysisOptions(screen, customFolder, onChoice, onFolder, onDefaultFolder, onPreset)
+                if (screen.quickNeedsConfirmation) {
+                    Text(stringResource(R.string.quick_analyze_confirmation))
+                } else {
+                    if (screen.busy) LinearProgressIndicator(Modifier.fillMaxWidth())
+                    screen.error?.let { Text(stringResource(it), color = MaterialTheme.colorScheme.error) }
+                    AnalysisOptions(screen, customFolder, onChoice, onFolder, onDefaultFolder, onPreset)
+                }
             }
         },
         confirmButton = {
-            TextButton(onStart, enabled = startEnabled && !screen.busy && screen.selected != null,
+            if (screen.quickNeedsConfirmation) {
+                TextButton(onAnalyze, Modifier.testTag("quick_analyze")) {
+                    Text(stringResource(R.string.analyze))
+                }
+            } else TextButton(onStart, enabled = startEnabled && !screen.busy && screen.selected != null,
                 modifier = Modifier.testTag("quick_start")) {
                 Symbol(Glyph.DOWNLOAD)
                 Spacer(Modifier.width(8.dp))

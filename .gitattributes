@@ -6,3 +6,4 @@ gradlew text eol=lf
 *.jpg binary
 *.jar binary
 *.sh text eol=lf
+tools/patches/ffmpeg/* text eol=lf

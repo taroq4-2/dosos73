@@ -2,7 +2,7 @@
 
 Untrusted inputs include shared URLs, DNS answers, redirects, headers, filenames, extractor metadata, remote bytes and unreliable storage providers. Direct transport defaults to HTTPS; public HTTP requires explicit opt-in. Credential-bearing URLs, arbitrary ports, ambiguous numeric addresses and non-public targets are rejected before connection. Redirects retain target checks and reject HTTPS downgrade.
 
-Native HTTPS uses a randomly authenticated loopback CONNECT proxy. Every tunnel connects to a checked public IP; TLS remains end-to-end. Headers have an absolute deadline and origin inactivity is bounded. No trust-all verifier, cookie/login import or DRM bypass is installed. Native requests use structured arguments and fixed output paths rather than a user-built shell command.
+Native HTTPS uses a randomly authenticated loopback CONNECT proxy. Every tunnel connects to a checked public IP and TLS remains end-to-end. The proxy handles up to 12 pending headers independently of the eight authenticated tunnel slots. An incomplete header has a two-second deadline from socket acceptance. If all header slots are occupied, new sockets are closed until a slot becomes available. Origin inactivity is bounded. No trust-all verifier, cookie/login import or DRM bypass is installed. Native requests use structured arguments and fixed output paths rather than a user-built shell command.
 
 Direct append requires a matching validated representation, range and strong validator. Conflicting encoding/length/range/ETag headers are rejected. Media files have no fixed application size ceiling; metadata has separate allocation guards. Storage reserve calculations use Long counters and checked arithmetic.
 

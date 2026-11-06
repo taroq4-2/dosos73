@@ -64,9 +64,9 @@ class QuickColdLaunchTest {
             val launch = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
                 .setComponent(if (useAlias) alias else ComponentName(context, MainActivity::class.java))
             ActivityScenario.launch<MainActivity>(launch).use { cold ->
-                await(cold, "Cold launcher must open the copied link and finish blocked HTTP analysis") {
+                await(cold, "Cold launcher must stage the copied link for confirmation") {
                     val state = ViewModelProvider(it)[MainViewModel::class.java].state.value
-                    it.lifecycle.currentState == Lifecycle.State.RESUMED && state.quick && !state.busy
+                    it.lifecycle.currentState == Lifecycle.State.RESUMED && state.quickNeedsConfirmation
                 }
                 cold.onActivity {
                     val model = ViewModelProvider(it)[MainViewModel::class.java]
@@ -76,7 +76,8 @@ class QuickColdLaunchTest {
                     assertFalse(model.batchSaving.value)
                     assertFalse(model.batchStorageError.value)
                     assertEquals(copiedUrl, model.state.value.url)
-                    assertEquals(R.string.error_cleartext_disabled, model.state.value.error)
+                    assertNull(model.state.value.error)
+                    assertFalse(model.state.value.busy)
                     assertNull(model.state.value.analysis)
                     assertNull(model.state.value.selected)
                     // The modal can own window focus now. Successful clipboard input above exercises

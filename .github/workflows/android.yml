@@ -38,7 +38,7 @@ jobs:
       - name: Validate bundle identity and ABI contents
         run: |
           python3 tools/fetch_bundletool.py /tmp/bundletool.jar
-          python3 tools/verify_bundle.py --bundle app/build/outputs/bundle/release/app-release.aab --bundletool /tmp/bundletool.jar --version-code 16 --version-name 1.3.0-rc.3 --report app/build/reports/audit/bundle.json
+          python3 tools/verify_bundle.py --bundle app/build/outputs/bundle/release/app-release.aab --bundletool /tmp/bundletool.jar --version-code 20 --version-name 1.3.0 --report app/build/reports/audit/bundle.json
       - name: Record build identity and integrity
         run: |
           git rev-parse HEAD > app/build/reports/audit/source-commit.txt

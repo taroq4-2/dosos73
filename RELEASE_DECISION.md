@@ -1,5 +1,11 @@
 # Release decision
 
+## 1.3.0 GitHub distribution
+
+The signed 1.3.0 universal APK passed the release artifact checks and the project owner reported a successful device test. The [1.3.0 verification report](docs/RELEASE_1_3_0.md) binds that result to the package hash. This decision covers direct APK distribution on GitHub. Google Play submission has a separate checklist and owner-controlled account and policy gates.
+
+## Historical readiness candidate
+
 **Production / Google Play: NO-GO.**
 
 The implementation candidate may be prepared and tested, but production approval
