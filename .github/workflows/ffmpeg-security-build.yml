@@ -1,0 +1,97 @@
+name: Patched Android FFmpeg
+
+on:
+  push:
+    branches: [runtime/ffmpeg-security-20261106]
+    paths: [.github/workflows/ffmpeg-security-build.yml]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  native:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        abi: [arm64-v8a, armeabi-v7a, x86, x86_64]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd # v4.0.4
+        with:
+          packages: platform-tools
+      - name: Install pinned Android NDK and assembler
+        run: |
+          sdkmanager 'ndk;28.2.13676358'
+          sudo apt-get update
+          sudo apt-get install -y nasm
+      - name: Prepare verified security backports
+        run: |
+          set -euo pipefail
+          mkdir -p tools/patches/ffmpeg
+          cd tools/patches/ffmpeg
+          cat > SHA256SUMS.txt <<'EOF'
+          594a0cbca9527bc1edab7f76679af5a73cee23aadc878e2cc6a9001e22742c45  969c7eb091989a664cb7bf66a1f02051cc46cb52.patch
+          1fd3c8a2b37bb24fe4c8500422090453e18a06634e2647d8fb50216beb5332b8  d1434518fbd03789e3e5dc0657a7a9f1123ce074.patch
+          af4bf01465777b2b8d159e8cd8a2185f155a0db39baa7fc2c0e6acf4d5f734b8  71403a21b02a92b925e26e609e9bd3e48df451cf.patch
+          fb9d5c7625495040858ef316396d10d8be62c514187d0e19cc455410dbce79a9  2c2f6e96e31795ae95a8f8323a493ffbc493111f.patch
+          EOF
+          while read -r checksum patch; do
+            curl --fail --location --retry 3 \
+              "https://github.com/FFmpeg/FFmpeg/commit/$patch" --output "$patch"
+          done < SHA256SUMS.txt
+          sha256sum --check SHA256SUMS.txt
+      - name: Build and check patched FFmpeg
+        env:
+          ABI: ${{ matrix.abi }}
+        run: |
+          set -euo pipefail
+          export ANDROID_NDK_HOME="$ANDROID_HOME/ndk/28.2.13676358"
+          python3 - <<'PY'
+          from pathlib import Path
+          script = Path("tools/build_compact_ffmpeg.sh")
+          text = script.read_text()
+          hook = "git checkout --detach 946fcce07b6dcd0331c8cc609192aeff5e1924f8\n"
+          if "patch_dir=" in text:
+              if all(patch.stem in text for patch in Path("tools/patches/ffmpeg").glob("*.patch")):
+                  raise SystemExit(0)
+              raise SystemExit("Patched recipe does not reference every backport")
+          if text.count(hook) != 1:
+              raise SystemExit("Expected the original pinned FFmpeg build recipe")
+          updates = r'''patch_dir="$root/tools/patches/ffmpeg"
+          (cd "$patch_dir" && sha256sum --check SHA256SUMS.txt)
+          git apply "$patch_dir/969c7eb091989a664cb7bf66a1f02051cc46cb52.patch"
+          git apply --exclude=doc/APIchanges --exclude=libavutil/version.h "$patch_dir/d1434518fbd03789e3e5dc0657a7a9f1123ce074.patch"
+          git apply "$patch_dir/71403a21b02a92b925e26e609e9bd3e48df451cf.patch"
+          git apply "$patch_dir/2c2f6e96e31795ae95a8f8323a493ffbc493111f.patch"
+          '''
+          script.write_text(text.replace(hook, hook + updates))
+          PY
+          bash tools/build_compact_ffmpeg.sh "$ABI"
+          ndk_tools="$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin"
+          target="native-out/$ABI"
+          "$ndk_tools/llvm-readelf" --dyn-syms --wide "$target/usr/lib/libavutil.so" \
+            | grep 'av_encryption_init_info_append_side_data'
+          for elf in "$target/ffmpeg" "$target/ffprobe" "$target/usr/lib/"*.so; do
+            segments=$("$ndk_tools/llvm-readelf" -lW "$elf" | awk '$1 == "LOAD" { print $NF }')
+            test -n "$segments"
+            for alignment in $segments; do
+              (( alignment >= 16384 ))
+            done
+          done
+          cp tools/build_compact_ffmpeg.sh "$target/"
+          cp -r tools/patches/ffmpeg "$target/security-patches"
+          (
+            cd "$target"
+            find . -type f ! -name ARTIFACT_SHA256SUMS.txt -print0 \
+              | sort -z | xargs -0 sha256sum > ARTIFACT_SHA256SUMS.txt
+          )
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: ffmpeg-security-${{ matrix.abi }}
+          path: native-out/${{ matrix.abi }}/
+          if-no-files-found: error
