@@ -116,7 +116,7 @@ def position():
     (OUT/'media-session.txt').write_text(text,encoding='utf-8')
     # Restrict to this app's session before interpreting state/position.
     section=text[text.find('package='+PACKAGE):]
-    match=re.search(r'PlaybackState.*?state=(\d+), position=(\d+)',section)
+    match=re.search(r'PlaybackState.*?state=(?:[A-Z_]+\()?(\d+)\)?, position=(\d+)',section)
     if not match: raise AssertionError('Application media session unavailable')
     return tuple(map(int,match.groups()))
 
@@ -145,12 +145,19 @@ def main(apk, expected, page_size):
     print('MP4 download matches the origin SHA-256',flush=True)
     click('nav_files');click(Path(video).name);click('Play');wait('Pause')
     time.sleep(3)
+    # MediaSession stores a position anchor, not a continuously sampled clock.
+    # Pausing asks the real MediaPlayer to publish its actual currentPosition.
+    shell('cmd','media_session','dispatch','pause');time.sleep(1)
     first=position()
+    assert first[0]==2
+    shell('cmd','media_session','dispatch','play')
     shell('svc','wifi','disable');shell('svc','data','disable')
     shell('input','keyevent','KEYCODE_HOME');time.sleep(4)
+    assert position()[0]==3
+    shell('cmd','media_session','dispatch','pause');time.sleep(1)
     second=position()
-    assert first[0]==second[0]==3 and second[1]>first[1]+1000
-    start();click('Pause');paused=position()[1]
+    assert second[0]==2 and second[1]>first[1]+2000
+    start();wait('Play');paused=second[1]
     for _ in range(5):
         time.sleep(14)
         print('Waiting for idle playback resources to be released',flush=True)
