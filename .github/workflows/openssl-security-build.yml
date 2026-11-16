@@ -1,0 +1,32 @@
+name: OpenSSL security backports
+on:
+  push:
+    branches: ['maintenance/**']
+    paths: ['tools/patches/openssl/**', 'tools/build_patched_openssl.sh', '.github/workflows/openssl-security-build.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        abi: [arm64-v8a, armeabi-v7a, x86, x86_64]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd
+        with:
+          packages: platform-tools
+      - run: sdkmanager 'ndk;28.2.13676358'
+      - name: Build official backports for Android
+        env:
+          ABI: ${{ matrix.abi }}
+        run: ANDROID_NDK_HOME="$ANDROID_HOME/ndk/28.2.13676358" bash tools/build_patched_openssl.sh "$ABI" /tmp/openssl-build
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: openssl-patched-${{ matrix.abi }}
+          path: /tmp/openssl-build/${{ matrix.abi }}/
