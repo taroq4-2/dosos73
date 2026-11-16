@@ -1,7 +1,7 @@
 name: OpenSSL security backports
 on:
   push:
-    branches: ['maintenance/**']
+    branches: ['runtime/openssl-**']
     paths: ['tools/patches/openssl/**', 'tools/build_patched_openssl.sh', '.github/workflows/openssl-security-build.yml']
   workflow_dispatch:
 permissions:

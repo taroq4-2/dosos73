@@ -13,6 +13,9 @@ case "$abi" in
   *) exit 2 ;;
 esac
 mkdir -p "$out"
+architecture_flags=()
+if [ "$abi" = armeabi-v7a ]; then architecture_flags=(-march=armv7-a -mfpu=neon -mfloat-abi=softfp -mthumb); fi
+if [ "$abi" = x86 ]; then architecture_flags=(-march=i686 -msse3 -mstackrealign -mfpmath=sse); fi
 python3 - "$tools" "$out" <<'PY'
 import hashlib,json,pathlib,tarfile,urllib.request,sys
 tools,out=map(pathlib.Path,sys.argv[1:])
@@ -40,8 +43,8 @@ PY
 export ANDROID_NDK_ROOT="$ndk"
 export PATH="$ndk/toolchains/llvm/prebuilt/linux-x86_64/bin:$PATH"
 # Keep TLS/cipher support. Disable neither QUIC nor CMS to conceal advisories.
-./Configure "$target" -D__ANDROID_API__=29 -DNO_SYSLOG -Oz -fPIC \
-  -Wl,-z,max-page-size=16384 \
+./Configure "$target" "${architecture_flags[@]}" -D__ANDROID_API__=29 -DNO_SYSLOG -Oz -fPIC \
+  -fstack-protector-strong -Wl,-z,relro,-z,now -Wl,-z,max-page-size=16384 \
   --prefix=/data/data/com.os73.dosos73/files/runtime/usr \
   shared zlib-dynamic no-ssl no-hw no-srp no-tests enable-tls1_3
 make -j3 build_libs
@@ -50,6 +53,11 @@ for library in libcrypto.so.3 libssl.so.3; do
   llvm-strip --strip-unneeded -o "$out/$abi/$library" "$library"
   llvm-readelf -d "$out/$abi/$library" > "$out/$abi/$library.dynamic.txt"
   llvm-readelf --dyn-syms --wide "$out/$abi/$library" > "$out/$abi/$library.symbols.txt"
+  llvm-readelf --program-headers --wide "$out/$abi/$library" > "$out/$abi/$library.segments.txt"
+  grep -q '__stack_chk_fail' "$out/$abi/$library.symbols.txt"
+  grep -q 'BIND_NOW' "$out/$abi/$library.dynamic.txt"
+  grep -q 'GNU_RELRO' "$out/$abi/$library.segments.txt"
+  if grep -E 'GNU_STACK.*RWE' "$out/$abi/$library.segments.txt"; then exit 1; fi
 done
 perl configdata.pm --dump > "$out/$abi/configuration.txt"
 cp "$tools/patches/openssl/manifest.json" "$out/$abi/source-manifest.json"
