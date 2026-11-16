@@ -25,10 +25,20 @@ def shell(*args): return adb('shell',*args)
 
 
 def window():
-    shell('uiautomator','dump','/sdcard/acceptance-window.xml')
-    raw=shell('cat','/sdcard/acceptance-window.xml')
-    (OUT/'latest-window.xml').write_text(raw,encoding='utf-8')
-    return ET.fromstring(raw)
+    for _ in range(6):
+        shell('rm','-f','/sdcard/acceptance-window.xml')
+        dumped=shell('uiautomator','dump','/sdcard/acceptance-window.xml')
+        # UIAutomator can exit 0 with a null root during Activity/window creation.
+        # Never accept a stale dump from the previous window in that case.
+        if 'ERROR' not in dumped:
+            try:
+                raw=shell('cat','/sdcard/acceptance-window.xml')
+                tree=ET.fromstring(raw)
+                (OUT/'latest-window.xml').write_text(raw,encoding='utf-8')
+                return tree
+            except (subprocess.CalledProcessError, ET.ParseError): pass
+        time.sleep(0.5)
+    raise AssertionError('Android did not expose an accessibility window after six fresh dumps')
 
 
 def find(tree, label):
@@ -187,4 +197,5 @@ if __name__=='__main__':
     try: main(a.apk,a.sha256,a.page_size)
     finally:
         OUT.mkdir(exist_ok=True)
+        (OUT/'last-screen.png').write_bytes(adb('exec-out','screencap','-p',binary=True))
         (OUT/'crash.txt').write_text(adb('logcat','-d','-b','crash'),encoding='utf-8')
