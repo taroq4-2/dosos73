@@ -28,6 +28,15 @@ with tarfile.open(archive) as f: f.extractall(out,filter='data')
 PY
 cd "$out/openssl-3.5.9"
 for patch in "$tools"/patches/openssl/*.patch; do git apply --check "$patch"; git apply "$patch"; done
+python3 - <<'PY'
+from pathlib import Path
+p=Path('Configurations/15-android.conf')
+s=p.read_text()
+old='shared_extension => ".so",'
+assert s.count(old)==1
+# Match the versioned SONAME required by the existing Python extensions.
+p.write_text(s.replace(old, 'shared_extension => ".so.$(SHLIB_VERSION_NUMBER)",'))
+PY
 export ANDROID_NDK_ROOT="$ndk"
 export PATH="$ndk/toolchains/llvm/prebuilt/linux-x86_64/bin:$PATH"
 # Keep TLS/cipher support. Disable neither QUIC nor CMS to conceal advisories.
