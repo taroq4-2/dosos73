@@ -5,7 +5,7 @@
 ### وسائطك، في مكان واحد.
 مدير تنزيل مفتوح المصدر لأندرويد، مصمّم للعربية والإنجليزية.
 
-[**تنزيل APK الموحّد**](https://github.com/taroq4-2/dosos73/releases/download/v1.3.0/dosos73-1.3.0-universal.apk) · [English](README.md) · [ملاحظات الإصدار](https://github.com/taroq4-2/dosos73/releases/tag/v1.3.0)
+[**تنزيل APK الموحّد**](https://github.com/taroq4-2/dosos73/releases/download/v1.3.1/dosos73-1.3.1-universal.apk) · [English](README.md) · [ملاحظات الإصدار](https://github.com/taroq4-2/dosos73/releases/tag/v1.3.1) · [موقع التنزيل الرسمي](https://taroq4-2.github.io/dosos73/)
 
 ![Android](https://img.shields.io/badge/Android-10%2B-19D7F5?style=flat-square)
 ![License](https://img.shields.io/badge/License-GPL--3.0--or--later-7044D4?style=flat-square)
@@ -16,19 +16,20 @@
 
 | الإصدار | حزمة واحدة لأجهزة أندرويد المدعومة |
 |---|---|
-| **1.3.0** | إصدار رسمي · أندرويد **10 فأحدث** |
-| **60.78 ميغابايت** | ملف APK موحّد · ARM32 وARM64 وx86 وx86_64 |
+| **1.3.1** | إصدار رسمي · أندرويد **10 فأحدث** |
+| **58.89 ميغابايت** | ملف APK موحّد · ARM32 وARM64 وx86 وx86_64 |
 | **MP3 V0** | تحويل صوت محلي · المحركات مضمّنة منذ التثبيت |
 
-حجم الملف **60,777,526 بايت**.
+حجم الملف **58,885,174 بايت**.
 
-[تنزيل APK](https://github.com/taroq4-2/dosos73/releases/download/v1.3.0/dosos73-1.3.0-universal.apk) · [التحقق ببصمة SHA-256](https://github.com/taroq4-2/dosos73/releases/download/v1.3.0/SHA256SUMS.txt) · [نتائج الاختبار](docs/RELEASE_1_3_0.md)
+[تنزيل APK](https://github.com/taroq4-2/dosos73/releases/download/v1.3.1/dosos73-1.3.1-universal.apk) · [التحقق ببصمة SHA-256](https://github.com/taroq4-2/dosos73/releases/download/v1.3.1/SHA256SUMS.txt) · [نتائج الاختبار](docs/RELEASE_1_3_1.md)
 
 ثبّت الحزمة، واسمح بالتثبيت من المتصفح أو مدير الملفات الذي اخترته عندما يطلب أندرويد ذلك. تحافظ التحديثات الرسمية على هوية التوقيع نفسها.
 
 ## تنزيلاتك اليومية
 
 - **فيديو وMP3:** حلّل رابطًا عامًا، واختر جودة متاحة، ثم احفظ الفيديو المتوافق أو الصوت بصيغة MP3 V0.
+- **تشغيل محلي:** شغّل الملفات المحفوظة وتحكّم بها من إشعار Android. يستمر صوت الفيديو أو الملف الصوتي في الخلفية.
 - **ملفات مباشرة:** تنزيل متدفق دون حد ثابت للحجم داخل التطبيق، مع استئناف مشروط بتطابق المحتوى وخيار النقل باتصالين.
 - **قائمة تنزيل محفوظة:** أولويات وإيقاف مؤقت واستئناف وإعادة محاولة، مع مراجعة دفعات تصل إلى 20 رابطًا واختيار الصيغة والمجلد لكل رابط.
 - **حفظ متحقق منه:** بصمات للمحتوى، واسترداد للحفظ عند الانقطاع، وسجل مسبق لاسترداد عمليات إعادة التسمية المدعومة.
@@ -60,9 +61,9 @@
 
 ## التحقق والمصدر
 
-تتضمن ملفات الإصدار حزمة APK موقّعة وبصمات SHA-256 وقائمة مكونات بصيغة CycloneDX SBOM ومصدر التطبيق وأرشيفًا مستقلًا لمصادر المكونات الأصلية. [ملفات الإصدار](https://github.com/taroq4-2/dosos73/releases/tag/v1.3.0)
+تتضمن ملفات الإصدار حزمة APK موقّعة وبصمات SHA-256 وقائمة مكونات بصيغة CycloneDX SBOM ومصدر التطبيق وأرشيفًا مستقلًا لمصادر المكونات الأصلية. [ملفات الإصدار](https://github.com/taroq4-2/dosos73/releases/tag/v1.3.1)
 
-[نتائج التحقق للإصدار 1.3.0](docs/RELEASE_1_3_0.md) · [خريطة المشروع](docs/REPOSITORY_MAP.md)
+[نتائج التحقق للإصدار 1.3.1](docs/RELEASE_1_3_1.md) · [خريطة المشروع](docs/REPOSITORY_MAP.md)
 
 ```sh
 ./gradlew testDebugUnitTest lintDebug lintRelease assembleDebug assembleRelease

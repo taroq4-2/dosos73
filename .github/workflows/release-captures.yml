@@ -1,0 +1,73 @@
+name: Signed release screenshots
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Published release tag
+        required: true
+        type: string
+      sha256:
+        description: Expected SHA-256 of the signed universal APK
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Download the exact published APK
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.tag }}
+          EXPECTED_SHA256: ${{ inputs.sha256 }}
+        run: |
+          [[ "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          [[ "$EXPECTED_SHA256" =~ ^[a-f0-9]{64}$ ]]
+          name="dosos73-${RELEASE_TAG#v}-universal.apk"
+          gh release download "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --pattern "$name" --output "$RUNNER_TEMP/signed.apk"
+          printf '%s  %s\n' "$EXPECTED_SHA256" "$RUNNER_TEMP/signed.apk" | sha256sum --check
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
+        with:
+          api-level: 35
+          arch: x86_64
+          target: google_apis
+          profile: pixel_6
+          script: |
+            mkdir captures
+            adb install "$RUNNER_TEMP/signed.apk"
+            adb shell wm size 1080x2400
+            adb shell wm density 420
+            adb shell pm grant com.os73.dosos73 android.permission.POST_NOTIFICATIONS
+            adb shell input keyevent KEYCODE_WAKEUP
+            adb shell wm dismiss-keyguard
+            adb shell am start -W -n com.os73.dosos73/.MainActivity
+            sleep 3
+            adb shell pidof com.os73.dosos73
+            adb shell uiautomator dump /sdcard/window.xml
+            adb pull /sdcard/window.xml captures/home-ar.xml
+            grep -F 'تحميل الوسائط' captures/home-ar.xml || grep -F 'رابط' captures/home-ar.xml
+            adb exec-out screencap -p > captures/home-ar.png
+            adb shell cmd locale set-app-locales com.os73.dosos73 --user 0 --locales en-US
+            adb shell am force-stop com.os73.dosos73
+            adb shell am start -W -n com.os73.dosos73/.MainActivity
+            sleep 2
+            adb shell uiautomator dump /sdcard/window.xml
+            adb pull /sdcard/window.xml captures/home-en.xml
+            grep -F 'Download media' captures/home-en.xml
+            adb exec-out screencap -p > captures/home-en.png
+            sha256sum "$RUNNER_TEMP/signed.apk" > captures/apk-sha256.txt
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: signed-release-captures
+          path: captures/

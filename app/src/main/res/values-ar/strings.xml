@@ -78,8 +78,6 @@
     <string name="nav_files">الملفات</string>
     <string name="more">المزيد</string>
     <string name="settings">الإعدادات</string>
-    <string name="url_placeholder">أدخل الرابط هنا…</string>
-    <string name="download_action">تحميل</string>
     <string name="start_short">ابدأ</string>
     <string name="quick_tools">أدوات سريعة</string>
     <string name="extract_audio">استخراج الصوت</string>
@@ -130,8 +128,6 @@
     <string name="download_behavior">سلوك التنزيل</string>
     <string name="pause_explanation">يمكن إيقاف التنزيل المباشر مؤقتًا. بعد الانقطاع يُستأنف الجزء المحفوظ فقط عند إثبات تطابق المصدر، وإلا يبدأ الملف من جديد بأمان. تنزيلات محرك الوسائط تبدأ مجددًا بعد الانقطاع.</string>
     <string name="audio_tool_hint">ألصق رابطًا مدعومًا. تُختار صيغ الصوت عند توفرها.</string>
-    <string name="source_hint">ألصق رابط وسائط عامًا في حقل الإدخال. تتوقف الصيغ المتاحة على المصدر، وقد يتطلب بعض المحتوى صلاحيات وصول لا يوفرها التطبيق.</string>
-    <string name="got_it">حسنًا</string>
     <string name="close">إغلاق</string>
     <string name="confirm">تأكيد</string>
     <string name="delete_confirmation">هل تريد حذف «%1$s» من التخزين؟ لا يمكن التراجع عن ذلك.</string>
@@ -146,6 +142,11 @@
     <string name="pending_link_hint">راجع الرابط الوارد أو ألغِه لمتابعة عملك الحالي.</string>
     <string name="preview">معاينة محلية</string>
     <string name="preview_local">معاينة محلية فقط دون الاتصال بالمصدر.</string>
+    <string name="playback_channel">تشغيل محلي</string>
+    <string name="playback_play">تشغيل</string>
+    <string name="playback_stop">إيقاف</string>
+    <string name="playback_background">يستمر الصوت عند مغادرة التطبيق، بما فيه صوت الفيديو.</string>
+    <string name="playback_local_required">احفظ الملف في مجلد «التنزيلات» على جهازك لتشغيله هنا دون اتصال.</string>
     <string name="preview_unsupported">تعذّرت معاينة الملف هنا. جرّب تطبيقًا خارجيًا.</string>
     <string name="open_external">فتح بتطبيق آخر</string>
     <string name="privacy_title">الخصوصية والبيانات المحلية</string>

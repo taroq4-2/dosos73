@@ -62,7 +62,6 @@ internal fun MainActivity.AppScreen(model: MainViewModel, sharedGeneration: Int,
     var presetApplying by remember { mutableStateOf(false) }
     var requestingNotifications by remember { mutableStateOf(false) }
     var details by remember { mutableStateOf(false) }
-    var source by remember { mutableStateOf<String?>(null) }
     var fileAction by rememberSaveable(stateSaver = listSaver<Pair<SavedFile, String>?, Any>(
         save = { value -> value?.let { (file, action) ->
             listOf(file.uri, file.name, file.mime, file.bytes, file.date, action)
@@ -355,13 +354,16 @@ internal fun MainActivity.AppScreen(model: MainViewModel, sharedGeneration: Int,
         containerColor = Neon.Background,
         snackbarHost = { SnackbarHost(snackbar) },
         bottomBar = {
-            AppNavigation(page) { key ->
-                focus.clearFocus()
-                keyboard?.hide()
-                page = key
-                query = ""
-                searching = false
-                if (key == "files") refresh()
+            Column {
+                NowPlaying { preview = it }
+                AppNavigation(page) { key ->
+                    focus.clearFocus()
+                    keyboard?.hide()
+                    page = key
+                    query = ""
+                    searching = false
+                    if (key == "files") refresh()
+                }
             }
         },
     ) { padding ->
@@ -395,7 +397,6 @@ internal fun MainActivity.AppScreen(model: MainViewModel, sharedGeneration: Int,
                     "home" ->
                         HomeScreen(
                             screen,
-                            transfer,
                             tree != null,
                             model::edit,
                             model::select,
@@ -404,14 +405,16 @@ internal fun MainActivity.AppScreen(model: MainViewModel, sharedGeneration: Int,
                             onPaste = {
                                 focus.clearFocus()
                                 keyboard?.hide()
-                                model.paste(
+                                val text = try {
                                     getSystemService(ClipboardManager::class.java)
                                         .primaryClip
                                         ?.takeIf { it.itemCount > 0 }
                                         ?.getItemAt(0)
                                         ?.text
+                                        ?.take(32_768)
                                         ?.toString()
-                                )
+                                } catch (_: RuntimeException) { null }
+                                model.paste(text)
                             },
                             onSettings = { page = "settings" },
                             onFiles = {
@@ -422,14 +425,12 @@ internal fun MainActivity.AppScreen(model: MainViewModel, sharedGeneration: Int,
                                 model.prefer(Kind.AUDIO)
                                 message(R.string.audio_tool_hint)
                             },
-                            onVideo = { model.prefer(Kind.VIDEO) },
                             onFolder = { picker.launch(tree) },
                             onDefaultFolder = {
                                     tree = null
                                 preferences.edit().remove("tree").apply()
                             },
                             onStart = ::requestStart,
-                            onSource = { source = it },
                             onOffline = { page = "offline" },
                             onPreset = ::applyPreset,
                             startEnabled = !submitting && !requestingNotifications && !presetApplying,
@@ -598,26 +599,19 @@ internal fun MainActivity.AppScreen(model: MainViewModel, sharedGeneration: Int,
         DownloadHistoryReview(item) { answer.complete(it) }
     }
     preview?.let { item ->
-        OfflinePreview(
-            item,
-            { preview = null },
-            {
-                preview = null
-                open(Uri.parse(item.uri), item.mime)
-            },
-        )
+        key(item.uri) {
+            OfflinePreview(
+                item,
+                { preview = null },
+                {
+                    preview = null
+                    open(Uri.parse(item.uri), item.mime)
+                },
+            )
+        }
     }
     PendingSharedReview(screen, batchBusy, batchSaving, batchStorageError,
         onReview = model::acceptPending, onDiscard = model::discardPending)
-    if (source != null)
-        AlertDialog(
-            onDismissRequest = { source = null },
-            title = { Text(source!!) },
-            text = { Text(stringResource(R.string.source_hint)) },
-            confirmButton = {
-                TextButton({ source = null }) { Text(stringResource(R.string.got_it)) }
-            },
-        )
     if (details) TransferDetailsDialog(transfer) { details = false }
     fileAction?.let { (item, type) ->
         AlertDialog(

@@ -4,12 +4,9 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
-import android.graphics.ImageDecoder
 import android.net.Uri
 import android.os.Build
-import android.widget.VideoView
 import androidx.compose.foundation.selection.toggleable
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -20,11 +17,9 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.viewinterop.AndroidView
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -197,101 +192,6 @@ internal fun BatchScreen(
 
 internal fun safeSourceLabel(url: String?): String =
     url?.let { runCatching { java.net.URI(it).host }.getOrNull() } ?: "—"
-
-@Composable
-internal fun OfflinePreview(item: SavedFile, onDismiss: () -> Unit, onExternal: () -> Unit) {
-    val context = LocalContext.current
-    val uri = remember(item.uri) { Uri.parse(item.uri) }
-    val lifecycle = androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
-    var bitmap by remember(item.uri) { mutableStateOf<android.graphics.Bitmap?>(null) }
-    var failed by remember(item.uri) { mutableStateOf(uri.scheme != "content") }
-    var player by remember { mutableStateOf<VideoView?>(null) }
-    LaunchedEffect(item.uri) {
-        if (!failed && item.mime.startsWith("image/")) {
-            bitmap =
-                withContext(Dispatchers.IO) {
-                    runCatching {
-                            ImageDecoder.decodeBitmap(
-                                ImageDecoder.createSource(context.contentResolver, uri)
-                            ) { decoder, info, _ ->
-                                val scale =
-                                    minOf(1f, 1024f / maxOf(info.size.width, info.size.height))
-                                decoder.setTargetSize(
-                                    maxOf(1, (info.size.width * scale).toInt()),
-                                    maxOf(1, (info.size.height * scale).toInt()),
-                                )
-                                decoder.allocator = ImageDecoder.ALLOCATOR_SOFTWARE
-                            }
-                        }
-                        .getOrNull()
-                }
-            failed = bitmap == null
-        } else if (!item.mime.startsWith("video/") && !item.mime.startsWith("audio/")) failed = true
-    }
-    DisposableEffect(lifecycle, item.uri) {
-        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
-            if (event == androidx.lifecycle.Lifecycle.Event.ON_PAUSE ||
-                event == androidx.lifecycle.Lifecycle.Event.ON_STOP) {
-                runCatching { player?.pause() }
-            }
-        }
-        lifecycle.addObserver(observer)
-        onDispose {
-            lifecycle.removeObserver(observer)
-            runCatching { player?.stopPlayback() }
-            player = null
-        }
-    }
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(item.name, maxLines = 2) },
-        text = {
-            Column {
-                Text(
-                    stringResource(R.string.preview_local),
-                    style = MaterialTheme.typography.bodySmall,
-                )
-                if (failed) Text(stringResource(R.string.preview_unsupported))
-                else if (item.mime.startsWith("image/")) {
-                    bitmap?.let {
-                        Image(
-                            it.asImageBitmap(),
-                            null,
-                            Modifier.fillMaxWidth().heightIn(max = 320.dp),
-                        )
-                    } ?: CircularProgressIndicator()
-                } else
-                    AndroidView(
-                        factory = { ctx ->
-                            VideoView(ctx).apply {
-                                player = this
-                                setMediaController(
-                                    android.widget.MediaController(ctx).also {
-                                        it.setAnchorView(this)
-                                    }
-                                )
-                                setOnErrorListener { _, _, _ ->
-                                    failed = true
-                                    true
-                                }
-                                setOnPreparedListener {
-                                    if (lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED)) start()
-                                }
-                                try {
-                                    setVideoURI(uri)
-                                } catch (_: Exception) {
-                                    failed = true
-                                }
-                            }
-                        },
-                        modifier = Modifier.fillMaxWidth().height(240.dp),
-                    )
-            }
-        },
-        confirmButton = { TextButton(onDismiss) { Text(stringResource(R.string.close)) } },
-        dismissButton = { TextButton(onExternal) { Text(stringResource(R.string.open_external)) } },
-    )
-}
 
 @Composable
 internal fun PrivacyScreen(onHistoryCleared: () -> Unit) {
