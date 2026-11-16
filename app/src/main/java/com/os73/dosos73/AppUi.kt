@@ -316,7 +316,7 @@ internal fun TransferCard(
                 }
                 if (
                     state.phase in setOf(Phase.PAUSED, Phase.WAITING) ||
-                        (state.phase == Phase.DOWNLOADING && Transfers.currentTask?.analysis?.direct == true)
+                        (state.phase == Phase.DOWNLOADING && Transfers.currentTask?.localSource == null)
                 )
                     IconAction(
                         if (state.phase in setOf(Phase.PAUSED, Phase.WAITING)) Glyph.PLAY else Glyph.PAUSE,

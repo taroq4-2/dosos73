@@ -257,7 +257,9 @@ class RenameRecoveryRegressionTest {
         assertNotNull(recovery.pending())
         // Creation/publication of another document must remain durably indexed.
         val published = create("new-publication.bin", "new bytes")
-        assertTrue(File(context.filesDir, "saved-files.json").readText().contains(published.uri))
+        state.value = emptyList()
+        assertTrue(runCatching { LibraryRepository.refresh(context) }.isFailure)
+        assertTrue(LibraryRepository.files.value.any { it.uri == published.uri })
         assertNotNull(recovery.pending())
         assertTrue(runCatching { LibraryRepository.delete(context, original) }.isFailure)
         LibraryRepository.hideHistory(context, unrelated)

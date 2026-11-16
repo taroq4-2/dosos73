@@ -67,6 +67,42 @@ class LocalPlaybackTest {
         return result
     }
 
+    @Test fun idlePauseReleasesServiceAndResumesAtBookmark() {
+        val resolver = context.contentResolver
+        val name = "bookmark-${UUID.randomUUID()}.wav"
+        val uri = checkNotNull(resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, ContentValues().apply {
+            put(MediaStore.MediaColumns.DISPLAY_NAME, name)
+            put(MediaStore.MediaColumns.MIME_TYPE, "audio/wav")
+            put(MediaStore.MediaColumns.IS_PENDING, 1)
+        }))
+        try {
+            checkNotNull(resolver.openOutputStream(uri)).use { it.write(wave()) }
+            resolver.update(uri, ContentValues().apply { put(MediaStore.MediaColumns.IS_PENDING, 0) }, null, null)
+            LocalPlaybackService.pauseTimeoutMillisForTests = 200
+            ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+                scenario.onActivity { assertTrue(LocalPlayback.start(it, SavedFile(uri.toString(), name, "audio/wav", 0, 0))) }
+                await { LocalPlayback.state.value?.phase == PlaybackPhase.PLAYING }
+                instrumentation.runOnMainSync { LocalPlayback.seek(4_000) }
+                await { position() >= 4_000 }
+                instrumentation.runOnMainSync { LocalPlayback.pause() }
+                await { LocalPlayback.state.value?.phase == PlaybackPhase.SUSPENDED && !LocalPlayback.hasService() }
+                val bookmark = position()
+                assertTrue(bookmark >= 4_000)
+                scenario.moveToState(Lifecycle.State.CREATED)
+                // Suspension keeps metadata, not a running player or advancing clock.
+                Thread.sleep(300)
+                assertEquals(bookmark, position())
+                scenario.moveToState(Lifecycle.State.RESUMED)
+                scenario.onActivity { LocalPlayback.resume(it) }
+                await { LocalPlayback.state.value?.phase == PlaybackPhase.PLAYING && position() > bookmark + 250 }
+            }
+        } finally {
+            instrumentation.runOnMainSync { LocalPlayback.stop() }
+            LocalPlaybackService.pauseTimeoutMillisForTests = null
+            resolver.delete(uri, null, null)
+        }
+    }
+
     private fun await(condition: () -> Boolean) = runBlocking {
         withTimeout(15_000) { while (!condition()) delay(100) }
     }

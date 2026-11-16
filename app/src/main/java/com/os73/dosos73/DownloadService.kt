@@ -75,7 +75,7 @@ class DownloadService : Service() {
                     }
                     "pause" -> {
                         if (job?.isActive == true && !cancelled) {
-                            if (Transfers.currentTask?.analysis?.direct == true &&
+                            if (Transfers.currentTask?.localSource == null &&
                                 Transfers.state.value.phase in setOf(Phase.DOWNLOADING, Phase.PAUSED)) {
                                 val task = Transfers.currentTask ?: return@launch
                                 // Prevent moving to the next task while the journal write suspends.

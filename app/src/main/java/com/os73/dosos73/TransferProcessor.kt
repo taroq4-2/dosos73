@@ -2,7 +2,6 @@ package com.os73.dosos73
 
 import android.content.Context
 import java.io.File
-import java.util.UUID
 import kotlinx.coroutines.*
 
 /** Owns verification/publication and journal acknowledgement, independently of Service callbacks. */
@@ -18,9 +17,7 @@ internal class TransferProcessor(
     }
 
     suspend fun run(task: DownloadTask, detail: String) = coroutineScope {
-        val directory =
-            if (task.analysis.direct || task.localSource != null) TransferFiles.directory(context, task.id)
-            else File(context.cacheDir, "transfer-${UUID.randomUUID()}")
+        val directory = TransferFiles.directory(context, task.id)
         var stage = Stage.TRANSFER
         var terminal = TransferState(Phase.CANCELLED, task.analysis.title)
         var failureCode: FailureCode? = null
@@ -138,7 +135,7 @@ internal class TransferProcessor(
             // Keep every dispatcher return in finalization inside an active context. A
             // cancelled caller must not interrupt queue acknowledgement after a commit.
             withContext(NonCancellable) {
-                val retain = task.analysis.direct && terminal.phase != Phase.COMPLETE && !isUserCancelled()
+                val retain = task.localSource == null && terminal.phase != Phase.COMPLETE && !isUserCancelled()
                 withContext(Dispatchers.IO) {
                     if (!retain) directory.deleteRecursively()
                 }

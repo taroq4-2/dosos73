@@ -32,9 +32,10 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
-internal enum class PlaybackPhase { PREPARING, PLAYING, PAUSED, FINISHED, ERROR }
+internal enum class PlaybackPhase { PREPARING, PLAYING, PAUSED, SUSPENDED, FINISHED, ERROR }
 
-internal data class LocalPlaybackState(val file: SavedFile, val phase: PlaybackPhase, val duration: Int = 0) {
+internal data class LocalPlaybackState(val file: SavedFile, val phase: PlaybackPhase, val duration: Int = 0,
+    val position: Int = 0, val videoWidth: Int = 0, val videoHeight: Int = 0) {
     val active get() = phase != PlaybackPhase.FINISHED && phase != PlaybackPhase.ERROR
 }
 
@@ -69,7 +70,9 @@ internal object LocalPlayback {
         if (file.kind !in setOf(Kind.AUDIO, Kind.VIDEO) || !allowed(context, Uri.parse(file.uri))) return false
         return try {
             ContextCompat.startForegroundService(context, Intent(context, LocalPlaybackService::class.java)
-                .putExtra("uri", file.uri).putExtra("name", file.name.take(240)).putExtra("mime", file.mime))
+                .putExtra("uri", file.uri).putExtra("name", file.name.take(240)).putExtra("mime", file.mime)
+                .putExtra("position", updates.value?.takeIf { it.file.uri == file.uri &&
+                    it.phase == PlaybackPhase.SUSPENDED }?.position ?: 0))
             true
         } catch (_: IllegalStateException) { false }
         catch (_: SecurityException) { false }
@@ -79,10 +82,20 @@ internal object LocalPlayback {
     fun detach(owner: LocalPlaybackService) { if (service === owner) service = null }
     fun publish(state: LocalPlaybackState?) { updates.value = state }
     fun pause() { service?.pause() }
-    fun resume() { service?.play() }
-    fun stop() { service?.finish() }
-    fun seek(position: Int) { service?.seek(position) }
-    fun position(): Int = service?.position() ?: 0
+    fun resume(context: Context) {
+        if (service != null) service?.play()
+        else updates.value?.takeIf { it.phase == PlaybackPhase.SUSPENDED }?.let { start(context, it.file) }
+    }
+    fun stop() { if (service != null) service?.finish() else updates.value = null }
+    fun seek(position: Int) {
+        if (service != null) service?.seek(position)
+        else updates.value?.takeIf { it.phase == PlaybackPhase.SUSPENDED }?.let {
+            updates.value = it.copy(position = position.coerceIn(0, it.duration))
+        }
+    }
+    fun position(): Int = service?.position() ?: updates.value?.takeIf {
+        it.phase == PlaybackPhase.SUSPENDED }?.position ?: 0
+    internal fun hasService() = service != null
     fun videoSurface(uri: String): Surface? = output?.takeIf { it.uri == uri && it.surface.isValid }?.surface
 
     fun attachVideo(uri: String, owner: Any, surface: Surface) {
@@ -98,6 +111,13 @@ internal object LocalPlayback {
 }
 
 class LocalPlaybackService : Service() {
+    companion object {
+        @Volatile internal var pauseTimeoutMillisForTests: Long? = null
+        private const val ID = 76
+        private const val CHANNEL = "local_playback"
+        private const val TOGGLE = "com.os73.dosos73.PLAYBACK_TOGGLE"
+        private const val STOP = "com.os73.dosos73.PLAYBACK_STOP"
+    }
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private val audioAttributes = AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_MEDIA)
         .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC).build()
@@ -147,13 +167,13 @@ class LocalPlaybackService : Service() {
                 val name = intent?.getStringExtra("name")
                 val mime = intent?.getStringExtra("mime")
                 if (uri == null || name == null || mime == null) finish()
-                else load(SavedFile(uri, name, mime, 0, 0))
+                else load(SavedFile(uri, name, mime, 0, 0), intent.getIntExtra("position", 0))
             }
         }
         return START_NOT_STICKY
     }
 
-    private fun load(file: SavedFile) {
+    private fun load(file: SavedFile, resumePosition: Int) {
         releasePlayback()
         current = LocalPlaybackState(file, PlaybackPhase.PREPARING)
         val uri = Uri.parse(file.uri)
@@ -182,16 +202,26 @@ class LocalPlaybackService : Service() {
                 media.setAudioAttributes(audioAttributes)
                 media.setWakeMode(this@LocalPlaybackService, PowerManager.PARTIAL_WAKE_LOCK)
                 media.setDataSource(checkNotNull(input))
+                media.setOnVideoSizeChangedListener { source, width, height ->
+                    if (player === source && width > 0 && height > 0) {
+                        current = current?.copy(videoWidth = width, videoHeight = height)
+                        LocalPlayback.publish(current)
+                    }
+                }
                 media.setOnPreparedListener { prepared ->
                     if (player === prepared) {
-                        idleTimeout?.cancel()
                         val duration = prepared.duration.coerceAtLeast(0)
                         current = current?.copy(duration = duration)
                         session.setMetadata(MediaMetadata.Builder()
                             .putString(MediaMetadata.METADATA_KEY_TITLE, file.name)
                             .putLong(MediaMetadata.METADATA_KEY_DURATION, duration.toLong()).build())
                         update(PlaybackPhase.PAUSED)
-                        play()
+                        if (resumePosition in 1 until duration) {
+                            prepared.setOnSeekCompleteListener {
+                                if (player === it) { it.setOnSeekCompleteListener(null); play() }
+                            }
+                            prepared.seekTo(resumePosition.toLong(), MediaPlayer.SEEK_CLOSEST)
+                        } else play()
                     }
                 }
                 media.setOnCompletionListener { if (player === it) finish(PlaybackPhase.FINISHED) }
@@ -233,7 +263,8 @@ class LocalPlaybackService : Service() {
             player?.pause()
             abandonFocus()
             update(PlaybackPhase.PAUSED)
-            idleTimeout = scope.launch { delay(60_000); finish() }
+            val timeout = if (BuildConfig.DEBUG) pauseTimeoutMillisForTests ?: 60_000 else 60_000
+            idleTimeout = scope.launch { delay(timeout); suspendPlayback() }
         } catch (_: RuntimeException) { finish(PlaybackPhase.ERROR) }
     }
 
@@ -246,6 +277,17 @@ class LocalPlaybackService : Service() {
     }
 
     internal fun position(): Int = runCatching { player?.currentPosition ?: 0 }.getOrDefault(0)
+
+    /** Retain one small process-local bookmark, with no player, service or wake lock. */
+    private fun suspendPlayback() {
+        val bookmark = current?.copy(phase = PlaybackPhase.SUSPENDED, position = position()) ?: return
+        current = null
+        releasePlayback()
+        LocalPlayback.publish(bookmark)
+        session.isActive = false
+        stopForeground(STOP_FOREGROUND_REMOVE)
+        stopSelf()
+    }
 
     private fun update(phase: PlaybackPhase) {
         val next = current?.copy(phase = phase) ?: return
@@ -324,10 +366,4 @@ class LocalPlaybackService : Service() {
             .setStyle(style).build()
     }
 
-    private companion object {
-        const val ID = 76
-        const val CHANNEL = "local_playback"
-        const val TOGGLE = "com.os73.dosos73.PLAYBACK_TOGGLE"
-        const val STOP = "com.os73.dosos73.PLAYBACK_STOP"
-    }
 }

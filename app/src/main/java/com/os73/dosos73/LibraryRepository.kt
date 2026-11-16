@@ -55,11 +55,37 @@ internal object LibraryRepository {
 
     private fun index(context: Context) = AtomicFile(File(context.filesDir, "saved-files.json"))
 
+    private data class IndexIdentity(val path: String, val fileKey: Any?, val bytes: Long,
+        val modified: java.nio.file.attribute.FileTime)
+    private var cachedIdentity: IndexIdentity? = null
+    private var cachedRows: List<SavedFile>? = null
+    private var cachedDigest: String? = null
+    private fun identity(file: File): IndexIdentity? = try {
+        if (File(file.path + ".bak").exists()) null
+        else java.nio.file.Files.readAttributes(file.toPath(), java.nio.file.attribute.BasicFileAttributes::class.java).let {
+            IndexIdentity(file.absolutePath, it.fileKey(), it.size(), it.lastModifiedTime())
+        }
+    } catch (_: java.io.IOException) { null }
+
     private fun read(context: Context): List<SavedFile> {
+        val disk = index(context).baseFile
+        val before = identity(disk)
+        if (before != null && before == cachedIdentity) cachedRows?.let { rows ->
+            cachedDigest?.let { return (LibraryAdditions(context).read(it) + rows).distinctBy { row -> row.uri } }
+        }
         val input = try { index(context).openRead() }
             catch (_: java.io.FileNotFoundException) { return emptyList() }
-        return android.util.JsonReader(input.reader(Charsets.UTF_8)).use { reader ->
+        val digest = java.security.MessageDigest.getInstance("SHA-256")
+        val result = android.util.JsonReader(java.security.DigestInputStream(input, digest).reader(Charsets.UTF_8)).use { reader ->
             val files = ArrayList<SavedFile>()
+            val envelope = reader.peek() == android.util.JsonToken.BEGIN_OBJECT
+            if (envelope) {
+                reader.beginObject()
+                require(reader.nextName() == "version" && reader.nextInt() == 1)
+                require(reader.nextName() == "generation")
+                java.util.UUID.fromString(reader.nextString())
+                require(reader.nextName() == "rows")
+            }
             reader.beginArray()
             while (reader.hasNext()) {
                 var uri: String? = null; var name: String? = null; var mime: String? = null
@@ -78,9 +104,14 @@ internal object LibraryRepository {
                     requireNotNull(bytes), requireNotNull(date)))
             }
             reader.endArray()
+            if (envelope) reader.endObject()
             require(reader.peek() == android.util.JsonToken.END_DOCUMENT)
             files
         }
+        val after = identity(disk)
+        val hash = digest.digest().joinToString("") { "%02x".format(it) }
+        if (after != null && after == before) { cachedIdentity = after; cachedRows = result; cachedDigest = hash }
+        return (LibraryAdditions(context).read(hash) + result).distinctBy { it.uri }
     }
 
     private fun write(context: Context, files: List<SavedFile>) {
@@ -88,14 +119,20 @@ internal object LibraryRepository {
         val atomic = index(context)
         val output = atomic.startWrite()
         try {
-            val writer = android.util.JsonWriter(output.writer(Charsets.UTF_8))
-            writer.beginArray()
+            val digest = java.security.MessageDigest.getInstance("SHA-256")
+            val writer = android.util.JsonWriter(java.security.DigestOutputStream(output, digest).writer(Charsets.UTF_8))
+            writer.beginObject().name("version").value(1).name("generation").value(java.util.UUID.randomUUID().toString())
+                .name("rows").beginArray()
             files.forEach {
                 writer.beginObject().name("uri").value(it.uri).name("name").value(it.name)
                     .name("mime").value(it.mime).name("bytes").value(it.bytes).name("date").value(it.date).endObject()
             }
-            writer.endArray(); writer.flush()
+            writer.endArray().endObject(); writer.flush()
             atomic.finishWrite(output)
+            cachedIdentity = identity(atomic.baseFile)
+            cachedRows = files
+            cachedDigest = digest.digest().joinToString("") { "%02x".format(it) }
+            LibraryAdditions(context).clear()
         } catch (error: Exception) { atomic.failWrite(output); throw error }
     }
 
@@ -110,7 +147,7 @@ internal object LibraryRepository {
         if (changed == null) { recovery.forget(); return saved }
         val next = saved.filterNot { it.uri == plan.original.uri || it.uri == changed.uri } + changed
         mutable.value = next
-        cache.remove(plan.original.uri)
+        invalidateThumbnail(plan.original.uri)
         write(context, next)
         val currentHidden = hidden(context)
         check(context.getSharedPreferences("library", Context.MODE_PRIVATE).edit()
@@ -200,7 +237,13 @@ internal object LibraryRepository {
                     ?.use { if (it.moveToFirst()) name = it.getString(0) ?: fallback }
                 val entry = SavedFile(uri.toString(), name, mime, bytes, System.currentTimeMillis())
                 val next = (listOf(entry) + saved).distinctBy { it.uri }
-                write(context, next)
+                val digest = cachedDigest?.takeIf { cachedIdentity == identity(index(context).baseFile) }
+                val additions = LibraryAdditions(context)
+                val delta = digest?.let { (listOf(entry) + additions.read(it)).distinctBy { row -> row.uri } }
+                if (digest != null && delta != null && delta.size <= 128) {
+                    if (BuildConfig.DEBUG) beforeIndexWriteForTests?.invoke()
+                    additions.write(digest, delta)
+                } else write(context, next)
                 mutable.value = next
             }
         }
@@ -223,7 +266,7 @@ internal object LibraryRepository {
                     // Keep the provider-returned identity usable even if the immediate receipt write fails.
                     val changed = item.copy(uri = returned.toString(), name = clean)
                     mutable.value = saved.map { if (it.uri == item.uri) changed else it }
-                    cache.remove(item.uri)
+                    invalidateThumbnail(item.uri)
                     recovery.recordReturned(plan, returned)
                     recoverRename(context)
                     return@withLock
@@ -242,7 +285,7 @@ internal object LibraryRepository {
                 // Keep the usable reference in this session even if the following disk write fails.
                 // Provider rename and this private index are not one durable transaction.
                 mutable.value = next
-                cache.remove(item.uri)
+                invalidateThumbnail(item.uri)
                 write(context, next)
                 migrateHiddenUri(context, item.uri, newUri.toString())
                 LibraryPreferences.migrateUri(context, item.uri, newUri.toString())
@@ -263,7 +306,7 @@ internal object LibraryRepository {
                 val next = saved.filterNot { it.uri == item.uri }
                 write(context, next)
                 mutable.value = next
-                cache.remove(item.uri)
+                invalidateThumbnail(item.uri)
                 LibraryPreferences.clearUri(context, item.uri)
                 removeHiddenUri(context, item.uri)
                 updateSourceHistory { DownloadHistory.remove(context, item.uri) }
@@ -278,7 +321,7 @@ internal object LibraryRepository {
             val next = saved.filterNot { it.uri == item.uri }
             write(context, next)
             mutable.value = next
-            cache.remove(item.uri)
+            invalidateThumbnail(item.uri)
             LibraryPreferences.clearUri(context, item.uri)
             removeHiddenUri(context, item.uri)
             updateSourceHistory { DownloadHistory.remove(context, item.uri) }
@@ -348,14 +391,24 @@ internal object LibraryRepository {
         cache.evictAll()
     }
 
-    suspend fun thumbnail(context: Context, item: SavedFile): Bitmap? =
-        withContext(Dispatchers.IO) {
-            cache.get(item.uri)
-                ?: runCatching {
-                        context.contentResolver
-                            .loadThumbnail(Uri.parse(item.uri), Size(192, 192), null)
-                            .also { cache.put(item.uri, it) }
-                    }
-                    .getOrNull()
-        }
+    private fun invalidateThumbnail(uri: String) {
+        cache.snapshot().keys.filter { it.startsWith("$uri|") }.forEach(cache::remove)
+    }
+
+    suspend fun thumbnail(context: Context, item: SavedFile): Bitmap? {
+        val key = "${item.uri}|${item.date}|${item.bytes}"
+        cache.get(key)?.let { return it }
+        val signal = android.os.CancellationSignal()
+        return try {
+            withAnalysisCancellation(signal::cancel) {
+                withContext(Dispatchers.IO) {
+                    val bitmap = context.contentResolver.loadThumbnail(Uri.parse(item.uri), Size(192, 192), signal)
+                    kotlinx.coroutines.currentCoroutineContext().ensureActive()
+                    cache.put(key, bitmap)
+                    bitmap
+                }
+            }
+        } catch (cancelled: CancellationException) { throw cancelled }
+        catch (_: Exception) { null }
+    }
 }

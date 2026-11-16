@@ -126,7 +126,11 @@ class MainActivity : ComponentActivity() {
         }
         if (intent?.action == Intent.ACTION_SEND && intent.type == "text/plain") {
             quickPending = false
-            intent.getCharSequenceExtra(Intent.EXTRA_TEXT)?.toString()?.let(model::receive)
+            try {
+                intent.getCharSequenceExtra(Intent.EXTRA_TEXT)?.take(32768)?.toString()?.let(model::receiveShared)
+            } catch (_: RuntimeException) {
+                Toast.makeText(this, R.string.error_url, Toast.LENGTH_SHORT).show()
+            }
             intent.removeExtra(Intent.EXTRA_TEXT)
             sharedGeneration++
         }

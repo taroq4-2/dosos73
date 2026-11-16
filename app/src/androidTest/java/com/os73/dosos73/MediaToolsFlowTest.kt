@@ -203,6 +203,9 @@ class MediaToolsFlowTest {
 
     private fun startAndAwaitDuplicate(quick: Boolean) {
         val start = if (quick) "quick_start" else "download"
+        // A dismissed Dialog can leave its Android window intercepting the next tap
+        // after Compose has removed its nodes. Await the owning window, not a fixed delay.
+        if (!quick) compose.waitUntil(10000) { context.hasWindowFocus() }
         compose.waitUntil(10000) { runCatching { compose.onNodeWithTag(start).assertIsEnabled(); true }.getOrDefault(false) }
         val button = compose.onNodeWithTag(start)
         if (!quick) button.performScrollTo()
@@ -251,6 +254,37 @@ class MediaToolsFlowTest {
     }
 
     @Test fun homeDuplicateCancelAndOpenDoNotEnqueueAndAgainEnqueuesOnce() = duplicateChoices(quick = false)
+
+    @Test fun failedDownloadDoesNotInvalidateAnIndependentHomeReview() {
+        val choice = Choice("fixture", Kind.FILE, "bin", "Original")
+        val review = analysis(choice)
+        openHome(review)
+        compose.runOnIdle { Transfers.update(TransferState(Phase.FAILED, "Other task", error = R.string.error_start)) }
+        compose.waitForIdle()
+        compose.runOnIdle {
+            assertEquals(review, model.state.value.analysis)
+            assertEquals(choice, model.state.value.selected)
+            Transfers.update(TransferState())
+        }
+    }
+
+    @Test fun sharedLinkNeedsExplicitReviewWhenAutoAnalysisIsDisabled() {
+        val old = LinkPreferences.autoAnalyzeShared(context)
+        try {
+            LinkPreferences.setAutoAnalyzeShared(context, false)
+            val choice = Choice("fixture", Kind.FILE, "bin", "Original")
+            val review = analysis(choice)
+            openHome(review)
+            val shared = "https://example.com/shared.mp4"
+            compose.runOnIdle { model.receiveShared(shared) }
+            compose.runOnIdle {
+                assertEquals(shared, model.state.value.pendingShared)
+                assertEquals(review, model.state.value.analysis)
+                assertFalse(model.state.value.busy)
+                model.discardPending()
+            }
+        } finally { LinkPreferences.setAutoAnalyzeShared(context, old) }
+    }
 
     @Test fun quickDuplicateCancelAndOpenDoNotEnqueueAndAgainEnqueuesOnce() = duplicateChoices(quick = true)
 

@@ -30,8 +30,8 @@ class MediaEngine(
 
     fun cancel() { session?.cancel() }
 
-    private suspend fun <T> invocation(block: (NativeProcessSession) -> T): T {
-        val active = NativeProcessSession(context)
+    private suspend fun <T> invocation(entry: File? = null, block: (NativeProcessSession) -> T): T {
+        val active = if (entry == null) NativeProcessSession(context) else NativeProcessSession(context, entry)
         check(session == null) { "Media engine already active" }
         session = active
         return try {
@@ -133,8 +133,23 @@ class MediaEngine(
         task: DownloadTask,
         directory: File,
         progress: (Float?, Boolean) -> Unit,
-    ): File =
-        invocation { active ->
+    ): File {
+        val entry = withContext(Dispatchers.IO) {
+            // Only validated HTTP checkpoint pairs survive a new extraction. Completed
+            // streams, fragment journals and interrupted merges are rebuilt safely.
+            directory.listFiles().orEmpty().forEach { file ->
+                val retained = when {
+                    file.name.endsWith(".part") -> File(file.path + ".resume.json").isFile
+                    file.name.endsWith(".part.resume.json") -> File(file.path.removeSuffix(".resume.json")).isFile
+                    else -> false
+                }
+                if (!retained) check(file.delete()) { "Stale native output cannot be removed" }
+            }
+            for (name in listOf("verified_http.py", "verified_download.py"))
+                context.assets.open(name).use { source -> File(directory, name).outputStream().use(source::copyTo) }
+            File(directory, "verified_download.py")
+        }
+        return invocation(entry) { active ->
             initialize()
             publicProxy(Stage.TRANSFER).use { p ->
                 active.attachProxy(p)
@@ -142,8 +157,8 @@ class MediaEngine(
                     request(task.analysis.url, p).apply {
                         addOption("-f", formatSelector(task.choice.id))
                         addOption("-o", File(directory, "media.%(ext)s").absolutePath)
-                        addOption("--no-part")
-                        addOption("--no-continue")
+                        addOption("--part")
+                        addOption("--continue")
                         addOption("--newline")
                         addOption("--progress-delta", 1)
                         if (task.choice.kind == Kind.AUDIO && task.choice.extension == "mp3") {
@@ -157,7 +172,8 @@ class MediaEngine(
                 var stage = Stage.TRANSFER
                 Diagnostics.event(stage, "started")
                 try {
-                    active.execute(request.buildCommand()) { percent, processing ->
+                    val zipapp = File(context.noBackupFilesDir, "youtubedl-android/yt-dlp/yt-dlp")
+                    active.execute(listOf(zipapp.absolutePath) + request.buildCommand()) { percent, processing ->
                         if (processing) stage = Stage.MERGE
                         progress(percent, processing)
                     }
@@ -177,6 +193,7 @@ class MediaEngine(
                 } ?: error("Output missing")
             }
         }
+    }
 
     companion object {
         internal fun formatSelector(id: String): String {

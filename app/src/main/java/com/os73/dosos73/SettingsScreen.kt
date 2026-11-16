@@ -2,11 +2,17 @@ package com.os73.dosos73
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
+import androidx.compose.ui.platform.LocalContext
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.Dispatchers
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 
 @Composable
 internal fun SettingsScreen(customFolder: Boolean, onLanguage: (String) -> Unit,
@@ -35,6 +41,7 @@ internal fun SettingsScreen(customFolder: Boolean, onLanguage: (String) -> Unit,
             Symbol(Glyph.AUDIO); Spacer(Modifier.width(8.dp)); Text(stringResource(R.string.offline_convert))
         }
         NetworkControls()
+        SharedLinkControls()
         OutlinedButton(onPrivacy, Modifier.fillMaxWidth()) { Text(stringResource(R.string.privacy_title)) }
         OutlinedButton(onBatch, Modifier.fillMaxWidth()) { Text(stringResource(R.string.batch_title)) }
         Panel {
@@ -43,6 +50,33 @@ internal fun SettingsScreen(customFolder: Boolean, onLanguage: (String) -> Unit,
         }
         TextButton(onAbout, Modifier.testTag("about")) { Text(stringResource(R.string.about)) }
         Text(BuildConfig.VERSION_NAME, color = Neon.Muted)
+    }
+}
+
+@Composable
+private fun SharedLinkControls() {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var enabled by remember { mutableStateOf(LinkPreferences.autoAnalyzeShared(context)) }
+    var saving by remember { mutableStateOf(false) }
+    var failed by remember { mutableStateOf(false) }
+    val label = stringResource(R.string.shared_auto)
+    Panel {
+        Text(stringResource(R.string.shared_auto), style = MaterialTheme.typography.titleMedium)
+        Text(stringResource(R.string.shared_auto_hint), color = Neon.Secondary)
+        Switch(enabled, onCheckedChange = { value ->
+            saving = true
+            scope.launch {
+                try {
+                    withContext(Dispatchers.IO) { LinkPreferences.setAutoAnalyzeShared(context, value) }
+                    enabled = value
+                    failed = false
+                } catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
+                catch (_: Exception) { failed = true }
+                finally { saving = false }
+            }
+        }, enabled = !saving, modifier = Modifier.testTag("shared_auto").semantics { contentDescription = label })
+        if (failed) Text(stringResource(R.string.error_storage), color = MaterialTheme.colorScheme.error)
     }
 }
 

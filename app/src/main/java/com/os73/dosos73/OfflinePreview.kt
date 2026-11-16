@@ -17,6 +17,10 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.Lifecycle
@@ -47,7 +51,7 @@ internal fun OfflinePreview(item: SavedFile, onDismiss: () -> Unit, onExternal: 
                     image && local -> ImagePreview(uri)
                     playable && local -> {
                         Text(stringResource(R.string.playback_background), style = MaterialTheme.typography.bodySmall)
-                        if (item.kind == Kind.VIDEO) LocalVideoSurface(item.uri)
+                        if (item.kind == Kind.VIDEO) LocalVideoSurface(item.uri, playback)
                         PlaybackControls(item, playback)
                     }
                     image || playable -> Text(stringResource(R.string.playback_local_required))
@@ -88,10 +92,15 @@ private fun ImagePreview(uri: Uri) {
 }
 
 @Composable
-private fun LocalVideoSurface(uri: String) {
+private fun LocalVideoSurface(uri: String, playback: LocalPlaybackState?) {
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     val token = remember(uri) { Any() }
     var holder by remember(uri) { mutableStateOf<SurfaceHolder?>(null) }
+    BoxWithConstraints(Modifier.fillMaxWidth().height(240.dp).background(Neon.Background),
+        contentAlignment = Alignment.Center) {
+    val ratio = if (playback != null && playback.videoWidth > 0 && playback.videoHeight > 0)
+        playback.videoWidth.toFloat() / playback.videoHeight else 16f / 9f
+    val width = minOf(maxWidth, maxHeight * ratio)
     AndroidView(
         factory = { context -> SurfaceView(context).apply {
             this.holder.addCallback(object : SurfaceHolder.Callback {
@@ -103,8 +112,9 @@ private fun LocalVideoSurface(uri: String) {
                 }
             })
         } },
-        modifier = Modifier.fillMaxWidth().aspectRatio(16f / 9f).background(Neon.Background),
+        modifier = Modifier.size(width, width / ratio),
     )
+    }
     DisposableEffect(uri, lifecycle, holder) {
         fun attach() {
             holder?.surface?.takeIf { it.isValid }?.let { LocalPlayback.attachVideo(uri, token, it) }
@@ -146,7 +156,16 @@ private fun PlaybackControls(item: SavedFile, playback: LocalPlaybackState?) {
     if (preparing) LinearProgressIndicator(Modifier.fillMaxWidth())
     val duration = playback?.duration?.takeIf { active && it > 0 }
     if (duration != null) {
+        val elapsed = playbackTime((dragged ?: position).toInt())
+        val total = playbackTime(duration)
+        val label = stringResource(R.string.playback_seek)
+        val time = stringResource(R.string.playback_time, elapsed, total)
+        Text(time, style = MaterialTheme.typography.bodySmall)
         Slider((dragged ?: position).coerceIn(0f, duration.toFloat()), { dragged = it },
+            modifier = Modifier.testTag("playback_seek").semantics {
+                contentDescription = label
+                stateDescription = time
+            },
             valueRange = 0f..duration.toFloat(), onValueChangeFinished = {
                 dragged?.let { LocalPlayback.seek(it.toInt()); position = it }
                 dragged = null
@@ -158,7 +177,7 @@ private fun PlaybackControls(item: SavedFile, playback: LocalPlaybackState?) {
             failed = false
             when {
                 playing -> LocalPlayback.pause()
-                active -> LocalPlayback.resume()
+                active -> LocalPlayback.resume(context)
                 else -> failed = !LocalPlayback.start(context, item)
             }
         }, enabled = !preparing) {
@@ -170,6 +189,7 @@ private fun PlaybackControls(item: SavedFile, playback: LocalPlaybackState?) {
 
 @Composable
 internal fun NowPlaying(onOpen: (SavedFile) -> Unit) {
+    val context = LocalContext.current
     val state by LocalPlayback.state.collectAsStateWithLifecycle()
     val playback = state?.takeIf { it.active } ?: return
     val playing = playback.phase == PlaybackPhase.PLAYING
@@ -181,8 +201,14 @@ internal fun NowPlaying(onOpen: (SavedFile) -> Unit) {
             if (playback.phase != PlaybackPhase.PREPARING)
                 IconAction(if (playing) Glyph.PAUSE else Glyph.PLAY,
                     stringResource(if (playing) R.string.pause else R.string.playback_play),
-                    if (playing) LocalPlayback::pause else LocalPlayback::resume)
+                    if (playing) LocalPlayback::pause else { { LocalPlayback.resume(context) } })
             IconAction(Glyph.CLOSE, stringResource(R.string.playback_stop), LocalPlayback::stop)
         }
     }
+}
+
+internal fun playbackTime(milliseconds: Int): String {
+    val seconds = milliseconds.coerceAtLeast(0) / 1000
+    return if (seconds >= 3600) "%d:%02d:%02d".format(java.util.Locale.ROOT, seconds / 3600, seconds / 60 % 60, seconds % 60)
+    else "%d:%02d".format(java.util.Locale.ROOT, seconds / 60, seconds % 60)
 }

@@ -221,6 +221,11 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         mutable.value = ScreenState(url.take(8192), pendingShared = mutable.value.pendingShared)
     }
 
+    internal fun receiveShared(text: String) {
+        if (LinkPreferences.autoAnalyzeShared(getApplication())) receive(text)
+        else mutable.value = mutable.value.copy(pendingShared = text.take(32768))
+    }
+
     fun receive(text: String) {
         if (mutable.value.busy || batchBusyMutable.value || !draftReady || savingMutable.value || draftErrorMutable.value) {
             mutable.value = mutable.value.copy(pendingShared = text.take(32768))
@@ -362,12 +367,6 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     fun select(choice: Choice) {
         if (choice in mutable.value.analysis?.choices.orEmpty())
             mutable.value = mutable.value.copy(selected = choice)
-    }
-
-    fun invalidateFormats() {
-        // A transfer failure is independent of a new link currently being reviewed.
-        if (mutable.value.quick) return
-        mutable.value = mutable.value.copy(analysis = null, selected = null)
     }
 
     internal fun quickInitializing() = !draftReady && !draftErrorMutable.value

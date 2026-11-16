@@ -126,7 +126,7 @@
     <string name="language_ar">العربية</string>
     <string name="language_en">English</string>
     <string name="download_behavior">سلوك التنزيل</string>
-    <string name="pause_explanation">يمكن إيقاف التنزيل المباشر مؤقتًا. بعد الانقطاع يُستأنف الجزء المحفوظ فقط عند إثبات تطابق المصدر، وإلا يبدأ الملف من جديد بأمان. تنزيلات محرك الوسائط تبدأ مجددًا بعد الانقطاع.</string>
+    <string name="pause_explanation">يمكن إيقاف التنزيل مؤقتًا. تُستكمل البيانات المحفوظة بعد التحقق من المصدر ومعرّف ETag القوي ونطاق البايتات. الروابط المتغيرة والمصادر غير القابلة للتحقق والبث المجزأ تبدأ من جديد بأمان.</string>
     <string name="audio_tool_hint">ألصق رابطًا مدعومًا. تُختار صيغ الصوت عند توفرها.</string>
     <string name="close">إغلاق</string>
     <string name="confirm">تأكيد</string>
@@ -145,6 +145,10 @@
     <string name="playback_channel">تشغيل محلي</string>
     <string name="playback_play">تشغيل</string>
     <string name="playback_stop">إيقاف</string>
+    <string name="playback_seek">موضع التشغيل</string>
+    <string name="shared_auto">تحليل الروابط المشتركة تلقائيًا</string>
+    <string name="shared_auto_hint">معطّل افتراضيًا. عند تفعيله يتصل التطبيق بمصدر الرابط الوارد من التطبيقات الأخرى فور استلامه. يبقى بدء التنزيل بحاجة إلى تأكيد.</string>
+    <string name="playback_time">%1$s من %2$s</string>
     <string name="playback_background">يستمر الصوت عند مغادرة التطبيق، بما فيه صوت الفيديو.</string>
     <string name="playback_local_required">احفظ الملف في مجلد «التنزيلات» على جهازك لتشغيله هنا دون اتصال.</string>
     <string name="preview_unsupported">تعذّرت معاينة الملف هنا. جرّب تطبيقًا خارجيًا.</string>

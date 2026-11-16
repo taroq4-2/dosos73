@@ -130,8 +130,9 @@ internal fun MainActivity.AppScreen(model: MainViewModel, sharedGeneration: Int,
         }
     }
     LaunchedEffect(transfer.phase) {
-        if (transfer.phase == Phase.COMPLETE) refresh()
-        if (transfer.phase == Phase.FAILED) model.invalidateFormats()
+        // Publication already updates the library flow. Discover only after a failed index update.
+        if (transfer.phase == Phase.COMPLETE && files.none { it.uri == transfer.uri?.toString() }) refresh()
+        // Transfer failures belong to Downloads. Keep the independent input/review intact.
     }
     BackHandler(page != "home") {
         page = if (page == "contact") "about" else "home"

@@ -126,7 +126,7 @@
     <string name="language_ar">العربية</string>
     <string name="language_en">English</string>
     <string name="download_behavior">Download behavior</string>
-    <string name="pause_explanation">Direct downloads can pause. After interruption, a verified saved prefix is reused only when the source identity matches; otherwise the file restarts safely. Media-engine downloads restart after interruption.</string>
+    <string name="pause_explanation">Downloads can pause. Saved data is reused only after the source, strong ETag and byte range are verified. Changed links, unverified sources and segmented streams restart safely.</string>
     <string name="audio_tool_hint">Paste a supported link. Audio formats will be selected when available.</string>
     <string name="close">Close</string>
     <string name="confirm">Confirm</string>
@@ -145,6 +145,10 @@
     <string name="playback_channel">Local playback</string>
     <string name="playback_play">Play</string>
     <string name="playback_stop">Stop</string>
+    <string name="playback_seek">Playback position</string>
+    <string name="shared_auto">Automatically analyze shared links</string>
+    <string name="shared_auto_hint">Off by default. When enabled, links sent by other apps contact their source as soon as received. Downloads still require confirmation.</string>
+    <string name="playback_time">%1$s of %2$s</string>
     <string name="playback_background">Audio continues when you leave the app, including sound from video.</string>
     <string name="playback_local_required">Save this file to your device’s Downloads folder to play it offline here.</string>
     <string name="preview_unsupported">This file cannot be previewed here. Try an external app.</string>

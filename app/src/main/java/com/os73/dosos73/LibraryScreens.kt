@@ -62,6 +62,7 @@ internal fun SavedFileRow(
     val lifecycle = androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
     LaunchedEffect(item.uri, item.date, refreshToken, lifecycle) {
         lifecycle.repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.STARTED) {
+          try {
             val access = FileAccess.inspect(context, android.net.Uri.parse(item.uri))
             val image = if (access == FileAvailability.AVAILABLE) LibraryRepository.thumbnail(context, item) else null
             kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main.immediate) {
@@ -70,6 +71,10 @@ internal fun SavedFileRow(
                     bitmap = image
                 }
             }
+            kotlinx.coroutines.awaitCancellation()
+          } finally {
+            bitmap = null
+          }
         }
     }
     fun previewAction() = when (availability) {
