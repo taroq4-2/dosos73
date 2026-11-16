@@ -1,6 +1,7 @@
 package com.os73.dosos73
 
 import android.content.ContentValues
+import android.content.ContentUris
 import android.net.Uri
 import android.provider.MediaStore
 import androidx.lifecycle.Lifecycle
@@ -29,7 +30,8 @@ class LocalPlaybackTest {
             "content://media/external_primary/downloads/123?redirect=true",
         )
         examples.forEach { assertFalse(it, LocalPlayback.allowed(context, Uri.parse(it))) }
-        assertTrue(LocalPlayback.allowed(context, MediaStore.Downloads.getContentUri("external_primary", 123)))
+        val record = ContentUris.withAppendedId(MediaStore.Downloads.getContentUri("external_primary"), 123)
+        assertTrue(LocalPlayback.allowed(context, record))
     }
 
     @Test fun localAudioKeepsAdvancingAfterActivityStopsAndReleasesOnStop() {

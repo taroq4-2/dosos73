@@ -312,6 +312,8 @@ class MediaToolsFlowTest {
             hasAnyAncestor(hasTestTag("preset_row_${preset.id}"))).performScrollTo().performClick()
         compose.waitUntil(10000) { model.state.value.selected == saved && !destination.contains("tree") }
         compose.runOnIdle { assertEquals(saved, model.state.value.selected); assertFalse(destination.contains("tree")) }
+        val applied = context.getString(R.string.tools_preset_applied)
+        compose.waitUntil(10000) { compose.onAllNodesWithText(applied).fetchSemanticsNodes().isEmpty() }
         startAndAwaitDuplicate(quick = false)
         compose.onNode(hasText(context.getString(R.string.cancel)) and hasClickAction() and hasAnyAncestor(hasTestTag("history_dialog"))).performClick()
         compose.waitUntil(10000) { compose.onAllNodesWithTag("history_dialog").fetchSemanticsNodes().isEmpty() }
