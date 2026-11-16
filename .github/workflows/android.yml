@@ -3,6 +3,16 @@ on:
   push:
     branches: [main, 'maintenance/**', 'feature/**', 'release/**']
     tags: ['v*']
+    paths:
+      - 'app/**'
+      - 'gradle/**'
+      - '*.gradle.kts'
+      - 'gradle.properties'
+      - 'tools/**'
+      - 'docs/audit/**'
+      - '.github/workflows/android.yml'
+      - '!tools/accept_signed_apk.py'
+      - '!tools/signed-candidate.json'
   pull_request:
   workflow_dispatch:
 concurrency:
@@ -124,7 +134,9 @@ jobs:
             mkdir -p app/build/reports/shared-device
             adb shell df -h /data | tee app/build/reports/shared-device/storage.txt
             adb shell am instrument -w com.os73.dosos73.test/androidx.test.runner.AndroidJUnitRunner | tee app/build/reports/shared-device/instrumentation.txt
+            adb logcat -d | grep -E 'LIBRARY_(INDEX|INCREMENTAL)' > app/build/reports/shared-device/library-benchmarks.txt || true
             test "$(tail -n 6 app/build/reports/shared-device/instrumentation.txt | tr -d '\r' | grep -E '^OK \([0-9]+ tests?\)$')" != ""
+            if [ "${{ matrix.api }}" -eq 36 ]; then for attempt in 1 2 3; do adb shell am instrument -w -e class com.os73.dosos73.MediaToolsFlowTest#homeDuplicateCancelAndOpenDoNotEnqueueAndAgainEnqueuesOnce com.os73.dosos73.test/androidx.test.runner.AndroidJUnitRunner | tee "app/build/reports/shared-device/duplicate-repeat-$attempt.txt"; test "$(tail -n 6 "app/build/reports/shared-device/duplicate-repeat-$attempt.txt" | tr -d '\r' | grep -E '^OK \([0-9]+ tests?\)$')" != "" || exit 1; done; fi
             if [ "${{ matrix.api }}" -eq 35 ]; then adb shell am instrument -w -e class com.os73.dosos73.LiveDownloadTest#mediaExtractorAndNativeDownload -e liveMedia true com.os73.dosos73.test/androidx.test.runner.AndroidJUnitRunner | tee app/build/reports/shared-device/live-native.txt; test "$(tail -n 6 app/build/reports/shared-device/live-native.txt | tr -d '\r' | grep -E '^OK \([0-9]+ tests?\)$')" != ""; fi
             printf '%s\n' 'Default instrumentation excludes gated liveMedia/liveTransport/tlsCompare cases. API 35 separately runs a public MP4 native extraction/download; this does not assert live YouTube acceptance.' > app/build/reports/shared-device/coverage-scope.txt
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

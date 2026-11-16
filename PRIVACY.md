@@ -4,6 +4,10 @@ No accounts, advertising SDKs, analytics or telemetry are implemented. URLs are 
 
 The app reads the clipboard when you press Paste or use the optional Quick download entry. If you separately enable the launcher fallback, opening the app from its launcher can trigger the same quick entry. Quick download reads one clipboard snapshot after the device is unlocked and the app has focus. It shows the link for review and contacts the source only after you choose Analyze. Saving the file requires you to press Start. The app has no background clipboard monitor.
 
+Links shared by another app wait for Review by default. Settings contains a separate, optional automatic shared-link analysis switch. Enabling it allows source requests immediately after a shared link is received; it does not authorize saving a download without Start. Invalid text is rejected locally. Explicit Paste and Analyze are user-initiated source requests.
+
+Validated native HTTP continuation stores only URL digests, strong ETags, byte counts and a prefix digest beside private no-backup partial files. It does not store signed media URLs in those checkpoint files. Changed links, validators or redirects cause a safe restart; segmented streams restart. Paused playback keeps a process-local file/position bookmark after its player and service are released; the bookmark is not sent anywhere and does not survive process termination.
+
 The selected destination URI is stored locally. Transfers use private temporary files, then MediaStore or a user-authorized folder. Backup is disabled. The project does not collect cookies or passwords, and cannot access private account content.
 
 The operating system and externally selected file-opening apps have their own privacy behavior. Public GitHub bug reports should not contain private links, credentials or personal files.
@@ -19,3 +23,5 @@ Completed-history day selection is currently a visibility filter, not complete m
 لا يجمع التطبيق حسابات أو إعلانات أو تحليلات استخدام. يقرأ الحافظة عند الضغط على «لصق» أو استخدام اختصار «التنزيل السريع» بعد تفعيله. إذا فعّلت خيار الفتح البديل من المشغّل، فقد يقرأ الحافظة عند فتح التطبيق من أيقونته أيضًا. يقرأ الاختصار الحافظة مرة واحدة بعد فتح قفل الجهاز وظهور التطبيق في الواجهة، ويعرض الرابط للمراجعة. يتصل التطبيق بالمصدر بعد اختيار «تحليل»، ويبدأ حفظ الملف بعد الضغط على «بدء». لا يراقب التطبيق الحافظة في الخلفية.
 
 تبقى بيانات الاسترداد الخاصة مشفّرة محليًا. ترى المواقع الخارجية طلباتك وعنوان الشبكة. تصفية السجل حسب الأيام لا تمحو كل بياناته ولا تحذف ملفات التنزيل.
+
+تنتظر الروابط المشتركة من تطبيق آخر اختيار «مراجعة» افتراضيًا. يمكن تفعيل تحليلها تلقائيًا من إعداد مستقل وواضح؛ عند تفعيله يتصل التطبيق بالمصدر عند الاستلام، ويظل بدء حفظ الملف بحاجة إلى تأكيد. يُرفض النص غير الصالح محليًا. يحتفظ الاستئناف بمعرّفات تحقق وبصمات للروابط والأجزاء في التخزين الخاص المستثنى من النسخ الاحتياطي، ولا يكتب الروابط الموقّعة نفسها في ملفات التحقق. الملفات الجزئية نفسها وبيانات فهرس المكتبة محمية بعزل تخزين أندرويد، ولا نزعم تشفير كل بايت منها.

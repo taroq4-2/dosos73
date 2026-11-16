@@ -83,18 +83,19 @@ internal object LocalPlayback {
     fun publish(state: LocalPlaybackState?) { updates.value = state }
     fun pause() { service?.pause() }
     fun resume(context: Context) {
-        if (service != null) service?.play()
-        else updates.value?.takeIf { it.phase == PlaybackPhase.SUSPENDED }?.let { start(context, it.file) }
+        val bookmark = updates.value?.takeIf { it.phase == PlaybackPhase.SUSPENDED }
+        if (bookmark != null) {
+            if (!start(context, bookmark.file)) updates.value = bookmark.copy(phase = PlaybackPhase.ERROR)
+        } else service?.play()
     }
     fun stop() { if (service != null) service?.finish() else updates.value = null }
     fun seek(position: Int) {
-        if (service != null) service?.seek(position)
-        else updates.value?.takeIf { it.phase == PlaybackPhase.SUSPENDED }?.let {
-            updates.value = it.copy(position = position.coerceIn(0, it.duration))
-        }
+        val bookmark = updates.value?.takeIf { it.phase == PlaybackPhase.SUSPENDED }
+        if (bookmark != null) updates.value = bookmark.copy(position = position.coerceIn(0, bookmark.duration))
+        else service?.seek(position)
     }
-    fun position(): Int = service?.position() ?: updates.value?.takeIf {
-        it.phase == PlaybackPhase.SUSPENDED }?.position ?: 0
+    fun position(): Int = updates.value?.takeIf { it.phase == PlaybackPhase.SUSPENDED }?.position
+        ?: service?.position() ?: 0
     internal fun hasService() = service != null
     fun videoSurface(uri: String): Surface? = output?.takeIf { it.uri == uri && it.surface.isValid }?.surface
 
