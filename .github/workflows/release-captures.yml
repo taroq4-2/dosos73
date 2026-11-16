@@ -20,6 +20,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - name: Download the exact published APK
         env:
           GH_TOKEN: ${{ github.token }}
@@ -40,32 +43,9 @@ jobs:
         with:
           api-level: 35
           arch: x86_64
-          target: google_apis
+          target: default
           profile: pixel_6
-          script: |
-            mkdir captures
-            adb install "$RUNNER_TEMP/signed.apk"
-            adb shell wm size 1080x2400
-            adb shell wm density 420
-            adb shell pm grant com.os73.dosos73 android.permission.POST_NOTIFICATIONS
-            adb shell input keyevent KEYCODE_WAKEUP
-            adb shell wm dismiss-keyguard
-            adb shell am start -W -n com.os73.dosos73/.MainActivity
-            sleep 3
-            adb shell pidof com.os73.dosos73
-            adb shell uiautomator dump /sdcard/window.xml
-            adb pull /sdcard/window.xml captures/home-ar.xml
-            grep -F 'تحميل الوسائط' captures/home-ar.xml || grep -F 'رابط' captures/home-ar.xml
-            adb exec-out screencap -p > captures/home-ar.png
-            adb shell cmd locale set-app-locales com.os73.dosos73 --user 0 --locales en-US
-            adb shell am force-stop com.os73.dosos73
-            adb shell am start -W -n com.os73.dosos73/.MainActivity
-            sleep 2
-            adb shell uiautomator dump /sdcard/window.xml
-            adb pull /sdcard/window.xml captures/home-en.xml
-            grep -F 'Download media' captures/home-en.xml
-            adb exec-out screencap -p > captures/home-en.png
-            sha256sum "$RUNNER_TEMP/signed.apk" > captures/apk-sha256.txt
+          script: bash tools/capture_signed_release.sh "$RUNNER_TEMP/signed.apk"
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
