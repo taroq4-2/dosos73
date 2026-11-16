@@ -40,11 +40,9 @@
 
 ## شاهد التطبيق
 
-<img src="screenshots/home-ar.png" width="230" alt="الرئيسية العربية" /> <img src="screenshots/downloads-ar.png" width="230" alt="تنزيل وسائط فعلي" /> <img src="screenshots/media-library-ar.png" width="230" alt="مكتبة الملفات المحفوظة" />
+<img src="screenshots/home-1.3.1-ar.png" width="250" alt="الرئيسية العربية في dosos73 1.3.1" /> <img src="screenshots/home-1.3.1-en.png" width="250" alt="الرئيسية الإنجليزية في dosos73 1.3.1" /> <img src="screenshots/media-library-ar.png" width="250" alt="مكتبة الملفات في dosos73 1.2.0" />
 
-<img src="screenshots/home-en.png" width="230" alt="الرئيسية الإنجليزية" /> <img src="screenshots/settings-ar.png" width="230" alt="الإعدادات العربية" />
-
-تعرض الصور واجهة الإصدار الموقّع 1.2.0 على محاكي أندرويد. [تفاصيل الالتقاط](screenshots/README.md)
+التُقطت صور الرئيسية من APK الموقّع للإصدار 1.3.1 على Android 15. لقطة مكتبة الملفات من 1.2.0. [تفاصيل الالتقاط](screenshots/README.md)
 
 ## من الرابط إلى الملف
 

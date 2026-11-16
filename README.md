@@ -38,11 +38,9 @@ Install the APK and allow installation from your chosen browser or file manager 
 
 ## See the app
 
-<img src="screenshots/home-ar.png" width="230" alt="Arabic Home" /> <img src="screenshots/downloads-ar.png" width="230" alt="Actual media download" /> <img src="screenshots/media-library-ar.png" width="230" alt="Saved files" />
+<img src="screenshots/home-1.3.1-ar.png" width="250" alt="Arabic Home in dosos73 1.3.1" /> <img src="screenshots/home-1.3.1-en.png" width="250" alt="English Home in dosos73 1.3.1" /> <img src="screenshots/media-library-ar.png" width="250" alt="Saved files in dosos73 1.2.0" />
 
-<img src="screenshots/home-en.png" width="230" alt="English Home" /> <img src="screenshots/settings-ar.png" width="230" alt="Settings" />
-
-These screenshots show the signed 1.2.0 interface on an Android emulator. [Capture details](screenshots/README.md)
+The Home screenshots come from the signed 1.3.1 APK on Android 15. The library screenshot is from 1.2.0. [Capture details](screenshots/README.md)
 
 ## From a link to a saved file
 

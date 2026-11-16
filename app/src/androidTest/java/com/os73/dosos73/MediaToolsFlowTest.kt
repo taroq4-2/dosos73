@@ -181,6 +181,7 @@ class MediaToolsFlowTest {
 
     private fun openQuick(analysis: Analysis) {
         installAnalysis(analysis)
+        compose.waitUntil(10000) { context.hasWindowFocus() && !model.state.value.quick }
         compose.runOnIdle {
             model.edit("")
             QuickLaunch.setEnabled(context, true)
@@ -190,6 +191,7 @@ class MediaToolsFlowTest {
                 InstrumentationRegistry.getInstrumentation().callActivityOnNewIntent(context, QuickLaunch.intent(context))
             } finally { context.intent = harnessIntent }
         }
+        compose.waitUntil(10000) { model.state.value.quickNeedsConfirmation }
         compose.onNodeWithTag("quick_analyze").performClick()
         awaitAnalysis(analysis, quick = true)
         compose.onNodeWithTag("quick_dialog").assertIsDisplayed()
@@ -202,7 +204,9 @@ class MediaToolsFlowTest {
     private fun startAndAwaitDuplicate(quick: Boolean) {
         val start = if (quick) "quick_start" else "download"
         compose.waitUntil(10000) { runCatching { compose.onNodeWithTag(start).assertIsEnabled(); true }.getOrDefault(false) }
-        compose.onNodeWithTag(start).performClick()
+        val button = compose.onNodeWithTag(start)
+        if (!quick) button.performScrollTo()
+        button.assertIsDisplayed().performClick()
         compose.waitUntil(10000) { compose.onAllNodesWithTag("history_dialog").fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithTag("history_dialog").assertIsDisplayed()
     }
