@@ -35,7 +35,7 @@ s=p.read_text()
 old='shared_extension => ".so",'
 assert s.count(old)==1
 # Match the versioned SONAME required by the existing Python extensions.
-p.write_text(s.replace(old, 'shared_extension => ".so.$(SHLIB_VERSION_NUMBER)",'))
+p.write_text(s.replace(old, r'shared_extension => ".so.\$(SHLIB_VERSION_NUMBER)",'))
 PY
 export ANDROID_NDK_ROOT="$ndk"
 export PATH="$ndk/toolchains/llvm/prebuilt/linux-x86_64/bin:$PATH"
