@@ -1,0 +1,249 @@
+{
+  "base_sha256": "f5fe7e277d60b003f4c6b987e3c8bf50d227eb42af110099a766cabdfc6871b4",
+  "removed": [
+    {
+      "abi": "arm64-v8a",
+      "path": "usr/lib/python3.12/lib-dynload/_ctypes_test.cpython-312.so",
+      "sha256": "b9b22f2e497e18c01723afb159511f5137b072cde40a0b5cac2b3f394d61cb1f"
+    },
+    {
+      "abi": "arm64-v8a",
+      "path": "usr/lib/python3.12/lib-dynload/_testbuffer.cpython-312.so",
+      "sha256": "d31f1536a476ea5384603711bb3281a669b5eec08ea8b5d54e44756b5b06ad93"
+    },
+    {
+      "abi": "arm64-v8a",
+      "path": "usr/lib/python3.12/lib-dynload/_testcapi.cpython-312.so",
+      "sha256": "68cc352e8445eef40471f5d2307a0bbfc8b9cce81b4c347944e3ffb80344a0c0"
+    },
+    {
+      "abi": "arm64-v8a",
+      "path": "usr/lib/python3.12/lib-dynload/_testclinic.cpython-312.so",
+      "sha256": "f05af0e1e39c15bb5f6b436b884ed2b06f540aa287fbb2afaf946de28276514c"
+    },
+    {
+      "abi": "arm64-v8a",
+      "path": "usr/lib/python3.12/lib-dynload/_testimportmultiple.cpython-312.so",
+      "sha256": "0d6716a3364bf27535a308e256c4f07d90aa44ade3afc672be65e0ccaabecd76"
+    },
+    {
+      "abi": "arm64-v8a",
+      "path": "usr/lib/python3.12/lib-dynload/_testinternalcapi.cpython-312.so",
+      "sha256": "1801341aa09de65477161c437093448492686fe82d520b9cc31671bca552db82"
+    },
+    {
+      "abi": "arm64-v8a",
+      "path": "usr/lib/python3.12/lib-dynload/_testmultiphase.cpython-312.so",
+      "sha256": "0dc5d75f2eecfa3f26af99d8d2e9630f06ccfc71426c0bc9e1ac8648238ff53e"
+    },
+    {
+      "abi": "arm64-v8a",
+      "path": "usr/lib/python3.12/lib-dynload/_testsinglephase.cpython-312.so",
+      "sha256": "02134c85544ab174c240bbbf6e93e59a0748c427a57292b43ccf03b8c519038d"
+    },
+    {
+      "abi": "armeabi-v7a",
+      "path": "usr/lib/python3.12/lib-dynload/_ctypes_test.cpython-312.so",
+      "sha256": "b7e5201fb10c57c46ccd43a54367b9f42b0e316ce139bc1b7b1171ab3489169e"
+    },
+    {
+      "abi": "armeabi-v7a",
+      "path": "usr/lib/python3.12/lib-dynload/_testbuffer.cpython-312.so",
+      "sha256": "950b3cc3f4240223616b83a6481d8aaedf3de05a01ccf0a3a10f971f90c10499"
+    },
+    {
+      "abi": "armeabi-v7a",
+      "path": "usr/lib/python3.12/lib-dynload/_testcapi.cpython-312.so",
+      "sha256": "63d8275342cb7cf128c2a6e8cf78ad57054356bb507430839184987ec08de0d5"
+    },
+    {
+      "abi": "armeabi-v7a",
+      "path": "usr/lib/python3.12/lib-dynload/_testclinic.cpython-312.so",
+      "sha256": "f0a8921991161697b1dc295a6fec0b69ef5990ed124e743d3037028f9c4788a4"
+    },
+    {
+      "abi": "armeabi-v7a",
+      "path": "usr/lib/python3.12/lib-dynload/_testimportmultiple.cpython-312.so",
+      "sha256": "3e116b8cf00f07babbb4a2b89329123940a87a0b07aa29b54b45ef45750599ce"
+    },
+    {
+      "abi": "armeabi-v7a",
+      "path": "usr/lib/python3.12/lib-dynload/_testinternalcapi.cpython-312.so",
+      "sha256": "ae522f2be23b67396184cad22646c8e0f709bae6de27266101f6c8ecf826642c"
+    },
+    {
+      "abi": "armeabi-v7a",
+      "path": "usr/lib/python3.12/lib-dynload/_testmultiphase.cpython-312.so",
+      "sha256": "fb6b0fd35e4915e327a2841abfb65ac5091bee75515bf2c57288826558e71ed0"
+    },
+    {
+      "abi": "armeabi-v7a",
+      "path": "usr/lib/python3.12/lib-dynload/_testsinglephase.cpython-312.so",
+      "sha256": "ffe278da84307243efd4e4870583fde7a7a6af1c6da51d54ae7844773e78eeb3"
+    },
+    {
+      "abi": "x86",
+      "path": "usr/lib/python3.12/lib-dynload/_ctypes_test.cpython-312.so",
+      "sha256": "5f99c436877195e847fd48289b79e42db1944919fddf91151bb2e5357ee6aab8"
+    },
+    {
+      "abi": "x86",
+      "path": "usr/lib/python3.12/lib-dynload/_testbuffer.cpython-312.so",
+      "sha256": "53815f75db92b042875876e0af642a6137e07124a53024441aba7ac604df4d44"
+    },
+    {
+      "abi": "x86",
+      "path": "usr/lib/python3.12/lib-dynload/_testcapi.cpython-312.so",
+      "sha256": "c9f2db1b13361040db34298acaa8ba9532eef46e1306f13033f905b1a15d6b8f"
+    },
+    {
+      "abi": "x86",
+      "path": "usr/lib/python3.12/lib-dynload/_testclinic.cpython-312.so",
+      "sha256": "ff15b2ea23a868ec43047b1a556143641b47adfe4f14caf316cfdde64cf07011"
+    },
+    {
+      "abi": "x86",
+      "path": "usr/lib/python3.12/lib-dynload/_testimportmultiple.cpython-312.so",
+      "sha256": "6a4f866f86998388689b4e7d71a8c3562b2e360f86808c21742cece72c0d2d79"
+    },
+    {
+      "abi": "x86",
+      "path": "usr/lib/python3.12/lib-dynload/_testinternalcapi.cpython-312.so",
+      "sha256": "21e7f6100eb7e6f954e8080770f5ea3963b95ef6d75565800e157ab1fcf78cd7"
+    },
+    {
+      "abi": "x86",
+      "path": "usr/lib/python3.12/lib-dynload/_testmultiphase.cpython-312.so",
+      "sha256": "e0229e6ace39f7a12881f08e05819a92ef7a5de51fcfcff478dd110f59beb994"
+    },
+    {
+      "abi": "x86",
+      "path": "usr/lib/python3.12/lib-dynload/_testsinglephase.cpython-312.so",
+      "sha256": "95f0294ece806081c82eb31026d5bcc59d926efdecfceba0daf44d18422d5e52"
+    },
+    {
+      "abi": "x86_64",
+      "path": "usr/lib/python3.12/lib-dynload/_ctypes_test.cpython-312.so",
+      "sha256": "818d572cd774f546204e7284bc16be2b96bcd9e8803f9364aaa3ce9480bc6cfa"
+    },
+    {
+      "abi": "x86_64",
+      "path": "usr/lib/python3.12/lib-dynload/_testbuffer.cpython-312.so",
+      "sha256": "54ed5b46e6b25fad7ea5912d42df50b2b69137ae2bd2e56f8c26680338bac61e"
+    },
+    {
+      "abi": "x86_64",
+      "path": "usr/lib/python3.12/lib-dynload/_testcapi.cpython-312.so",
+      "sha256": "ecf88b4115213b6615e1de3250d9f5d11848085eb4b1aa2ab33e04525f2dd5c6"
+    },
+    {
+      "abi": "x86_64",
+      "path": "usr/lib/python3.12/lib-dynload/_testclinic.cpython-312.so",
+      "sha256": "b8a24e2567bb24934e528d459a8cbcb4ed39e17be5bb524b3cad9ceeaebf7bca"
+    },
+    {
+      "abi": "x86_64",
+      "path": "usr/lib/python3.12/lib-dynload/_testimportmultiple.cpython-312.so",
+      "sha256": "eb6bd513a33ba4a5f0361704d493b6968a86a262791e2c4892555ae1926038b7"
+    },
+    {
+      "abi": "x86_64",
+      "path": "usr/lib/python3.12/lib-dynload/_testinternalcapi.cpython-312.so",
+      "sha256": "c6046863761151ac2e49f8a51b50a3275ac7b263e0848dbbaed3ae13a313905c"
+    },
+    {
+      "abi": "x86_64",
+      "path": "usr/lib/python3.12/lib-dynload/_testmultiphase.cpython-312.so",
+      "sha256": "28c33c1d579e287ad41bb4637fff7280644e64bbe60d11cbf501ddb1e4f962b4"
+    },
+    {
+      "abi": "x86_64",
+      "path": "usr/lib/python3.12/lib-dynload/_testsinglephase.cpython-312.so",
+      "sha256": "e0bfc5dc0fea37925a2e176d6009707a39d04116556ac16313a675db6364406b"
+    }
+  ],
+  "replaced": [
+    {
+      "abi": "arm64-v8a",
+      "path": "usr/lib/libcrypto.so.3",
+      "before_sha256": "cf775ed70cf3fe7ff7e1b1b70d27552df9acd58ab41a3ea2a138e198d6738874",
+      "after_sha256": "f46b841bdb1ef9100c86a4f0bdafef3f9e1d4ff3ae4d33b01341f642bf9bc193"
+    },
+    {
+      "abi": "arm64-v8a",
+      "path": "usr/lib/libssl.so.3",
+      "before_sha256": "c2a08fb443d29b7d8638f3c8a1b79e587440392d32365653475b7dd3e7b04069",
+      "after_sha256": "da97c348fe4922627d4f6366a853c9f10d414a97b3755179ef8fc311037ec5fb"
+    },
+    {
+      "abi": "armeabi-v7a",
+      "path": "usr/lib/libcrypto.so.3",
+      "before_sha256": "f95ac31441f76d4d0987d4d957d4117b0d3f727253cc809fcc419fba807e7f37",
+      "after_sha256": "c461650b3e966f036afb13cf1a8cf5cfd1beb79f0787b6be6823d8992f38856f"
+    },
+    {
+      "abi": "armeabi-v7a",
+      "path": "usr/lib/libssl.so.3",
+      "before_sha256": "4a838ab7d76c5cd862ec55960bd0f45ba0371ab849783ffe8bf7c5e3fb17b58c",
+      "after_sha256": "e072603f04d9c07a084763676eae67c31867aa93ff1e2f27372eb9e2c53b4631"
+    },
+    {
+      "abi": "x86",
+      "path": "usr/lib/libcrypto.so.3",
+      "before_sha256": "1d701ac9221180408a67dd963b0504f3c26a905053b55b71885675ea18e07e9f",
+      "after_sha256": "8bd106b649a67acb1625ad4e41dd6a6585a6b91bcf43aaef5c1174f50da0c457"
+    },
+    {
+      "abi": "x86",
+      "path": "usr/lib/libssl.so.3",
+      "before_sha256": "0239c65fab3b8b594769bdddc6f2f0c83b83accae7602a3e29ddd79a1f9fb4ea",
+      "after_sha256": "c0e97f82ea5f6ba80d31fb2bc2fcd9e5d9cbddb12659274db3a338de30e9afab"
+    },
+    {
+      "abi": "x86_64",
+      "path": "usr/lib/libcrypto.so.3",
+      "before_sha256": "57cbf4b6fb13c3b92035832d35612719af2867f5b08d6bad26aeafb174d70b90",
+      "after_sha256": "73d1e1f84bf04952d3791bb60acb6449e0350ae3b9e20764080f4fba5d3e1eb2"
+    },
+    {
+      "abi": "x86_64",
+      "path": "usr/lib/libssl.so.3",
+      "before_sha256": "34b7055279d211a637d49d2de66981f8bb49613ccf852d453ede230140287508",
+      "after_sha256": "54591d69d5e5cbbed1e3f102a02d555e27e1a82fce378ca8d220cb6f7b2d0210"
+    }
+  ],
+  "runtime_sha256": "7be1375f51f03104dc55a933ef5ea7de8f0dcbd94ae386417362eb5bb310d855",
+  "runtime_bytes": 51651883,
+  "members": {
+    "assets/dosos73/python-common.json": "e8c78585377efd6781ba82768c2e90138e9938605c51988d1a6e557d8740e8b3",
+    "assets/dosos73/python-common.zip": "41961964814cd3619dbcbc2a655a654be8e5ff8e9b545fedcf38edcfe691fe87",
+    "lib/arm64-v8a/libandroidx.graphics.path.so": "41e9a793c43a0f4fddb19e33f346bace464f30f888ba7b9eaf96294ea115bfb6",
+    "lib/arm64-v8a/libffmpeg.so": "75c2e9044a03c1c6c5e71d2dfbae29941af7536b90c0be21645856e176c7d1af",
+    "lib/arm64-v8a/libffmpeg.zip.so": "fd63769ff71adbe61fe8d32766ad7d30793f28a9b636668966a242740da54849",
+    "lib/arm64-v8a/libffprobe.so": "81574ea84071564f65bf0df51cd640373d22e059672c16755f3f4b61a365de14",
+    "lib/arm64-v8a/libpython.so": "0e8e21b7a2c32bd7ea46995f52ae9195279970d3f099e9b5795520746213646a",
+    "lib/arm64-v8a/libpython.zip.so": "25de0fccbba9099dfc363770119189e476b2fa9f7c16a1ec312fbb422b47aff5",
+    "lib/arm64-v8a/libqjs.so": "91d78b0c0ff664d597ffa17bafbd708cf65b9f925dacc43ac637b3be7b062223",
+    "lib/armeabi-v7a/libandroidx.graphics.path.so": "41399eba6fc2a60f6f14642375c1824f3cf25eb8fec7397d753730a3ceda3e2b",
+    "lib/armeabi-v7a/libffmpeg.so": "f3d95865df7f4196759cf74e679da0048582dc8320993321416a287492e4e2a8",
+    "lib/armeabi-v7a/libffmpeg.zip.so": "f4ee0ee563bb969e19555095e6c137a7aa7c365c157b99254ffeb929e67e82ed",
+    "lib/armeabi-v7a/libffprobe.so": "71208f15916f68996bfcf54215d538a3c5378f65724f0f967e096d4d2cb42cdf",
+    "lib/armeabi-v7a/libpython.so": "1fb44bbc3dd858c41d5f1ea2334d5cece9a08fcf45c714a4c2322b76843eb84f",
+    "lib/armeabi-v7a/libpython.zip.so": "6ae00499c5a3a97114609ba1f00e88d9eb86907787842dc764af6589b0247480",
+    "lib/armeabi-v7a/libqjs.so": "4e6164748922b05b06d7fac7f59a63c81427b68bc38fe2327b852ec41cd42344",
+    "lib/x86/libandroidx.graphics.path.so": "eb0570b41fd3bff25d8204a967c03bd7550719e768b791f680cc40cbe35f29af",
+    "lib/x86/libffmpeg.so": "089a40b8e169117421fd535e9ea6e3bc1fe36b3da7cb3acccf179346106f8db2",
+    "lib/x86/libffmpeg.zip.so": "4ccd0067c27776c30c65dd0c106062235930994f7b7ef572dad593682e9f49c6",
+    "lib/x86/libffprobe.so": "e1acf06b76934085d33038db82f721076e08f069b669a811d95e04590d6f29a3",
+    "lib/x86/libpython.so": "ee52bf2d0605588a65fbaeeaa18ac515f7eaa4d5f94529803ce891804ae6aa28",
+    "lib/x86/libpython.zip.so": "13b24d336c801de694479e3dd5692ade52fc974a8946e8fa8c492f9aa2536e9e",
+    "lib/x86/libqjs.so": "991443bad619af89b99de7d75b3c7291159c0ef54e0b6993b336d018cce685c4",
+    "lib/x86_64/libandroidx.graphics.path.so": "4e56c996f13670e70082658de7880c4020eabf4f25e43387f88ed78a713fc9f0",
+    "lib/x86_64/libffmpeg.so": "fe21cd59b4cfe13f83a38ef596ec18067d2a4e4cbb60d9e8a8f31e204c4676eb",
+    "lib/x86_64/libffmpeg.zip.so": "db7d19dab7cfe4b3fab81f3617bd6ac113184df9b8d42166668beaafeff65253",
+    "lib/x86_64/libffprobe.so": "4f1319f2a822ea6c6a38eb976fbe1c0406710d26b6f88ee25f89712e19d3f4ca",
+    "lib/x86_64/libpython.so": "03babdd02ade1068fe3829c2c8902105889f084d7cc5d32cf2ade4acae7b50dd",
+    "lib/x86_64/libpython.zip.so": "2ce603ab00043b451df0be2cdb570badd61b05bec8f1cf0d7c22dff92b44b670",
+    "lib/x86_64/libqjs.so": "4b6c5ff23c35ead9bf8b828d8d6aff2cc608f6daf07820a7707b3eb3a2f9df0a"
+  }
+}

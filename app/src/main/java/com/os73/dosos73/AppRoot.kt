@@ -19,6 +19,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
@@ -27,6 +29,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+@OptIn(androidx.compose.ui.ExperimentalComposeUiApi::class)
 @Composable
 internal fun MainActivity.AppScreen(model: MainViewModel, sharedGeneration: Int, quickSettingsGeneration: Int = 0) {
     val focus = androidx.compose.ui.platform.LocalFocusManager.current
@@ -351,6 +354,7 @@ internal fun MainActivity.AppScreen(model: MainViewModel, sharedGeneration: Int,
         }
     }
     Scaffold(
+        modifier = Modifier.semantics { testTagsAsResourceId = true },
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         containerColor = Neon.Background,
         snackbarHost = { SnackbarHost(snackbar) },

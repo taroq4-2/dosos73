@@ -138,6 +138,8 @@ internal class TransferProcessor(
                 val retain = task.localSource == null && terminal.phase != Phase.COMPLETE && !isUserCancelled()
                 withContext(Dispatchers.IO) {
                     if (!retain) directory.deleteRecursively()
+                    else if (!task.analysis.direct) runCatching { NativeStaging.retainCheckpoints(directory) }
+                        .onFailure { Diagnostics.event(Stage.TRANSFER, "staging_cleanup_unavailable") }
                 }
                 var acknowledged = terminal.phase == Phase.COMPLETE
                 if (terminal.phase == Phase.COMPLETE) {

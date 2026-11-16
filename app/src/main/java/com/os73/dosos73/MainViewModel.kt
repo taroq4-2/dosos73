@@ -222,6 +222,10 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     internal fun receiveShared(text: String) {
+        if (!Regex("https?://", RegexOption.IGNORE_CASE).containsMatchIn(text)) {
+            mutable.value = mutable.value.copy(error = R.string.error_url)
+            return
+        }
         if (LinkPreferences.autoAnalyzeShared(getApplication())) receive(text)
         else mutable.value = mutable.value.copy(pendingShared = text.take(32768))
     }

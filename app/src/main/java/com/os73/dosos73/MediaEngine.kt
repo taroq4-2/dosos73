@@ -137,14 +137,7 @@ class MediaEngine(
         val entry = withContext(Dispatchers.IO) {
             // Only validated HTTP checkpoint pairs survive a new extraction. Completed
             // streams, fragment journals and interrupted merges are rebuilt safely.
-            directory.listFiles().orEmpty().forEach { file ->
-                val retained = when {
-                    file.name.endsWith(".part") -> File(file.path + ".resume.json").isFile
-                    file.name.endsWith(".part.resume.json") -> File(file.path.removeSuffix(".resume.json")).isFile
-                    else -> false
-                }
-                if (!retained) check(file.delete()) { "Stale native output cannot be removed" }
-            }
+            NativeStaging.retainCheckpoints(directory)
             for (name in listOf("verified_http.py", "verified_download.py"))
                 context.assets.open(name).use { source -> File(directory, name).outputStream().use(source::copyTo) }
             File(directory, "verified_download.py")
