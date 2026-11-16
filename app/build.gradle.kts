@@ -52,7 +52,7 @@ android {
     lint { abortOnError = true }
 }
 // The HTTP fixture must exercise the same transport version as the application.
-val okhttpVersion = "4.12.0"
+val okhttpVersion = "5.5.1"
 dependencies {
     // Override obsolete transitive archive/JSON dependencies carried by the native wrapper.
     implementation(platform("com.fasterxml.jackson:jackson-bom:2.22.4"))
