@@ -5,7 +5,7 @@
 ### وسائطك، في مكان واحد.
 مدير تنزيل مفتوح المصدر لأندرويد، مصمّم للعربية والإنجليزية.
 
-[**تنزيل APK الموحّد**](https://github.com/taroq4-2/dosos73/releases/download/v1.3.2/dosos73-1.3.2-universal.apk) · [English](README.md) · [ملاحظات الإصدار](https://github.com/taroq4-2/dosos73/releases/tag/v1.3.2) · [موقع التنزيل الرسمي](https://taroq4-2.github.io/dosos73/)
+[**تنزيل APK الموحّد**](https://github.com/taroq4-2/dosos73/releases/latest/download/dosos73.apk) · [English](README.md) · [ملاحظات الإصدار](https://github.com/taroq4-2/dosos73/releases/tag/v1.3.2) · [موقع التنزيل الرسمي](https://taroq4-2.github.io/dosos73/)
 
 ![Android](https://img.shields.io/badge/Android-10%2B-19D7F5?style=flat-square)
 ![License](https://img.shields.io/badge/License-GPL--3.0--or--later-7044D4?style=flat-square)
@@ -22,7 +22,7 @@
 
 حجم الملف **58,422,468 بايت**.
 
-[تنزيل APK](https://github.com/taroq4-2/dosos73/releases/download/v1.3.2/dosos73-1.3.2-universal.apk) · [التحقق ببصمة SHA-256](https://github.com/taroq4-2/dosos73/releases/download/v1.3.2/SHA256SUMS.txt) · [نتائج الاختبار](docs/RELEASE_1_3_2.md)
+[تنزيل APK](https://github.com/taroq4-2/dosos73/releases/latest/download/dosos73.apk) · [التحقق ببصمة SHA-256](https://github.com/taroq4-2/dosos73/releases/download/v1.3.2/SHA256SUMS.txt) · [نتائج الاختبار](docs/RELEASE_1_3_2.md)
 
 ثبّت الحزمة، واسمح بالتثبيت من المتصفح أو مدير الملفات الذي اخترته عندما يطلب أندرويد ذلك. تحافظ التحديثات الرسمية على هوية التوقيع نفسها.
 

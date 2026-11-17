@@ -69,10 +69,8 @@ jobs:
           name: failure-reports
           path: app/build/reports/
   device-tests:
-    # GitHub requires write visibility to read assets of our unpublished draft.
-    # Return to contents: read once 1.3.2 is public; this job never publishes.
     permissions:
-      contents: write
+      contents: read
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false

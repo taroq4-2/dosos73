@@ -5,7 +5,7 @@
 ### Your media. One place.
 An open-source Android downloader, designed for Arabic and English.
 
-[**Download the universal APK**](https://github.com/taroq4-2/dosos73/releases/download/v1.3.2/dosos73-1.3.2-universal.apk) · [العربية](README-ar.md) · [Release notes](https://github.com/taroq4-2/dosos73/releases/tag/v1.3.2) · [Official download site](https://taroq4-2.github.io/dosos73/)
+[**Download the universal APK**](https://github.com/taroq4-2/dosos73/releases/latest/download/dosos73.apk) · [العربية](README-ar.md) · [Release notes](https://github.com/taroq4-2/dosos73/releases/tag/v1.3.2) · [Official download site](https://taroq4-2.github.io/dosos73/)
 
 ![Android](https://img.shields.io/badge/Android-10%2B-19D7F5?style=flat-square)
 ![License](https://img.shields.io/badge/License-GPL--3.0--or--later-7044D4?style=flat-square)
@@ -20,7 +20,7 @@ An open-source Android downloader, designed for Arabic and English.
 | **58.42 MB** | One universal APK · ARM32, ARM64, x86 and x86_64 |
 | **MP3 V0** | Local audio conversion · no first-use engine download |
 
-[Download APK](https://github.com/taroq4-2/dosos73/releases/download/v1.3.2/dosos73-1.3.2-universal.apk) · [Verify SHA-256](https://github.com/taroq4-2/dosos73/releases/download/v1.3.2/SHA256SUMS.txt) · [Test results](docs/RELEASE_1_3_2.md)
+[Download APK](https://github.com/taroq4-2/dosos73/releases/latest/download/dosos73.apk) · [Verify SHA-256](https://github.com/taroq4-2/dosos73/releases/download/v1.3.2/SHA256SUMS.txt) · [Test results](docs/RELEASE_1_3_2.md)
 
 Install the APK and allow installation from your chosen browser or file manager when Android asks. Updates keep the existing signing identity. No phone-specific edition is needed.
 
