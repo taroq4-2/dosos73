@@ -56,7 +56,7 @@ val okhttpVersion = "4.12.0"
 dependencies {
     // Override obsolete transitive archive/JSON dependencies carried by the native wrapper.
     implementation(platform("com.fasterxml.jackson:jackson-bom:2.22.4"))
-    implementation("org.apache.commons:commons-compress:1.27.1")
+    implementation("org.apache.commons:commons-compress:1.28.0")
     implementation("commons-io:commons-io:2.19.0")
     implementation("org.apache.commons:commons-lang3:3.18.0")
     implementation(platform("androidx.compose:compose-bom:2024.10.01"))
