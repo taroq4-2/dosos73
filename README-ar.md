@@ -5,7 +5,7 @@
 ### وسائطك، في مكان واحد.
 مدير تنزيل مفتوح المصدر لأندرويد، مصمّم للعربية والإنجليزية.
 
-[**تنزيل APK الموحّد**](https://github.com/taroq4-2/dosos73/releases/download/v1.3.1/dosos73-1.3.1-universal.apk) · [English](README.md) · [ملاحظات الإصدار](https://github.com/taroq4-2/dosos73/releases/tag/v1.3.1) · [موقع التنزيل الرسمي](https://taroq4-2.github.io/dosos73/)
+[**تنزيل APK الموحّد**](https://github.com/taroq4-2/dosos73/releases/download/v1.3.2/dosos73-1.3.2-universal.apk) · [English](README.md) · [ملاحظات الإصدار](https://github.com/taroq4-2/dosos73/releases/tag/v1.3.2) · [موقع التنزيل الرسمي](https://taroq4-2.github.io/dosos73/)
 
 ![Android](https://img.shields.io/badge/Android-10%2B-19D7F5?style=flat-square)
 ![License](https://img.shields.io/badge/License-GPL--3.0--or--later-7044D4?style=flat-square)
@@ -16,13 +16,13 @@
 
 | الإصدار | حزمة واحدة لأجهزة أندرويد المدعومة |
 |---|---|
-| **1.3.1** | إصدار رسمي · أندرويد **10 فأحدث** |
-| **58.89 ميغابايت** | ملف APK موحّد · ARM32 وARM64 وx86 وx86_64 |
+| **1.3.2** | إصدار رسمي · أندرويد **10 فأحدث** |
+| **58.42 ميغابايت** | ملف APK موحّد · ARM32 وARM64 وx86 وx86_64 |
 | **MP3 V0** | تحويل صوت محلي · المحركات مضمّنة منذ التثبيت |
 
-حجم الملف **58,885,174 بايت**.
+حجم الملف **58,422,468 بايت**.
 
-[تنزيل APK](https://github.com/taroq4-2/dosos73/releases/download/v1.3.1/dosos73-1.3.1-universal.apk) · [التحقق ببصمة SHA-256](https://github.com/taroq4-2/dosos73/releases/download/v1.3.1/SHA256SUMS.txt) · [نتائج الاختبار](docs/RELEASE_1_3_1.md)
+[تنزيل APK](https://github.com/taroq4-2/dosos73/releases/download/v1.3.2/dosos73-1.3.2-universal.apk) · [التحقق ببصمة SHA-256](https://github.com/taroq4-2/dosos73/releases/download/v1.3.2/SHA256SUMS.txt) · [نتائج الاختبار](docs/RELEASE_1_3_2.md)
 
 ثبّت الحزمة، واسمح بالتثبيت من المتصفح أو مدير الملفات الذي اخترته عندما يطلب أندرويد ذلك. تحافظ التحديثات الرسمية على هوية التوقيع نفسها.
 
@@ -40,9 +40,9 @@
 
 ## شاهد التطبيق
 
-<img src="screenshots/home-1.3.1-ar.png" width="250" alt="الرئيسية العربية في dosos73 1.3.1" /> <img src="screenshots/home-1.3.1-en.png" width="250" alt="الرئيسية الإنجليزية في dosos73 1.3.1" /> <img src="screenshots/media-library-ar.png" width="250" alt="مكتبة الملفات في dosos73 1.2.0" />
+<img src="screenshots/home-1.3.2-ar.png" width="250" alt="الرئيسية العربية في dosos73 1.3.2" /> <img src="screenshots/home-1.3.2-en.png" width="250" alt="الرئيسية الإنجليزية في dosos73 1.3.2" /> <img src="screenshots/files-1.3.2-ar.png" width="250" alt="مكتبة الملفات في dosos73 1.3.2" />
 
-التُقطت صور الرئيسية من APK الموقّع للإصدار 1.3.1 على Android 15. لقطة مكتبة الملفات من 1.2.0. [تفاصيل الالتقاط](screenshots/README.md)
+التُقطت الصور من APK الموقّع نفسه للإصدار 1.3.2 على Android 16 بصفحات ذاكرة 16 كيلوبايت. [تفاصيل الالتقاط](screenshots/README.md)
 
 ## من الرابط إلى الملف
 
@@ -51,7 +51,7 @@
 3. ابدأ التنزيل وتابع تقدمه.
 4. افتح الملف أو شاركه أو تحقّق من بصمته من «الملفات».
 
-لا يستطيع تحويل الصوت رفع جودة المصدر. قد يبدأ استخراج الوسائط من جديد بعد الانقطاع؛ الاستئناف بالبايتات مخصص للمصادر المباشرة المتوافقة التي يمكن التحقق من تطابق محتواها. تظل المساحة المتاحة وقيود المصدر مؤثرة. لا يتجاوز التطبيق المحتوى الخاص أو تسجيل الدخول أو DRM أو القيود الإقليمية.
+لا يستطيع تحويل الصوت رفع جودة المصدر. يشمل الاستئناف المتحقق منه تنزيلات HTTP الأصلية المتوافقة أيضًا. قد تتطلب الروابط الموقّعة المتغيرة والمصادر دون معرّفات تحقق قوية والتدفقات المجزأة إعادة البدء الآمن. تظل المساحة المتاحة وقيود المصدر مؤثرة. لا يتجاوز التطبيق المحتوى الخاص أو تسجيل الدخول أو DRM أو القيود الإقليمية.
 
 ## حزمة صغيرة، ومعالجة محلية
 
@@ -59,9 +59,9 @@
 
 ## التحقق والمصدر
 
-تتضمن ملفات الإصدار حزمة APK موقّعة وبصمات SHA-256 وقائمة مكونات بصيغة CycloneDX SBOM ومصدر التطبيق وأرشيفًا مستقلًا لمصادر المكونات الأصلية. [ملفات الإصدار](https://github.com/taroq4-2/dosos73/releases/tag/v1.3.1)
+تتضمن ملفات الإصدار حزمة APK موقّعة وبصمات SHA-256 وقائمة مكونات بصيغة CycloneDX SBOM ومصدر التطبيق وأرشيفًا مستقلًا لمصادر المكونات الأصلية. [ملفات الإصدار](https://github.com/taroq4-2/dosos73/releases/tag/v1.3.2)
 
-[نتائج التحقق للإصدار 1.3.1](docs/RELEASE_1_3_1.md) · [خريطة المشروع](docs/REPOSITORY_MAP.md)
+[نتائج التحقق للإصدار 1.3.2](docs/RELEASE_1_3_2.md) · [خريطة المشروع](docs/REPOSITORY_MAP.md)
 
 ```sh
 ./gradlew testDebugUnitTest lintDebug lintRelease assembleDebug assembleRelease

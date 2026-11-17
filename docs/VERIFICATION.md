@@ -1,4 +1,6 @@
-# dosos731.2.0 — release verification
+# Historical verification — dosos73 1.2.0
+
+**Historical record. See [current 1.3.2 evidence](RELEASE_1_3_2.md).** Counts, limitations, screenshots and hashes below apply only to 1.2.0.
 
 Prepared1November2026. One signed universal APK for Android10+; this record binds measured checks to the exact delivery rather than to a previous candidate.
 

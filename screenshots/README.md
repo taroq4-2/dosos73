@@ -1,3 +1,9 @@
+# Current release screenshots
+
+The four `*-1.3.2-*.png` files are unedited captures of APK SHA-256 `19c5c5f3d69d635472a2d0fd6cfc1528250e2aba3f62e32a291fd3ea324d431e` on Android 16 x86_64 with 16 KiB pages and compatibility fallback disabled. Files shown were actually downloaded or converted in offline acceptance. [Run](https://github.com/taroq4-2/dosos73/actions/runs/43972220946).
+
+Earlier screenshots below are historical.
+
 # Actual release screenshots
 
 ## 1.3.1 Home
