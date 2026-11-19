@@ -168,7 +168,8 @@ gradlew.bat testDebugUnitTest lintDebug assembleDebug assembleRelease bundleRele
 | P0-2 التحقق من المحتوى | **مُعالَج** | فحص التوقيع عند التحليل في `probe()`، وبعد التنزيل وقبل النشر في `OutputStore.validate(extension=…)` |
 | P0-3 تحليل حاجب ومعتم | **مُعالَج جزئيًا** | آلة المراحل في `LinkAnalyzer.kt`، ومهلة فحص 30 s، ومهلة تحليل مصدر 25 s، وإلغاء، وأسباب فشل محددة. لم يُقس P50/P95 بعد (المرحلة F) |
 | P1-8 GitHub/F-Droid | **مُعالَج** | `SourceResolvers.kt` + `SourceResolversTest` + تجارب المحاكي |
-| P1-10 (جديد) أسماء الملفات المحفوظة تحمل معرّف المهمة (`name-<uuid>.apk`) | مفتوح، المرحلة C | سلوك قائم في 1.3.2 (`PublicationReceipt.prepare`) لتجنب التعارض، وتعتمد عليه الاستعادة. يحتاج تغييره اختبارات استعادة |
+| P1-10 أسماء الملفات المحفوظة تحمل معرّف المهمة | **مُعالَج** (المرحلة C) | `PublicationNames.kt`: اسم مقروء فريد بين ملفات الوجهة وخطط النشر المعلقة، مع الرجوع إلى `name-<id>` عند تعذر القراءة. `ReadablePublicationNameTest` و42 اختبار نشر/استعادة على الجهاز |
+| P1-7 God ViewModel | **مُعالَج** (المرحلة C) | `BatchDraftSession.kt`، `AnalysisReducer.kt`، `EngineContracts.kt`، و`ARCHITECTURE.md` |
 | بقية P1/P2 | مفتوحة | المراحل C–G |
 
 ## 8) خطة التغيير القصيرة (المرحلة B — P0)

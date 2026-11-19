@@ -65,6 +65,30 @@ gradlew.bat testDebugUnitTest lintDebug lintRelease assembleDebug assembleReleas
 
 **للمقارنة:** في 1.3.2 كانت هذه الروابط الأربعة كلها تُحال إلى محرك الوسائط (Python/yt-dlp)، لأن نوع APK لم يكن في القائمة ولأن صفحات GitHub/F-Droid صفحات HTML. لم يُقس زمن 1.3.2 على هذا المحاكي: **غير مُقاس**.
 
+## المرحلة C — إعادة الهندسة
+
+### البوابة الآلية
+
+| الخطوة | النتيجة | التفاصيل |
+|---|---|---|
+| `testDebugUnitTest` | PASSED | **170/170** (+8 في `ArchitecturePhaseCTest`: المختزل، ولوحة التنزيلات، وأسماء النشر) |
+| `lintDebug` / `lintRelease` | PASSED | 81 / 82 ملاحظة، مطابقة لما قبل المرحلة، صفر Error |
+| `assembleDebug` / `assembleRelease` | PASSED | — |
+| `connectedDebugAndroidTest` (19 صنفًا متأثرًا) | **PASSED** | **103/103** على المحاكي `dosos73_vnext` (API 35) في 1 د 43 ث. النتائج الخام في `build-evidence/phaseC-device-results.xml` |
+
+### الأصناف المشغّلة على الجهاز
+
+| الصنف | العدد | لماذا شُغّل |
+|---|---:|---|
+| `StaleAnalysisTest` (جديد) | 2 | نتيجة تحليل أُلغي لا تظهر أبدًا، ولا تُطبَّق نتيجة على رابط آخر |
+| `ReadablePublicationNameTest` (جديد) | 2 | `اسم.bin` ثم `اسم (2).bin` مع بقاء الاستعادة صحيحة، وحجز اسم خطة نشر غير مكتملة |
+| `BatchHandoffTest`, `BatchDraftTest`, `BatchChoiceUiTest` | 20 | نقل منطق المسودة المشفرة إلى `BatchDraftSession` |
+| `UiFlowTest`, `ClipboardInputTest`, `QuickLaunchTest`, `ReviewLayoutTest`, `RotationStateTest`, `LandscapeReviewLayoutTest`, `AppResourcesTest` | 24 | `MainViewModel` والواجهة |
+| `OutputSafetyTest`, `PublicationRecoveryTest`, `PublicationCommitRaceTest`, `PublicationUriBoundaryTest`, `RenameRecoveryRegressionTest` | 42 | تغيير أسماء النشر وفحص المحتوى في `validate` |
+| `LibraryQueueTest`, `LibraryMutationTest` | 13 | المكتبة والطابور |
+
+بقية الاختبارات (~92 من 193 القديمة) لم تُشغَّل في هذه المرحلة: **NOT RUN**، وتُشغّل كاملة في المرحلة G.
+
 ### ما لم يُختبر بعد
 
 | البند | الحالة | السبب |

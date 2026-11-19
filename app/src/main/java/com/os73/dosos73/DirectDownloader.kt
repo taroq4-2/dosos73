@@ -24,7 +24,7 @@ sealed interface DirectProbe {
     data class Failed(val code: FailureCode, val status: Int? = null, val retryAfterSeconds: Long? = null) : DirectProbe
 }
 
-class DirectDownloader(private val client: OkHttpClient = secureClient()) {
+class DirectDownloader(private val client: OkHttpClient = secureClient()) : LinkInspector {
     @Volatile private var activeCall: okhttp3.Call? = null
     private val cancelled = AtomicBoolean(false)
     @Volatile private var parallel: ParallelDownloader? = null
@@ -34,7 +34,7 @@ class DirectDownloader(private val client: OkHttpClient = secureClient()) {
             .callTimeout(25, TimeUnit.SECONDS).build()
     }
 
-    fun cancel() {
+    override fun cancel() {
         cancelled.set(true)
         parallel?.cancel()
         activeCall?.cancel()
@@ -90,7 +90,7 @@ class DirectDownloader(private val client: OkHttpClient = secureClient()) {
      * bytes, which proves what the body really is (P0-1/P0-2): headers and URL extensions are hints.
      * Never downloads the body, never follows a redirect without re-checking it (see [request]).
      */
-    suspend fun probe(url: String, onResponse: () -> Unit = {}): DirectProbe =
+    override suspend fun probe(url: String, onResponse: () -> Unit): DirectProbe =
         withContext(Dispatchers.IO) {
             currentCoroutineContext().ensureActive()
             try { probeOnce(url, onResponse) }
@@ -191,7 +191,7 @@ class DirectDownloader(private val client: OkHttpClient = secureClient()) {
      * Small JSON documents from documented public APIs (GitHub Releases, F-Droid). Same SSRF,
      * TLS and redirect policy as every other request; bounded size; non-JSON is refused.
      */
-    internal suspend fun fetchJson(url: String, accept: String = "application/json"): String =
+    override suspend fun fetchJson(url: String, accept: String): String =
         withContext(Dispatchers.IO) {
             request(url, quick = true, accept = accept).use { response ->
                 if (!response.isSuccessful) {

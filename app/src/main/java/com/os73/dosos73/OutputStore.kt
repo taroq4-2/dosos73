@@ -138,7 +138,11 @@ class OutputStore(
                     file.length(),
                 )
             val receipt = PublicationReceipt(context, task.id)
-            val temporary = receipt.prepare(task.tree, mime, expected, name, task.choice.extension)
+            // Readable names only when both the destination and other pending plans are known.
+            val taken = PublicationNames.existing(context, task.tree)?.let { existing ->
+                PublicationNames.reserved(context, task.id)?.let { existing + it }
+            }
+            val temporary = receipt.prepare(task.tree, mime, expected, name, task.choice.extension, taken)
             var document: DocumentFile? = null
             val uri =
                 if (task.tree == null) {

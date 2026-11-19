@@ -2,6 +2,12 @@
 
 ## Unreleased · vNext (branch `feature/dosos73-vnext-overhaul`)
 
+### Phase C: architecture
+- `MainViewModel` keeps only link/analysis orchestration. The encrypted multi-link draft actor moved, unchanged, into `BatchDraftSession`. State transitions are pure functions (`AnalysisReducer`). Engines are reached through the `LinkInspector` and `MediaExtractor` contracts.
+- New `DownloadBoard` read-model merges the active transfer, queue, failures and library into one stream (status, category, real progress, honest ETA) for the redesigned screens, the widget and notifications.
+- Saved files get readable names (`Report.pdf`, then `Report (2).pdf`) instead of `Report-<uuid>.pdf`. Names stay unique among the destination's files and other unfinished publications, so crash recovery remains exact. If either can't be listed, the 1.3.2 scheme is used. Existing files are not renamed.
+- See `ARCHITECTURE.md` for layers and the link-to-file flow.
+
 ### Phase B: link analysis and file downloads (P0)
 - Direct links to APK, XAPK, APKS, AAB, ZIP, RAR, 7Z, PDF, Office, EPUB, EXE/MSI/DMG/ISO, images, audio and video are recognised as files. Previously anything outside a short MIME list (including `application/vnd.android.package-archive`) was sent to the media engine and usually failed.
 - The type is proven from the file's first bytes, not just its headers or name. An HTML page is never saved as an APK, and a declared APK whose bytes are another format is refused. The check runs again after the download, before publishing.
