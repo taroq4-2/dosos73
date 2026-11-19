@@ -44,7 +44,7 @@ gradlew.bat testDebugUnitTest lintDebug lintRelease assembleDebug assembleReleas
 | الملف | العدد | ما يثبته |
 |---|---:|---|
 | `FileTypesTest` | 6 | أنواع MIME الخاصة بـ APK، وتواقيع ZIP/RAR/7Z/PDF/PNG/JPEG/MP4/EXE، وكشف HTML عبر BOM والمسافات، وحكم Match/Mismatch/WebPage/Unverifiable |
-| `DirectDownloaderTest` (فحص الرابط) | 15 جديدة ضمن 39 | APK مع `vnd.android` وoctet-stream وبلا MIME وZIP عام. `Content-Disposition` RFC 5987. HTML برابط `.apk` يُرفض حتى لو ادّعى نوعًا ثنائيًا. APK محتواه PDF يُرفض. RAR/7Z/EXE/DOCX/XAPK/APKS/EPUB. حالة 416 تُعاد بطلب GET عادي مرة واحدة دون تكرار. 404/410/403/401/503/429 مع `Retry-After`. سلسلة تحويلات 302→307. قراءة رأس محدودة لملف 1 MB في طلب واحد. JSON محدود الحجم وحد معدل GitHub |
+| `DirectDownloaderTest` (فحص الرابط) | 14 جديدة ضمن 39 | APK مع `vnd.android` وoctet-stream وبلا MIME وZIP عام. `Content-Disposition` RFC 5987. HTML برابط `.apk` يُرفض حتى لو ادّعى نوعًا ثنائيًا. APK محتواه PDF يُرفض. RAR/7Z/EXE/DOCX/XAPK/APKS/EPUB. حالة 416 تُعاد بطلب GET عادي مرة واحدة دون تكرار. 404/410/403/401/503/429 مع `Retry-After`. سلسلة تحويلات 302→307. قراءة رأس محدودة لملف 1 MB في طلب واحد. JSON محدود الحجم وحد معدل GitHub |
 | `DirectFileNameTest` | +2 | امتداد APK/XAPK محفوظ، واسم ISO-8859-1، ورفض انتحال الامتداد بحرف U+202E |
 | `SourceResolversTest` | 7 | مطابقة روابط GitHub Releases وF-Droid، ونقاط API الرسمية، ورفض أصول خارج نفس الإصدار، وترتيب APK حسب ABI الجهاز |
 | `LinkAnalyzerTest` | 11 | الملف المباشر لا يشغّل محرك الوسائط. الصفحة العامة تذهب للمحرك. الصفحة بدل الملف تفشل فورًا بسبب محدد. 404/410/عدم تطابق النوع لا تشغّل المحرك. مهلة الفحص مستقلة. اختيار أصول الإصدار. F-Droid |
