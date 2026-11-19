@@ -45,6 +45,12 @@ internal data class BoardSummary(val counts: Map<BoardStatus, Int>, val focus: B
 }
 
 internal object DownloadBoard {
+    /** Task titles carry no extension (it is a separate choice); show "name.ext" like saved files. */
+    fun displayName(task: DownloadTask, title: String = task.analysis.title): String {
+        val extension = task.choice.extension.lowercase()
+        return if (extension.isEmpty() || title.lowercase().endsWith(".$extension")) title else "$title.$extension"
+    }
+
     /** Pure merge of the four sources; deterministic order: active, queued/paused, failed, completed (newest first). */
     fun build(
         transfer: TransferState,
@@ -58,7 +64,7 @@ internal object DownloadBoard {
         if (activeId != null) {
             items += BoardItem(
                 key = "task:$activeId",
-                title = transfer.title.ifBlank { current.analysis.title },
+                title = displayName(current, transfer.title.ifBlank { current.analysis.title }),
                 status = if (transfer.phase == Phase.PAUSED) BoardStatus.PAUSED else BoardStatus.ACTIVE,
                 category = categoryOf(current.choice),
                 bytes = transfer.bytes.takeIf { it > 0 },
@@ -73,7 +79,7 @@ internal object DownloadBoard {
         for (task in queue) {
             if (task.id == activeId) continue
             items += BoardItem(
-                key = "task:${task.id}", title = task.analysis.title,
+                key = "task:${task.id}", title = displayName(task),
                 status = if (task.userPaused) BoardStatus.PAUSED else BoardStatus.QUEUED,
                 category = categoryOf(task.choice), total = task.analysis.sizeBytes, task = task,
             )
@@ -81,7 +87,7 @@ internal object DownloadBoard {
         for (failure in failures) {
             if (failure.task.id == activeId || queue.any { it.id == failure.task.id }) continue
             items += BoardItem(
-                key = "failed:${failure.task.id}", title = failure.task.analysis.title, status = BoardStatus.FAILED,
+                key = "failed:${failure.task.id}", title = displayName(failure.task), status = BoardStatus.FAILED,
                 category = categoryOf(failure.task.choice), total = failure.task.analysis.sizeBytes,
                 error = failure.code?.let { PipelineException(Stage.TRANSFER, it).messageResource() },
                 task = failure.task, failure = failure,

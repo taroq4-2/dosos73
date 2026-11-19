@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- التنقل -->
+    <string name="nav_library">المكتبة</string>
+    <string name="nav_settings">الإعدادات</string>
+
+    <!-- الرئيسية -->
+    <string name="home_tagline">محرك الوسائط والملفات الشامل</string>
+    <string name="new_download_hint">الصق رابط فيديو أو صوت أو ملف لبدء التحميل.</string>
+    <string name="url_placeholder">ألصق الرابط هنا…</string>
+    <string name="analyze_link">تحليل الرابط</string>
+    <string name="shortcut_files">ملفات</string>
+    <string name="shortcut_video_hint">تفضيل صيغ الفيديو</string>
+    <string name="shortcut_audio_hint">تفضيل صيغ الصوت</string>
+    <string name="row_quick_settings">الإعدادات السريعة</string>
+    <string name="row_quick_settings_hint">مكان الحفظ · الشبكة · المظهر</string>
+    <string name="row_supported">الروابط المدعومة</string>
+    <string name="row_supported_hint">ملفات مباشرة · GitHub · F-Droid · مواقع الوسائط</string>
+    <string name="row_tools">أدوات إضافية</string>
+    <string name="row_tools_hint">استخراج الصوت · عدة روابط · التحميل السريع</string>
+
+    <!-- الروابط المدعومة -->
+    <string name="supported_direct_title">روابط الملفات المباشرة</string>
+    <string name="supported_direct_body">APK وXAPK وAPKS وZIP وRAR و7Z وPDF وملفات Office وEPUB وEXE وMSI وDMG وISO والصور والصوت والفيديو. يُتحقق من نوع الملف من محتواه لا من اسمه فقط.</string>
+    <string name="supported_github_title">إصدارات GitHub</string>
+    <string name="supported_github_body">صفحات الإصدارات والوسوم والمستودعات تعرض ملفات الإصدار عبر واجهة GitHub العامة، وروابط الأصول المباشرة تعمل كملفات.</string>
+    <string name="supported_fdroid_title">F-Droid</string>
+    <string name="supported_fdroid_body">صفحات التطبيقات تُحوَّل إلى ملف APK للإصدار المقترح من f-droid.org.</string>
+    <string name="supported_media_title">مواقع الوسائط</string>
+    <string name="supported_media_body">صفحات الفيديو والصوت العامة التي يستطيع محرك الوسائط المدمج قراءتها، مع اختيار الجودة والصيغة.</string>
+    <string name="supported_limits_title">غير مدعوم</string>
+    <string name="supported_limits_body">المحتوى الذي يتطلب تسجيل دخول أو CAPTCHA أو دفعًا أو المحمي بـ DRM، والصفحات التي تعرض زر تنزيل دون رابط ملف عام. تُحفظ حزم Android ولا تُثبَّت تلقائيًا أبدًا.</string>
+
+    <!-- التنزيلات -->
+    <string name="filter_all">الكل</string>
+    <string name="filter_downloading">قيد التنزيل</string>
+    <string name="filter_completed">مكتمل</string>
+    <string name="filter_stopped">متوقف / فشل</string>
+    <string name="section_in_progress">قيد التنزيل</string>
+    <string name="section_completed">مكتملة</string>
+    <string name="status_completed">اكتمل</string>
+    <string name="status_queued">بالانتظار</string>
+    <string name="status_paused">متوقف مؤقتًا</string>
+    <string name="status_failed">فشل</string>
+    <string name="time_left">متبقٍ %1$s</string>
+    <string name="item_actions">إجراءات %1$s</string>
+    <string name="section_toggle">إظهار أو إخفاء %1$s</string>
+    <string name="downloads_empty_filter">لا شيء هنا ضمن هذا التصنيف.</string>
+
+    <!-- الإعدادات -->
+    <string name="group_downloads">التنزيلات</string>
+    <string name="group_network">الشبكة</string>
+    <string name="group_notifications">الإشعارات</string>
+    <string name="group_appearance">المظهر واللغة</string>
+    <string name="group_privacy">الخصوصية والأمان</string>
+    <string name="group_tools">الأدوات</string>
+    <string name="group_about">حول التطبيق</string>
+    <string name="theme_title">السمة</string>
+    <string name="theme_system">حسب النظام</string>
+    <string name="theme_dark">داكن</string>
+    <string name="theme_light">فاتح</string>
+    <string name="dynamic_color">ألوان الخلفية</string>
+    <string name="dynamic_color_hint">استخدام ألوان خلفية الشاشة (Android 12 أو أحدث) بدل ألوان dosos73.</string>
+    <string name="notifications_on">إشعارات التقدم والاكتمال والفشل مسموحة.</string>
+    <string name="notifications_off">الإشعارات متوقفة. تستمر التنزيلات، لكن لن ترى التقدم خارج التطبيق.</string>
+    <string name="notifications_open">فتح إعدادات الإشعارات</string>
+    <string name="free_space">المساحة المتاحة على الجهاز: %1$s</string>
+    <!-- Library -->
+    <string name="category_apps">تطبيقات</string>
+    <string name="category_documents">مستندات</string>
+    <string name="category_images">صور</string>
+    <string name="category_archives">أرشيفات</string>
+    <string name="category_programs">برامج</string>
+    <string name="category_other">أخرى</string>
+</resources>

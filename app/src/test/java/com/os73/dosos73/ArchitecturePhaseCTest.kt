@@ -85,7 +85,7 @@ class ArchitecturePhaseCTest {
         val newer = SavedFile("content://2", "clip.mp4", "video/mp4", 20, date = 2)
         val transfer = TransferState(Phase.DOWNLOADING, "running", 250, 1000, 0.25f, 50)
         val board = DownloadBoard.build(transfer, active, listOf(active, waiting, held), listOf(failed, retried), listOf(older, newer))
-        assertEquals(listOf("running", "waiting", "held", "broken", "clip.mp4", "old.pdf"), board.map { it.title })
+        assertEquals(listOf("running.apk", "waiting.apk", "held.apk", "broken.apk", "clip.mp4", "old.pdf"), board.map { it.title })
         assertEquals(listOf(BoardStatus.ACTIVE, BoardStatus.QUEUED, BoardStatus.PAUSED, BoardStatus.FAILED,
             BoardStatus.COMPLETED, BoardStatus.COMPLETED), board.map { it.status })
         assertEquals(R.string.error_http404, board[3].error)
@@ -114,7 +114,7 @@ class ArchitecturePhaseCTest {
         val board = DownloadBoard.build(TransferState(Phase.DOWNLOADING, "run", 1, 2, .5f), active,
             listOf(task("q")), emptyList(), listOf(SavedFile("content://f", "f.zip", "application/zip", 1, 1)))
         val summary = DownloadBoard.summarize(board)
-        assertEquals("run", summary.focus!!.title)
+        assertEquals("run.apk", summary.focus!!.title)
         assertEquals(1, summary.count(BoardStatus.ACTIVE))
         assertEquals(1, summary.count(BoardStatus.QUEUED))
         assertEquals(1, summary.count(BoardStatus.COMPLETED))

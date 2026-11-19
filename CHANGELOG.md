@@ -2,6 +2,16 @@
 
 ## Unreleased · vNext (branch `feature/dosos73-vnext-overhaul`)
 
+### Phase D: redesign
+- New design system matching the reference: deep navy `#0B1929`, cards `#14273A`, interactive teal `#42D9CC`, light text `#E4F5F4`. A WCAG-AA light theme was added, with System / Dark / Light choices and optional wallpaper colors on Android 12+. Every screen reads one palette, and contrast is checked by tests.
+- Home: centered brand, a "New download" card with paste inside the link field, a teal "Analyze link" button, and Video / Audio / Files / Downloads shortcuts. Quick settings, supported links and more tools are all real actions. The menu and crown icons from the concept were left out because nothing would sit behind them.
+- Downloads: filter chips with real counts, collapsible sections, and cards with a file-type badge, downloaded / total, speed, percentage, honest ETA and state-aware actions, built on `DownloadBoard`.
+- Library: video, audio, apps, documents, images, archives, programs and other categories; empty categories are hidden.
+- Settings grouped into downloads, network, notifications, appearance and language, privacy and security, tools, and about. A new page lists supported links honestly, including what is not supported.
+- Proper RTL: the bottom bar, headers and rows follow the language; Home sits on the right in Arabic.
+- Fixed (present in 1.3.2): paused or interrupted GitHub release downloads could never resume, and every retry failed, because CDN redirects carry a fresh signed query. Resume identity is now host + path + strong ETag + exact length. Verified on a device with byte-identical SHA-256 after pause, process death and resume.
+- Fixed: icon buttons announced no name to TalkBack; a paused card lost its progress; long file names broke mid-word.
+
 ### Phase C: architecture
 - `MainViewModel` keeps only link/analysis orchestration. The encrypted multi-link draft actor moved, unchanged, into `BatchDraftSession`. State transitions are pure functions (`AnalysisReducer`). Engines are reached through the `LinkInspector` and `MediaExtractor` contracts.
 - New `DownloadBoard` read-model merges the active transfer, queue, failures and library into one stream (status, category, real progress, honest ETA) for the redesigned screens, the widget and notifications.

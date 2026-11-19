@@ -61,7 +61,18 @@ class MainActivity : ComponentActivity() {
                 model.batchSaving.collect { consumeQuickRequest() }
             }
         }
-        setContent { DososTheme { AppScreen(model, sharedGeneration, quickSettingsGeneration) } }
+        setContent {
+            DososTheme {
+                // System bar icons follow the resolved theme (light theme needs dark icons).
+                val dark = LocalPalette.current.dark
+                androidx.compose.runtime.LaunchedEffect(dark) {
+                    val transparent = android.graphics.Color.TRANSPARENT
+                    val style = if (dark) SystemBarStyle.dark(transparent) else SystemBarStyle.light(transparent, transparent)
+                    enableEdgeToEdge(statusBarStyle = style, navigationBarStyle = style)
+                }
+                AppScreen(model, sharedGeneration, quickSettingsGeneration)
+            }
+        }
     }
 
     override fun onSaveInstanceState(outState: Bundle) {

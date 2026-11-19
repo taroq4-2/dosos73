@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Navigation -->
+    <string name="nav_library">Library</string>
+    <string name="nav_settings">Settings</string>
+
+    <!-- Home -->
+    <string name="home_tagline">The all-in-one media and file downloader</string>
+    <string name="new_download_hint">Paste a video, audio or file link to start downloading.</string>
+    <string name="url_placeholder">Paste the link here…</string>
+    <string name="analyze_link">Analyze link</string>
+    <string name="shortcut_files">Files</string>
+    <string name="shortcut_video_hint">Prefer video formats</string>
+    <string name="shortcut_audio_hint">Prefer audio formats</string>
+    <string name="row_quick_settings">Quick settings</string>
+    <string name="row_quick_settings_hint">Save location · network · appearance</string>
+    <string name="row_supported">Supported links</string>
+    <string name="row_supported_hint">Direct files · GitHub · F-Droid · media sites</string>
+    <string name="row_tools">More tools</string>
+    <string name="row_tools_hint">Extract audio · multiple links · quick download</string>
+
+    <!-- Supported links -->
+    <string name="supported_direct_title">Direct file links</string>
+    <string name="supported_direct_body">APK, XAPK, APKS, ZIP, RAR, 7Z, PDF, Office, EPUB, EXE, MSI, DMG, ISO, images, audio and video. The file type is confirmed from its contents, not only its name.</string>
+    <string name="supported_github_title">GitHub releases</string>
+    <string name="supported_github_body">Release, tag and repository pages list their release files through GitHub\'s public API. Direct asset links work as files.</string>
+    <string name="supported_fdroid_title">F-Droid</string>
+    <string name="supported_fdroid_body">App pages resolve to the APK of the suggested version from f-droid.org.</string>
+    <string name="supported_media_title">Media sites</string>
+    <string name="supported_media_body">Public video and audio pages that the bundled media engine can read, with quality and format choices.</string>
+    <string name="supported_limits_title">Not supported</string>
+    <string name="supported_limits_body">Content behind sign-in, CAPTCHA, payment or DRM, and pages that only show a download button without a public file link. Android packages are saved, never installed automatically.</string>
+
+    <!-- Downloads -->
+    <string name="filter_all">All</string>
+    <string name="filter_downloading">Downloading</string>
+    <string name="filter_completed">Completed</string>
+    <string name="filter_stopped">Paused / failed</string>
+    <string name="section_in_progress">In progress</string>
+    <string name="section_completed">Completed</string>
+    <string name="status_completed">Completed</string>
+    <string name="status_queued">Waiting</string>
+    <string name="status_paused">Paused</string>
+    <string name="status_failed">Failed</string>
+    <string name="time_left">%1$s left</string>
+    <string name="item_actions">Actions for %1$s</string>
+    <string name="section_toggle">Show or hide %1$s</string>
+    <string name="downloads_empty_filter">Nothing here for this filter.</string>
+
+    <!-- Settings -->
+    <string name="group_downloads">Downloads</string>
+    <string name="group_network">Network</string>
+    <string name="group_notifications">Notifications</string>
+    <string name="group_appearance">Appearance and language</string>
+    <string name="group_privacy">Privacy and security</string>
+    <string name="group_tools">Tools</string>
+    <string name="group_about">About</string>
+    <string name="theme_title">Theme</string>
+    <string name="theme_system">System</string>
+    <string name="theme_dark">Dark</string>
+    <string name="theme_light">Light</string>
+    <string name="dynamic_color">Wallpaper colors</string>
+    <string name="dynamic_color_hint">Use colors from your wallpaper (Android 12 or later) instead of the dosos73 palette.</string>
+    <string name="notifications_on">Progress, completion and failure notifications are allowed.</string>
+    <string name="notifications_off">Notifications are off. Downloads still run, but you will not see progress outside the app.</string>
+    <string name="notifications_open">Open notification settings</string>
+    <string name="free_space">Free space on this device: %1$s</string>
+    <!-- Library -->
+    <string name="category_apps">Apps</string>
+    <string name="category_documents">Documents</string>
+    <string name="category_images">Images</string>
+    <string name="category_archives">Archives</string>
+    <string name="category_programs">Programs</string>
+    <string name="category_other">Other</string>
+</resources>

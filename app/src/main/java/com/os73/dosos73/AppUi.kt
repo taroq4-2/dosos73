@@ -94,8 +94,8 @@ internal fun IconAction(
     modifier: Modifier = Modifier,
     color: Color = Neon.Secondary,
 ) {
-    IconButton(onClick, modifier.sizeIn(minWidth = 48.dp, minHeight = 48.dp)) {
-        Symbol(kind, label, color = color)
+    IconButton(onClick, modifier.sizeIn(minWidth = 48.dp, minHeight = 48.dp).semantics { contentDescription = label }) {
+        Symbol(kind, color = color)
     }
 }
 
@@ -107,29 +107,27 @@ internal fun GradientButton(
     enabled: Boolean = true,
     icon: Glyph? = null,
 ) {
+    // Primary action: solid interactive teal (reference design), dark text for contrast.
+    val palette = LocalPalette.current
     Button(
         onClick,
-        modifier
-            .heightIn(min = 48.dp)
-            .clip(RoundedCornerShape(18.dp))
-            .background(
-                if (enabled) Brush.horizontalGradient(listOf(Neon.ActionBlue, Neon.Purple))
-                else Brush.linearGradient(listOf(Neon.Raised, Neon.Raised))
-            ),
+        modifier.heightIn(min = 54.dp),
         enabled = enabled,
+        shape = RoundedCornerShape(16.dp),
         colors =
             ButtonDefaults.buttonColors(
-                containerColor = Color.Transparent,
-                disabledContainerColor = Color.Transparent,
-                contentColor = Color.White,
+                containerColor = palette.accent,
+                contentColor = palette.onAccent,
+                disabledContainerColor = palette.raised,
+                disabledContentColor = palette.muted,
             ),
         contentPadding = PaddingValues(horizontal = 18.dp, vertical = 12.dp),
     ) {
         icon?.let {
-            Symbol(it, modifier = Modifier.size(20.dp), color = Color.White)
+            Symbol(it, modifier = Modifier.size(20.dp), color = LocalContentColor.current)
             Spacer(Modifier.width(7.dp))
         }
-        Text(label)
+        Text(label, style = MaterialTheme.typography.titleSmall)
     }
 }
 
@@ -376,11 +374,11 @@ internal fun NeonChip(
         colors =
             FilterChipDefaults.filterChipColors(
                 containerColor = Neon.Surface,
-                selectedContainerColor = Neon.ActionBlue,
+                selectedContainerColor = Neon.Cyan,
                 labelColor = Neon.Secondary,
-                selectedLabelColor = Color.White,
+                selectedLabelColor = LocalPalette.current.onAccent,
                 iconColor = Neon.Secondary,
-                selectedLeadingIconColor = Color.White,
+                selectedLeadingIconColor = LocalPalette.current.onAccent,
             ),
     )
 }

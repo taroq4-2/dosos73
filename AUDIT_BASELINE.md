@@ -170,7 +170,12 @@ gradlew.bat testDebugUnitTest lintDebug assembleDebug assembleRelease bundleRele
 | P1-8 GitHub/F-Droid | **مُعالَج** | `SourceResolvers.kt` + `SourceResolversTest` + تجارب المحاكي |
 | P1-10 أسماء الملفات المحفوظة تحمل معرّف المهمة | **مُعالَج** (المرحلة C) | `PublicationNames.kt`: اسم مقروء فريد بين ملفات الوجهة وخطط النشر المعلقة، مع الرجوع إلى `name-<id>` عند تعذر القراءة. `ReadablePublicationNameTest` و42 اختبار نشر/استعادة على الجهاز |
 | P1-7 God ViewModel | **مُعالَج** (المرحلة C) | `BatchDraftSession.kt`، `AnalysisReducer.kt`، `EngineContracts.kt`، و`ARCHITECTURE.md` |
-| بقية P1/P2 | مفتوحة | المراحل C–G |
+| P0-4 (جديد) استئناف تنزيلات GitHub/CDN الموقّعة يفشل دائمًا (موجود في 1.3.2) | **مُعالَج** (المرحلة D) | `DirectDownloader.download` يربط الهدف بالمضيف + المسار. `SignedRedirectResumeTest`، وتجربة جهاز بمطابقة SHA-256 |
+| P1-4 لا وضع فاتح | **مُعالَج** (المرحلة D) | `DesignSystem.kt` + `DesignContrastTest` |
+| P1-5 التنقل مجبر على LTR وأقسامه مختلفة | **مُعالَج** | `AppNavigation.kt` |
+| P1-6 الألوان تخالف المرجع / ألوان مبعثرة | **مُعالَج** | `DososPalettes` |
+| P1-9 إعدادات ناقصة | **مُعالَج جزئيًا** | المظهر والإشعارات والمساحة أُضيفت. عدد التنزيلات المتزامنة غير متاح لأن P1-1 لم يُنفذ |
+| بقية P1/P2 | مفتوحة | المراحل E–G (P1-1 التزامن، P1-2 أفعال الإشعار، P1-3 الودجت) |
 
 ## 8) خطة التغيير القصيرة (المرحلة B — P0)
 1. مُصنّف ملفات موحد (`FileTypeRegistry`): MIME + امتداد + magic bytes لـ APK/XAPK/APKS/AAB/ZIP/RAR/7Z/PDF/Office/EXE/MSI/DMG/ISO/EPUB/صور/صوت/فيديو، يحل محل القائمتين المكررتين.

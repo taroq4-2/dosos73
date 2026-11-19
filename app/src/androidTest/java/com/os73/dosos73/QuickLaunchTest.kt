@@ -196,7 +196,9 @@ class QuickLaunchTest {
                 ClipData.newIntent("intent", Intent(Intent.ACTION_VIEW, Uri.parse(firstUrl))),
                 sensitive, ClipData.newPlainText("oversize", "a".repeat(8193)))) {
                 clipboard.setPrimaryClip(clip)
-                assertThrows(RuntimeException::class.java) { QuickLaunch.copiedUrl(guarded) }
+                val read = runCatching { QuickLaunch.copiedUrl(guarded) }
+                assertTrue("clip '${clip.description.label}' was accepted as ${read.getOrNull()}",
+                    read.exceptionOrNull() is RuntimeException)
             }
             assertEquals(0, resolverAccesses)
             assertFalse(model.state.value.quick)

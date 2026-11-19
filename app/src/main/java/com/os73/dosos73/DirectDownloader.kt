@@ -262,14 +262,20 @@ class DirectDownloader(private val client: OkHttpClient = secureClient()) : Link
                 HttpRepresentation.requireIdentity(response, expectsBinary)
                 val body = response.body ?: throw IOException("Empty response")
                 val bodyLength = body.contentLength().takeIf { it >= 0 }
-                val targetHash = ResumeCheckpoint.hash(response.request.url.toString())
+                // The redirect target is identified by scheme, host and path. CDNs (GitHub release
+                // assets included) sign each redirect with a new query; binding to it made every
+                // resume fail. Same-object proof stays: strong ETag + If-Range + exact length/range.
+                val target = response.request.url
+                val targetHash = ResumeCheckpoint.hash(target.newBuilder().query(null).fragment(null).build().toString())
+                // Checkpoints written by 1.3.2 hashed the full URL; still valid when nothing changed.
+                val legacyTargetHash = ResumeCheckpoint.hash(target.toString())
                 val etag = ResumeCheckpoint.strongTag(response.header("ETag"))
                 val append = response.code == 206
                 val total: Long?
                 val offset: Long
                 if (append) {
                     val prior = checkpoint ?: throw IOException("Unrequested partial response")
-                    if (prior.offset <= 0 || targetHash != prior.targetHash || etag != prior.etag)
+                    if (prior.offset <= 0 || prior.targetHash !in setOf(targetHash, legacyTargetHash) || etag != prior.etag)
                         throw IOException("Changed representation")
                     val range =
                         HttpRepresentation.parseRange(response.header("Content-Range"))

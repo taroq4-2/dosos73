@@ -42,6 +42,7 @@ internal fun MainActivity.AppScreen(model: MainViewModel, sharedGeneration: Int,
     val batchBusy by model.batchBusy.collectAsStateWithLifecycle()
     val batchSaving by model.batchSaving.collectAsStateWithLifecycle()
     val batchStorageError by model.batchStorageError.collectAsStateWithLifecycle()
+    val preferredKind by model.preferredKind.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
     val snackbar = remember { SnackbarHostState() }
     var page by rememberSaveable { mutableStateOf("home") }
@@ -138,7 +139,11 @@ internal fun MainActivity.AppScreen(model: MainViewModel, sharedGeneration: Int,
         // Transfer failures belong to Downloads. Keep the independent input/review intact.
     }
     BackHandler(page != "home") {
-        page = if (page == "contact") "about" else "home"
+        page = when (page) {
+            "contact" -> "about"
+            "about", "privacy", "batch", "quick", "offline" -> if (page == "batch" || page == "offline") "home" else "more"
+            else -> "home"
+        }
         searching = false
         query = ""
     }
@@ -381,13 +386,21 @@ internal fun MainActivity.AppScreen(model: MainViewModel, sharedGeneration: Int,
                     style = MaterialTheme.typography.bodySmall)
             }
             if (page in setOf("downloads", "files")) {
-                ScreenHeader(
-                    {
-                        searching = !searching
-                        if (!searching) query = ""
-                    },
-                    { page = "more" },
-                )
+                val toggleSearch = {
+                    searching = !searching
+                    if (!searching) query = ""
+                }
+                if (page == "downloads")
+                    ScreenHeader(stringResource(R.string.downloads), Glyph.DOWNLOAD, toggleSearch) { close ->
+                        DropdownMenuItem({ Text(stringResource(R.string.start_queue)) }, { close(); runQueue() },
+                            enabled = queue.isNotEmpty() && !transfer.active)
+                        DropdownMenuItem({ Text(stringResource(R.string.details)) }, { close(); details = true },
+                            enabled = transfer.phase != Phase.IDLE)
+                    }
+                else
+                    ScreenHeader(stringResource(R.string.nav_library), Glyph.FOLDER, toggleSearch) { close ->
+                        DropdownMenuItem({ Text(stringResource(R.string.refresh)) }, { close(); refresh() })
+                    }
                 if (searching)
                     OutlinedTextField(
                         query,
@@ -408,6 +421,11 @@ internal fun MainActivity.AppScreen(model: MainViewModel, sharedGeneration: Int,
                             { focus.clearFocus(); keyboard?.hide(); model.analyze() },
                             model::cancelAnalysis,
                             onCandidate = model::pickCandidate,
+                            preferred = preferredKind,
+                            onVideo = { model.prefer(Kind.VIDEO) },
+                            onDownloads = { page = "downloads"; query = "" },
+                            onSupported = { page = "supported" },
+                            onTools = { page = "tools" },
                             onPaste = {
                                 focus.clearFocus()
                                 keyboard?.hide()
@@ -451,12 +469,6 @@ internal fun MainActivity.AppScreen(model: MainViewModel, sharedGeneration: Int,
                             query,
                             { command("cancel") },
                             { command("pause") },
-                            {
-                                Transfers.currentTask?.let {
-                                    enqueue(it.copy(userPaused = false))
-                                }
-                            },
-                            { transfer.uri?.let { open(it, transfer.mime) } },
                             { details = true },
                             { task ->
                                 scope.launch {
@@ -547,7 +559,9 @@ internal fun MainActivity.AppScreen(model: MainViewModel, sharedGeneration: Int,
                         )
                     "about" -> AboutScreen({ page = "more" }, { page = "contact" })
                     "contact" -> ContactScreen { page = "about" }
-                    "settings" -> SettingsScreen(tree != null,
+                    "supported" -> SupportedLinksScreen()
+                    "tools" -> ToolsScreen({ page = "offline" }, { page = "batch" }, { page = "quick" })
+                    "settings", "more" -> SettingsScreen(tree != null,
                         ::setLanguage, { picker.launch(tree) }, {
                             tree = null
                             preferences.edit().remove("tree").apply()
@@ -586,7 +600,10 @@ internal fun MainActivity.AppScreen(model: MainViewModel, sharedGeneration: Int,
                                 message(R.string.quick_pin_unavailable)
                         },
                         onTry = { startActivity(QuickLaunch.intent(this@AppScreen)) })
-                    else -> MoreScreen { page = it }
+                    else -> SettingsScreen(tree != null, ::setLanguage, { picker.launch(tree) }, {
+                            tree = null
+                            preferences.edit().remove("tree").apply()
+                        }, { page = "privacy" }, { page = "batch" }, { page = "about" }, { page = "quick" }, { page = "offline" })
 
                 }
             }

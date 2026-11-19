@@ -228,9 +228,13 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     private var preferred = Kind.VIDEO
+    private val preferredMutable = MutableStateFlow(Kind.VIDEO)
+    /** Media kind the home shortcuts select; drives which analysed format is preselected. */
+    val preferredKind: StateFlow<Kind> = preferredMutable.asStateFlow()
 
     fun prefer(kind: Kind) {
         preferred = kind
+        preferredMutable.value = kind
         mutable.value.analysis?.choices?.firstOrNull { it.kind == kind }?.let(::select)
     }
 

@@ -89,6 +89,40 @@ gradlew.bat testDebugUnitTest lintDebug lintRelease assembleDebug assembleReleas
 
 بقية الاختبارات (~92 من 193 القديمة) لم تُشغَّل في هذه المرحلة: **NOT RUN**، وتُشغّل كاملة في المرحلة G.
 
+## المرحلة D — إعادة التصميم
+
+### البوابة الآلية
+
+| الخطوة | النتيجة | التفاصيل |
+|---|---|---|
+| `testDebugUnitTest` | PASSED | **173/173** (+3: اختبار التباين للوضعين، و`SignedRedirectResumeTest` ×2) |
+| `lintDebug` / `lintRelease` | PASSED | 83 / 84 ملاحظة، صفر Error. الزيادة +2 تلميحات `UseKtx` في كتابتي `SharedPreferences` الجديدتين، اتباعًا لنمط `check(commit())` القائم. أُزيلت 16 سلسلة يتيمة بالعربية والإنجليزية |
+| `assembleDebug` / `assembleRelease` | PASSED | Release غير موقّع: 202,585,394 بايت (+127,680 بايت ≈ 125 KB منذ خط الأساس، لكل المراحل B–D) |
+| `connectedDebugAndroidTest` (20 صنفًا) | **84/87 ثم 86/87** | التفاصيل أدناه |
+
+### نتائج الجهاز
+
+| الاختبار | النتيجة | السبب والإجراء |
+|---|---|---|
+| `UiFlowTest.primaryNavigationKeepsRealEmptyStatesAndInput` | FAILED ثم **PASSED** | تراجع حقيقي مني: عبارة «لا توجد تنزيلات نشطة» اختفت حين توجد ملفات مكتملة. أُعيدت كبطاقة أعلى القائمة |
+| `AppResourcesTest.systemSplashUsesTheSameNavyCanvas` | FAILED ثم **PASSED** | الاختبار كان يثبّت الكحلي القديم `#070F1E`. حُدِّث ليقارن بتوكن الهوية `DososPalettes.Dark.background` |
+| `QuickLaunchTest.unsafeClipboardItemsAreRejectedWithoutOpeningAContentProvider` | **FLAKY (بيئة)**: فشل 3 من 6 | يفشل دائمًا مع العنصر `sensitive` فقط: يُقرأ الرابط بدون علامة `IS_SENSITIVE`. التفسير الأرجح أن مزامنة حافظة المحاكي مع Windows تعيد النص كمقطع عادي فتُسقط العلامة. `QuickLaunch.kt` لم يتغير منذ خط الأساس. أُضيفت رسالة تسمّي العنصر والقيمة المقروءة. **يحتاج تأكيدًا على جهاز فعلي** |
+| بقية 84 اختبارًا (Batch، Publication، Library، Output، Stale، Readable، Timeline...) | PASSED | — |
+
+### تجارب حقيقية على المحاكي
+
+| الحالة | النتيجة | الحكم |
+|---|---|---|
+| تنزيل 268,141,364 بايت من GitHub مع إيقاف مؤقت، ثم قتل العملية (`am force-stop`)، ثم إعادة الفتح والاستئناف | توقف عند 73.32 MiB واستُؤنف من نقطة الاستئناف حتى الاكتمال. **SHA-256 للنسخة المستأنفة = النسخة غير المنقطعة = بصمة GitHub المنشورة** `2080a4d490de9d64fc13f31868fab3f9c7215e06138c602d5df31611502e7260` | PASSED (بعد الإصلاح) |
+| نفس السيناريو قبل الإصلاح | 3 محاولات فشلت `DOWNLOAD_FAILED` («Changed representation») | خلل موجود في 1.3.2، أُصلح وأعيد إنتاجه باختبار JVM |
+| تسمية مقروءة على الجهاز | `dosos73.apk` ثم `dosos73-1.3.2-native-sources.zip` ثم `dosos73-1.3.2-native-sources (2).zip` | PASSED |
+| تحليل APK مع خنق الشبكة إلى 8000 kbps | 15,559 ms مقابل 1–2 ث بلا خنق؛ والتنزيل أبطأ بكثير من القيمة المطلوبة | خنق المحاكي غير موثوق. **اختبار الاتصال البطيء الحقيقي: NOT RUN** |
+| السمات: داكن/فاتح، العربية/الإنجليزية | لقطات حقيقية في `docs/vnext/screens/` | PASSED (بصريًا) |
+
+### ملاحظة على البيئة
+
+`connectedDebugAndroidTest` يزيل التطبيق بعد التشغيل (سلوك Gradle الافتراضي). لهذا فقد ملف F-Droid المحفوظ في المرحلة B مالكه في MediaStore واختفى من المكتبة. هذا أثر لطريقة الاختبار وليس خللًا في المنتج.
+
 ### ما لم يُختبر بعد
 
 | البند | الحالة | السبب |

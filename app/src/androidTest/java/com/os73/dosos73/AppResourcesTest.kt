@@ -1,5 +1,6 @@
 package com.os73.dosos73
 
+import androidx.compose.ui.graphics.toArgb
 import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.Assert.*
 import org.junit.Test
@@ -12,7 +13,8 @@ class AppResourcesTest {
         val theme = context.resources.newTheme().apply { applyStyle(R.style.AppTheme, true) }
         val value = android.util.TypedValue()
         assertTrue(theme.resolveAttribute(android.R.attr.windowSplashScreenBackground, value, true))
-        assertEquals(android.graphics.Color.rgb(7, 15, 30), value.data)
+        // vNext identity: the splash uses the reference navy, the same token as the app canvas.
+        assertEquals(DososPalettes.Dark.background.toArgb(), value.data)
     }
     @Test
     fun adaptiveForegroundHasDensityIndependentSize() {

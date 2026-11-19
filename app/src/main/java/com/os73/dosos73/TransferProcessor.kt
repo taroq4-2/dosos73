@@ -115,10 +115,16 @@ internal class TransferProcessor(
         } catch (_: CancellationException) {
             if (terminal.phase != Phase.COMPLETE) {
                 withContext(NonCancellable) { trace(stage, TimelineResult.INTERRUPTED) }
+                val cancelled = isUserCancelled()
+                // A paused task keeps its last real progress so every surface can show "x / y".
+                val last = Transfers.state.value.takeIf { !cancelled && it.title == task.analysis.title }
                 terminal =
                     TransferState(
-                        if (isUserCancelled()) Phase.CANCELLED else Phase.PAUSED,
+                        if (cancelled) Phase.CANCELLED else Phase.PAUSED,
                         task.analysis.title,
+                        bytes = last?.bytes ?: 0,
+                        total = last?.total,
+                        percent = last?.percent,
                     )
             }
         } catch (e: Exception) {
