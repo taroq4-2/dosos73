@@ -51,17 +51,17 @@ gradlew.bat testDebugUnitTest lintDebug lintRelease assembleDebug assembleReleas
 
 ### تجارب حقيقية على المحاكي (تطبيق Debug مثبّت، روابط حقيقية)
 
-زمن «الجاهزية» يقيسه التطبيق نفسه (`DososPipeline` → `millis`) من الضغط على «تحليل» حتى ظهور النتيجة. كل تجربة نُفذت **مرة واحدة**، فهذه ليست P50/P95.
+زمن «الجاهزية» يقيسه التطبيق نفسه (`DososPipeline` → `millis`) من الضغط على «تحليل» حتى ظهور النتيجة. عدد التشغيلات صغير (2–3 لكل رابط)، فهذه ليست P50/P95.
 
 | الحالة | الرابط | النتيجة | الزمن | الحكم |
 |---|---|---|---:|---|
-| APK مباشر من GitHub (تحويلات حتى خادم الأصول) | `…/releases/download/v1.3.2/dosos73.apk` | ملف APK، «تم التحقق من المحتوى (APK)»، الحجم 55.72 MiB (يطابق 58,422,468 بايت)، تنبيه عدم التثبيت التلقائي | 1,935 ms ثم 1,048 ms | PASSED |
-| صفحة إصدار GitHub | `…/releases/latest` | قائمة «اختر ملفًا من هذا الإصدار» بـ 3 ملفات APK أولًا ثم بقية الأصول مع أحجامها | 1,014 ms | PASSED |
-| صفحة تطبيق F-Droid | `f-droid.org/packages/org.fdroid.fdroid/` | APK الإصدار المقترح `org.fdroid.fdroid_2000053`، تم التحقق، 12.18 MiB | 666 ms | PASSED |
+| APK مباشر من GitHub (تحويلات حتى خادم الأصول) | `…/releases/download/v1.3.2/dosos73.apk` | ملف APK، «تم التحقق من المحتوى (APK)»، الحجم 55.72 MiB (يطابق 58,422,468 بايت)، تنبيه عدم التثبيت التلقائي | 1,935 / 1,048 / 1,265 ms | PASSED |
+| صفحة إصدار GitHub | `…/releases/latest` | قائمة «اختر ملفًا من هذا الإصدار» بـ 3 ملفات APK أولًا ثم بقية الأصول مع أحجامها | 1,014 / 990 ms | PASSED |
+| صفحة تطبيق F-Droid | `f-droid.org/packages/org.fdroid.fdroid/` | APK الإصدار المقترح `org.fdroid.fdroid_2000053`، تم التحقق، 12.18 MiB | 666 / 542 ms | PASSED |
 | ملف غير موجود | `…/releases/download/v1.3.2/no-such-file.apk` | رسالة HTTP 404 محددة، دون تشغيل محرك الوسائط | فوري (~1 s) | PASSED |
 | تنزيل كامل حتى الحفظ | APK F-Droid أعلاه | 12,774,751 بايت، VERIFY ثم PUBLISH، حُفظ في `Download/dosos73/` بنوع `application/vnd.android.package-archive`. SHA-256 على الجهاز: `dac55a0d17b1edf7e7286b48cfbd70c7c52fbb32a00af062c68830a437c47959` | ~5 s | PASSED |
 
-لقطات الشاشة محفوظة محليًا في `build-evidence/phaseB-device/` (غير مرفوعة).
+لقطات الشاشة (`direct-apk.png`, `github-release-page.png`, `fdroid-page.png`, `missing-apk.png`) محفوظة محليًا في `build-evidence/phaseB-device/` وغير مرفوعة. أُعيد التقاطها في التشغيل الثاني بعد إصلاح خطأ في مسار الحفظ بسكربتي، كان يكتب كل اللقطات فوق ملف واحد.
 
 **للمقارنة:** في 1.3.2 كانت هذه الروابط الأربعة كلها تُحال إلى محرك الوسائط (Python/yt-dlp)، لأن نوع APK لم يكن في القائمة ولأن صفحات GitHub/F-Droid صفحات HTML. لم يُقس زمن 1.3.2 على هذا المحاكي: **غير مُقاس**.
 
