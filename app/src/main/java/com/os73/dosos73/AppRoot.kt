@@ -407,6 +407,7 @@ internal fun MainActivity.AppScreen(model: MainViewModel, sharedGeneration: Int,
                             model::select,
                             { focus.clearFocus(); keyboard?.hide(); model.analyze() },
                             model::cancelAnalysis,
+                            onCandidate = model::pickCandidate,
                             onPaste = {
                                 focus.clearFocus()
                                 keyboard?.hide()

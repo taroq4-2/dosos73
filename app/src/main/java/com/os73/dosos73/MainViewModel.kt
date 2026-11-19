@@ -7,6 +7,7 @@ import okhttp3.HttpUrl.Companion.toHttpUrl
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.sync.withLock
 
 data class ScreenState(
@@ -18,6 +19,15 @@ data class ScreenState(
     val pendingShared: String? = null,
     val quick: Boolean = false,
     val quickNeedsConfirmation: Boolean = false,
+    /** Visible analysis progress; [busy] stays the single input gate for existing callers. */
+    val stage: AnalysisStage = AnalysisStage.IDLE,
+    /** Files offered by a recognised source page, best match first. */
+    val candidates: List<LinkCandidate> = emptyList(),
+    /** True when the probe matched the file signature; null for media-engine results. */
+    val verified: Boolean? = null,
+    val category: FileCategory? = null,
+    /** Seconds from an HTTP Retry-After header, shown with [error]. */
+    val retryAfter: Long? = null,
 )
 
 class MainViewModel(app: Application) : AndroidViewModel(app) {
@@ -193,19 +203,22 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     private val media = MediaEngine(app)
 
-    private suspend fun analyzeSource(url: String): Analysis = withTimeout(120_000) {
-        if (BuildConfig.DEBUG) analysisForTests?.let { return@withTimeout it(url) }
+    private suspend fun analyzeSource(
+        url: String,
+        onStage: (AnalysisStage) -> Unit = {},
+        pickFirst: Boolean = true,
+    ): AnalysisOutcome = withTimeout(120_000) {
+        if (BuildConfig.DEBUG) analysisForTests?.let { return@withTimeout AnalysisOutcome.Ready(it(url)) }
+        onStage(AnalysisStage.VALIDATING)
         val app = getApplication<Application>()
         NetworkSettings.requireSource(app, url, Stage.EXTRACT)
         val downloader = directForNetwork()
         withAnalysisCancellation({ downloader.cancel(); media.cancel() }) {
-            val candidate = try { downloader.analyze(url) }
-            catch (error: java.io.IOException) {
-                currentCoroutineContext().ensureActive()
-                if (!url.startsWith("https://")) throw error
-                null
-            }
-            candidate ?: media.analyze(url)
+            LinkAnalyzer(
+                probe = { target, onResponse -> downloader.probe(target, onResponse) },
+                fetchJson = { endpoint, accept -> downloader.fetchJson(endpoint, accept) },
+                media = { target -> media.analyze(target) },
+            ).analyze(url, onStage, pickFirst)
         }
     }
 
@@ -327,7 +340,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                         val result =
                             try {
                                 val analysis =
-                                    analyzeSource(entry.url)
+                                    (analyzeSource(entry.url) as AnalysisOutcome.Ready).analysis
                                 entry.copy(analysis = analysis, error = null, choice = analysis.choices.firstOrNull())
                             } catch (error: TimeoutCancellationException) {
                                 direct.cancel()
@@ -408,41 +421,64 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                 return
             }
         mutable.value =
-            mutable.value.copy(busy = true, error = null, analysis = null, selected = null)
+            mutable.value.copy(busy = true, error = null, analysis = null, selected = null,
+                stage = AnalysisStage.VALIDATING, candidates = emptyList(), verified = null, category = null,
+                retryAfter = null)
         val generation = ++analysisGeneration
+        // Stage callbacks arrive from network threads; a stale analysis can never overwrite a newer one.
+        val onStage: (AnalysisStage) -> Unit = { stage ->
+            mutable.update { if (generation == analysisGeneration && it.busy) it.copy(stage = stage) else it }
+        }
+        val startedAt = android.os.SystemClock.elapsedRealtime()
         job =
             viewModelScope.launch {
                 try {
-                    val analysis =
-                        analyzeSource(url)
+                    val outcome = analyzeSource(url, onStage, pickFirst = false)
                     if (generation != analysisGeneration) return@launch
-                    mutable.value =
-                        mutable.value.copy(
-                            url = url,
-                            busy = false,
-                            error = null,
-                            pendingShared = mutable.value.pendingShared,
-                            analysis = analysis,
-                            selected =
-                                analysis.choices.firstOrNull { it.kind == preferred }
-                                    ?: analysis.choices.first(),
-                        )
+                    Diagnostics.event(Stage.EXTRACT, "ready",
+                        millis = android.os.SystemClock.elapsedRealtime() - startedAt)
+                    when (outcome) {
+                        is AnalysisOutcome.Choices -> mutable.value = mutable.value.copy(
+                            url = url, busy = false, error = null, stage = AnalysisStage.READY,
+                            candidates = outcome.candidates)
+                        is AnalysisOutcome.Ready -> {
+                            val analysis = outcome.analysis
+                            mutable.value =
+                                mutable.value.copy(
+                                    url = url,
+                                    busy = false,
+                                    error = null,
+                                    stage = AnalysisStage.READY,
+                                    verified = outcome.verified,
+                                    category = outcome.category,
+                                    pendingShared = mutable.value.pendingShared,
+                                    analysis = analysis,
+                                    selected =
+                                        analysis.choices.firstOrNull { it.kind == preferred }
+                                            ?: analysis.choices.first(),
+                                )
+                        }
+                    }
                 } catch (_: TimeoutCancellationException) {
                     if (generation != analysisGeneration) return@launch
                     direct.cancel()
                     media.cancel()
-                    mutable.value = mutable.value.copy(busy = false, error = R.string.error_timeout)
+                    mutable.value = mutable.value.copy(busy = false, stage = AnalysisStage.FAILED,
+                        error = R.string.error_timeout)
                 } catch (_: CancellationException) {
                     if (generation == analysisGeneration) mutable.value = mutable.value.copy(busy = false)
                 } catch (error: Exception) {
                     if (generation != analysisGeneration) return@launch
                     val failure = FailureClassifier.classify(Stage.EXTRACT, error)
                     Diagnostics.event(failure.stage, "failed", code = failure.code)
+                    val retryAfter = (failure.cause as? RetryAfter)?.seconds?.takeIf { it > 0 }
                     mutable.value =
                         mutable.value.copy(
                             busy = false,
+                            stage = AnalysisStage.FAILED,
                             analysis = null,
                             selected = null,
+                            retryAfter = retryAfter,
                             error = failure.messageResource(),
                         )
                 }
@@ -458,8 +494,17 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         // Engines are shared by single/batch analysis; keep the gate closed until cleanup ends.
         viewModelScope.launch {
             cancelled?.join()
-            if (generation == analysisGeneration) mutable.value = mutable.value.copy(busy = false)
+            if (generation == analysisGeneration)
+                mutable.value = mutable.value.copy(busy = false, stage = AnalysisStage.CANCELED)
         }
+    }
+
+    /** Analyze one file offered by a source page (e.g. a GitHub release asset). */
+    fun pickCandidate(candidate: LinkCandidate) {
+        val screen = mutable.value
+        if (screen.busy || candidate !in screen.candidates) return
+        mutable.value = ScreenState(url = candidate.url, pendingShared = screen.pendingShared)
+        analyze()
     }
 
     override fun onCleared() {

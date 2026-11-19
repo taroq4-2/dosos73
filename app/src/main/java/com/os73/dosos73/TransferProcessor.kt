@@ -77,6 +77,8 @@ internal class TransferProcessor(
                     task.choice.kind,
                     task.choice.expectedHeight,
                     task.choice.expectsAudio,
+                    // Only direct files are checked against their name; engine outputs are media.
+                    extension = if (task.analysis.direct) task.choice.extension else null,
                 )
             }
             Diagnostics.event(stage, "completed", output.length())

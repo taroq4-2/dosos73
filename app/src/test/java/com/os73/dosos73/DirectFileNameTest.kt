@@ -34,6 +34,25 @@ class DirectFileNameTest {
     }
 
     @Test
+    fun androidPackagesKeepTheirExtension() {
+        assertEquals("app" to "apk", DirectFileName.resolve(null, "app", "application/vnd.android.package-archive"))
+        assertEquals("app" to "apk", DirectFileName.resolve(null, "app.apk", "application/octet-stream"))
+        // A ZIP-based package served as plain ZIP keeps the precise extension.
+        assertEquals("game" to "xapk", DirectFileName.resolve(null, "game.xapk", "application/zip"))
+        assertEquals("archive" to "zip", DirectFileName.resolve(null, "archive.zip", "application/zip"))
+    }
+
+    @Test
+    fun latin1EncodedNameAndBidiSpoofingAreHandled() {
+        assertEquals("café" to "pdf",
+            DirectFileName.resolve("attachment; filename*=ISO-8859-1''caf%E9.pdf", "get", "application/pdf"))
+        // U+202E would render "invoice‮gpj.exe" as "invoiceexe.jpg".
+        val (title, extension) = DirectFileName.resolve(
+            "attachment; filename=\"invoice‮gpj.exe\"", "get", "application/octet-stream")
+        assertEquals("invoicegpj" to "exe", title to extension)
+    }
+
+    @Test
     fun malformedEncodedNameFallsBack() {
         assertEquals(
             "safe" to "zip",

@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="stage_validating">جارٍ التحقق من الرابط…</string>
+    <string name="stage_resolving">جارٍ البحث عن ملف الإصدار…</string>
+    <string name="stage_connecting">جارٍ الاتصال بالمصدر…</string>
+    <string name="stage_probing">جارٍ قراءة معلومات الملف…</string>
+    <string name="stage_extracting">جارٍ جلب معلومات الوسائط… قد يستغرق ذلك حتى دقيقة.</string>
+    <string name="analysis_canceled">أُلغي التحليل.</string>
+    <string name="error_type_mismatch">محتوى الملف لا يطابق نوعه، فلم يُحفظ. قد يشير الرابط إلى ملف مختلف عمّا يوحي به اسمه.</string>
+    <string name="error_web_page">فتح الرابط صفحة ويب وليس ملفًا. افتح الصفحة في المتصفح وانسخ رابط التنزيل المباشر.</string>
+    <string name="error_link_expired">انتهت صلاحية رابط التنزيل (HTTP 410). احصل على رابط جديد من المصدر.</string>
+    <string name="error_source_no_file">لا تحتوي هذه الصفحة على ملف قابل للتنزيل لهذا الطلب.</string>
+    <string name="link_verified">تم التحقق من المحتوى (%1$s)</string>
+    <string name="link_unverified">النوع مأخوذ من الخادم، ويُتحقق منه مجددًا بعد التنزيل</string>
+    <string name="link_source">المصدر: %1$s</string>
+    <string name="candidates_title">اختر ملفًا من هذا الإصدار</string>
+    <string name="apk_notice">تُحفظ حزم Android ولا تُثبَّت تلقائيًا أبدًا. ثبّت فقط من مصادر تثق بها.</string>
+    <plurals name="retry_after">
+        <item quantity="zero">يمكنك إعادة المحاولة الآن.</item>
+        <item quantity="one">يمكنك إعادة المحاولة بعد ثانية واحدة.</item>
+        <item quantity="two">يمكنك إعادة المحاولة بعد ثانيتين.</item>
+        <item quantity="few">يمكنك إعادة المحاولة بعد %1$d ثوانٍ.</item>
+        <item quantity="many">يمكنك إعادة المحاولة بعد %1$d ثانية.</item>
+        <item quantity="other">يمكنك إعادة المحاولة بعد %1$d ثانية.</item>
+    </plurals>
+</resources>

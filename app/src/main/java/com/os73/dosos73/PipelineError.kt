@@ -32,6 +32,14 @@ enum class FailureCode {
     PUBLICATION_REVIEW_REQUIRED,
     EXTRACTION_FAILED,
     DOWNLOAD_FAILED,
+    /** The body's leading bytes contradict its declared type (e.g. an HTML page named .apk). */
+    FILE_TYPE_MISMATCH,
+    /** The source answered with a web page where a file was expected. */
+    WEB_PAGE_NOT_FILE,
+    /** HTTP 410 or an expired signed link. */
+    LINK_EXPIRED,
+    /** A recognised source page that has no downloadable file for this request. */
+    SOURCE_NO_FILE,
 }
 
 class PipelineException(val stage: Stage, val code: FailureCode, cause: Throwable? = null) :
@@ -119,6 +127,10 @@ fun PipelineException.messageResource(): Int =
         FailureCode.NETWORK_TIMEOUT -> R.string.error_timeout
         FailureCode.DOWNLOAD_INTERRUPTED -> R.string.error_incomplete_source
         FailureCode.EXTRACTION_FAILED -> R.string.error_analyze
+        FailureCode.FILE_TYPE_MISMATCH -> R.string.error_type_mismatch
+        FailureCode.WEB_PAGE_NOT_FILE -> R.string.error_web_page
+        FailureCode.LINK_EXPIRED -> R.string.error_link_expired
+        FailureCode.SOURCE_NO_FILE -> R.string.error_source_no_file
         else -> R.string.error_download
     }
 
@@ -127,7 +139,7 @@ fun PipelineException.messageResource(): Int =
  * stderr.
  */
 object Diagnostics {
-    fun event(stage: Stage, result: String, bytes: Long? = null, code: FailureCode? = null) {
+    fun event(stage: Stage, result: String, bytes: Long? = null, code: FailureCode? = null, millis: Long? = null) {
         if (BuildConfig.DEBUG)
             android.util.Log.i(
                 "DososPipeline",
@@ -140,6 +152,7 @@ object Diagnostics {
                         put("wrapper", "0.18.1")
                         put("engine", "2026.10.21")
                         bytes?.let { put("bytes", it) }
+                        millis?.let { put("millis", it) }
                         code?.let { put("failure", it.name) }
                     }
                     .toString(),

@@ -66,8 +66,28 @@ class OutputStore(
         kind: Kind,
         expectedHeight: Int? = null,
         expectsAudio: Boolean = false,
+        extension: String? = null,
     ) {
         require(file.isFile && file.length() > 0)
+        // P0-2: the saved bytes must be what the file claims to be. An HTML error/login page or a
+        // different format is never published as an APK, archive or document.
+        if (kind == Kind.FILE && extension != null) {
+            val header = file.inputStream().use { input ->
+                val buffer = ByteArray(FileTypes.HEADER_BYTES)
+                var filled = 0
+                while (filled < buffer.size) {
+                    val n = input.read(buffer, filled, buffer.size - filled)
+                    if (n < 0) break
+                    filled += n
+                }
+                buffer.copyOf(filled)
+            }
+            when (FileTypes.verify(extension, header)) {
+                FileTypes.Verdict.WebPage -> throw PipelineException(Stage.VERIFY, FailureCode.WEB_PAGE_NOT_FILE)
+                is FileTypes.Verdict.Mismatch -> throw PipelineException(Stage.VERIFY, FailureCode.FILE_TYPE_MISMATCH)
+                else -> Unit
+            }
+        }
         if (kind != Kind.FILE)
             MediaMetadataRetriever().use { retriever ->
                 retriever.setDataSource(file.absolutePath)
@@ -108,7 +128,8 @@ class OutputStore(
             val resolver = context.contentResolver
             val expected = file.inputStream().use(StreamIntegrity::fingerprint)
             val mime =
-                MimeTypeMap.getSingleton().getMimeTypeFromExtension(task.choice.extension)
+                FileTypes.publishMime(task.choice.extension)
+                    ?: MimeTypeMap.getSingleton().getMimeTypeFromExtension(task.choice.extension)
                     ?: "application/octet-stream"
             val name = Safety.filename(task.analysis.title, task.choice.extension)
             if (task.tree == null)

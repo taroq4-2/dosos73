@@ -14,10 +14,25 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
 
+/** Result of inspecting a link before anything is saved. */
+sealed interface DirectProbe {
+    /** The body is a real file; [verified] when its first bytes matched the type's signature. */
+    data class File(val analysis: Analysis, val verified: Boolean, val category: FileCategory) : DirectProbe
+    /** An HTML/text page: needs a source resolver or the media engine. */
+    data class Page(val finalUrl: String) : DirectProbe
+    /** The origin refused or failed the request; another engine cannot do better with this link. */
+    data class Failed(val code: FailureCode, val status: Int? = null, val retryAfterSeconds: Long? = null) : DirectProbe
+}
+
 class DirectDownloader(private val client: OkHttpClient = secureClient()) {
     @Volatile private var activeCall: okhttp3.Call? = null
     private val cancelled = AtomicBoolean(false)
     @Volatile private var parallel: ParallelDownloader? = null
+    /** Link inspection must answer quickly; long transfers keep [client]'s limits. */
+    private val probeClient: OkHttpClient by lazy {
+        client.newBuilder().connectTimeout(10, TimeUnit.SECONDS).readTimeout(15, TimeUnit.SECONDS)
+            .callTimeout(25, TimeUnit.SECONDS).build()
+    }
 
     fun cancel() {
         cancelled.set(true)
@@ -31,6 +46,9 @@ class DirectDownloader(private val client: OkHttpClient = secureClient()) {
         probe: Boolean = false,
         resume: ResumeCheckpoint? = null,
         rangeEnd: Long? = null,
+        range: String? = null,
+        quick: Boolean = false,
+        accept: String? = null,
     ): Response {
         var current = Safety.url(url)
         repeat(6) {
@@ -42,6 +60,8 @@ class DirectDownloader(private val client: OkHttpClient = secureClient()) {
                     .apply {
                         if (head) head()
                         if (probe) header("Range", "bytes=0-0")
+                        if (range != null) header("Range", range)
+                        if (accept != null) header("Accept", accept)
                         if (resume != null) {
                             header("Range", "bytes=${resume.offset}-${rangeEnd ?: ""}")
                             header("If-Range", resume.etag)
@@ -50,7 +70,7 @@ class DirectDownloader(private val client: OkHttpClient = secureClient()) {
                     .build()
             Safety.requirePublicLiteral(request.url.host)
             if (cancelled.get()) throw IOException("Cancelled")
-            val call = client.newCall(request)
+            val call = (if (quick) probeClient else client).newCall(request)
             activeCall = call
             if (cancelled.get()) call.cancel()
             val response = call.execute()
@@ -65,75 +85,129 @@ class DirectDownloader(private val client: OkHttpClient = secureClient()) {
         throw IOException("Too many redirects")
     }
 
-    suspend fun analyze(url: String): Analysis? =
+    /**
+     * Fast, bounded inspection of a link. One ranged GET reads at most [FileTypes.HEADER_BYTES]
+     * bytes, which proves what the body really is (P0-1/P0-2): headers and URL extensions are hints.
+     * Never downloads the body, never follows a redirect without re-checking it (see [request]).
+     */
+    suspend fun probe(url: String, onResponse: () -> Unit = {}): DirectProbe =
         withContext(Dispatchers.IO) {
             currentCoroutineContext().ensureActive()
-            val head = request(url, true)
-            var candidate =
-                if (head.code in setOf(403, 405, 501)) {
-                    head.close()
-                    request(url, probe = true)
-                } else head
-            // Some origins reject byte ranges although a normal GET is supported.
-            // Retry only this probe failure once; close without downloading the body.
-            if (candidate.code == 416) {
-                candidate.close()
-                candidate = request(url)
-            }
-            candidate.use { response ->
-                if (!response.isSuccessful) return@withContext null
-                val mime =
-                    response
-                        .header("Content-Type")
-                        ?.substringBefore(';')
-                        ?.trim()
-                        ?.lowercase()
-                        .orEmpty()
-                // HTML and unknown responses must go through the extractor, not be saved as media.
-                if (mime.startsWith("text/") || mime.contains("json") || mime.isBlank())
-                    return@withContext null
-                val kind =
-                    when {
-                        mime.startsWith("video/") -> Kind.VIDEO
-                        mime.startsWith("audio/") -> Kind.AUDIO
-                        else -> Kind.FILE
-                    }
-                if (
-                    !(mime.startsWith("video/") ||
-                        mime.startsWith("audio/") ||
-                        mime == "application/octet-stream" ||
-                        mime == "application/pdf" ||
-                        mime == "application/zip" ||
-                        mime in
-                            setOf(
-                                "image/jpeg",
-                                "image/png",
-                                "application/gzip",
-                                "application/x-7z-compressed",
-                            ))
-                )
-                    return@withContext null
-                val (title, safeExt) =
-                    DirectFileName.resolve(
-                        response.header("Content-Disposition"),
-                        response.request.url.pathSegments.lastOrNull().orEmpty(),
-                        mime,
-                    )
-                Analysis(
-                    url,
-                    title,
-                    listOf(Choice("direct", kind, safeExt, "Original")),
-                    true,
-                    if (response.code == 206)
-                        Regex("bytes 0-0/(\\d+)")
-                            .matchEntire(response.header("Content-Range").orEmpty())
-                            ?.groupValues
-                            ?.get(1)
-                            ?.toLongOrNull()
-                    else response.header("Content-Length")?.toLongOrNull()?.takeIf { it >= 0 },
-                )
+            try { probeOnce(url, onResponse) }
+            catch (error: IOException) {
+                // One retry for a transient connection failure only; HTTP statuses are not retried here.
+                if (cancelled.get() || (error !is java.net.SocketTimeoutException && error !is java.net.ConnectException))
+                    throw error
+                currentCoroutineContext().ensureActive()
+                kotlinx.coroutines.delay(400)
+                probeOnce(url, onResponse)
             }
         }
+
+    private fun probeOnce(url: String, onResponse: () -> Unit): DirectProbe {
+        var response = request(url, range = "bytes=0-${FileTypes.HEADER_BYTES - 1}", quick = true)
+        onResponse()
+        // Some origins reject byte ranges although a normal GET works; retry that once, unranged.
+        if (response.code == 416 || response.code == 501) {
+            response.close()
+            response = request(url, quick = true)
+        }
+        response.use {
+            if (!response.isSuccessful) return statusFailure(response)
+            val mime = response.header("Content-Type")?.substringBefore(';')?.trim()?.lowercase().orEmpty()
+            val finalUrl = response.request.url.toString()
+            if (mime.startsWith("text/html") || mime == "application/xhtml+xml") return DirectProbe.Page(finalUrl)
+            val encodings = response.headers.values("Content-Encoding").flatMap { it.split(',') }.map { it.trim() }
+            if (encodings.any { it.isNotEmpty() && !it.equals("identity", true) }) return DirectProbe.Page(finalUrl)
+            val header = response.body?.byteStream()?.use { input ->
+                val buffer = ByteArray(FileTypes.HEADER_BYTES)
+                var filled = 0
+                while (filled < buffer.size) {
+                    if (cancelled.get()) throw IOException("Cancelled")
+                    val n = input.read(buffer, filled, buffer.size - filled)
+                    if (n < 0) break
+                    filled += n
+                }
+                buffer.copyOf(filled)
+            } ?: ByteArray(0)
+            if (FileTypes.looksLikeHtml(header)) return DirectProbe.Page(finalUrl)
+            val disposition = response.header("Content-Disposition")
+            val attachment = disposition.orEmpty().trimStart().startsWith("attachment", ignoreCase = true)
+            val lastSegment = response.request.url.pathSegments.lastOrNull().orEmpty()
+            val named = DirectFileName.resolve(disposition, lastSegment, mime)
+            val title = named.first
+            var extension = named.second
+            // The extension the name alone gives ("bin" when it has none).
+            val suffix = DirectFileName.resolve(disposition, lastSegment, "").second
+            // Text/JSON/XML bodies are web resources unless the origin or the name says "this is a file".
+            val textual = mime.startsWith("text/") || mime.contains("json") || mime.endsWith("xml")
+            if (textual && !attachment && FileTypes.category(suffix) != FileCategory.DOCUMENT)
+                return DirectProbe.Page(finalUrl)
+            val sniffed = FileTypes.sniff(header)
+            when (FileTypes.verify(extension, header)) {
+                FileTypes.Verdict.WebPage -> return DirectProbe.Page(finalUrl)
+                is FileTypes.Verdict.Mismatch -> {
+                    // A mislabelled MIME type: trust the name when its signature matches the bytes,
+                    // otherwise the bytes of an opaque type. An unexplained conflict is refused.
+                    extension = when {
+                        sniffed != null && FileTypes.forExtension(suffix)?.signature?.invoke(header) == true -> suffix
+                        sniffed != null && mime in FileTypes.opaqueMimes -> sniffed.extension
+                        else -> return DirectProbe.Failed(FailureCode.FILE_TYPE_MISMATCH)
+                    }
+                }
+                else -> if (extension == "bin" && sniffed != null) extension = sniffed.extension
+            }
+            val kind = when {
+                mime.startsWith("video/") -> Kind.VIDEO
+                mime.startsWith("audio/") -> Kind.AUDIO
+                else -> Kind.FILE
+            }
+            val size =
+                if (response.code == 206) HttpRepresentation.parseRange(response.header("Content-Range"))?.total
+                else response.header("Content-Length")?.toLongOrNull()?.takeIf { it >= 0 }
+            return DirectProbe.File(
+                Analysis(url, title, listOf(Choice("direct", kind, extension, "Original")), true, size),
+                verified = FileTypes.verify(extension, header) == FileTypes.Verdict.Match,
+                category = FileTypes.category(extension),
+            )
+        }
+    }
+
+    private fun statusFailure(response: Response): DirectProbe.Failed {
+        val code = when (response.code) {
+            401, 407 -> FailureCode.AUTHENTICATION_REQUIRED
+            403 -> FailureCode.HTTP_403
+            404 -> FailureCode.HTTP_404
+            410 -> FailureCode.LINK_EXPIRED
+            429 -> FailureCode.HTTP_429
+            in 500..599 -> FailureCode.HTTP_SERVER
+            else -> FailureCode.DOWNLOAD_FAILED
+        }
+        val retryAfter = response.header("Retry-After")?.trim()?.toLongOrNull()?.takeIf { it in 0..86_400 }
+        return DirectProbe.Failed(code, response.code, retryAfter)
+    }
+
+    /**
+     * Small JSON documents from documented public APIs (GitHub Releases, F-Droid). Same SSRF,
+     * TLS and redirect policy as every other request; bounded size; non-JSON is refused.
+     */
+    internal suspend fun fetchJson(url: String, accept: String = "application/json"): String =
+        withContext(Dispatchers.IO) {
+            request(url, quick = true, accept = accept).use { response ->
+                if (!response.isSuccessful) {
+                    val limited = response.code == 403 && response.header("X-RateLimit-Remaining") == "0"
+                    throw PipelineException(Stage.EXTRACT, if (limited) FailureCode.HTTP_429 else statusFailure(response).code)
+                }
+                val mime = response.header("Content-Type").orEmpty().substringBefore(';').trim().lowercase()
+                if (!mime.contains("json")) throw IOException("Unexpected response type")
+                val source = response.body?.source() ?: throw IOException("Empty response")
+                if (source.request(MAX_JSON_BYTES + 1)) throw IOException("Response too large")
+                source.buffer.readUtf8()
+            }
+        }
+
+    /** Compatibility shim: a verified direct file, or null when the link is a page or failed. */
+    suspend fun analyze(url: String): Analysis? = (probe(url) as? DirectProbe.File)?.analysis
 
     suspend fun download(
         url: String,
@@ -295,6 +369,8 @@ class DirectDownloader(private val client: OkHttpClient = secureClient()) {
         }
 
     companion object {
+        private const val MAX_JSON_BYTES = 2L * 1024 * 1024
+
         fun secureClient(allowCleartext: () -> Boolean = { false }) =
             OkHttpClient.Builder()
                 // A system HTTP proxy resolves origins itself and would bypass the public DNS

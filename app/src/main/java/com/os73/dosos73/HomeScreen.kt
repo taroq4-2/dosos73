@@ -5,9 +5,11 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
@@ -35,6 +37,7 @@ internal fun HomeScreen(
     onOffline: () -> Unit,
     onPreset: (Choice, String?) -> Unit,
     startEnabled: Boolean,
+    onCandidate: (LinkCandidate) -> Unit = {},
 ) {
     val hasAnalysis = screen.analysis != null
     val canAnalyze = screen.url.isNotBlank() && !screen.busy
@@ -70,14 +73,64 @@ internal fun HomeScreen(
             }
             if (screen.busy) {
                 LinearProgressIndicator(Modifier.fillMaxWidth(), color = Neon.Cyan, trackColor = Neon.Raised)
-                TextButton(onCancelAnalysis) { Text(stringResource(R.string.cancel)) }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    screen.stage.label()?.let {
+                        Text(stringResource(it), Modifier.weight(1f).testTag("analysis_stage")
+                            .semantics { liveRegion = LiveRegionMode.Polite },
+                            style = MaterialTheme.typography.bodySmall, color = Neon.Secondary)
+                    } ?: Spacer(Modifier.weight(1f))
+                    TextButton(onCancelAnalysis, Modifier.heightIn(min = 48.dp).testTag("cancel_analysis")) {
+                        Text(stringResource(R.string.cancel))
+                    }
+                }
             } else if (!hasAnalysis) {
+                if (screen.stage == AnalysisStage.CANCELED)
+                    Text(stringResource(R.string.analysis_canceled), style = MaterialTheme.typography.bodySmall,
+                        color = Neon.Secondary)
                 GradientButton(stringResource(R.string.analyze), onAnalyze,
                     Modifier.fillMaxWidth().testTag("analyze"), canAnalyze && startEnabled, Glyph.LINK)
             }
             screen.error?.let {
-                Text(stringResource(it), Modifier.semantics { liveRegion = LiveRegionMode.Polite },
+                Text(stringResource(it), Modifier.semantics { liveRegion = LiveRegionMode.Polite }.testTag("analysis_error"),
                     color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                screen.retryAfter?.let { seconds ->
+                    val count = seconds.coerceAtMost(86_400).toInt()
+                    Text(pluralStringResource(R.plurals.retry_after, count, count),
+                        style = MaterialTheme.typography.bodySmall, color = Neon.Secondary)
+                }
+            }
+        }
+        if (screen.candidates.isNotEmpty() && !screen.busy) {
+            Panel {
+                Text(stringResource(R.string.candidates_title), style = MaterialTheme.typography.titleMedium)
+                screen.candidates.take(30).forEach { candidate ->
+                    TextButton({ onCandidate(candidate) }, Modifier.fillMaxWidth().heightIn(min = 48.dp)
+                        .testTag("candidate")) {
+                        Text(candidate.name, Modifier.weight(1f), maxLines = 2,
+                            style = MaterialTheme.typography.bodyMedium.copy(textDirection = TextDirection.Ltr))
+                        candidate.sizeBytes?.let {
+                            Spacer(Modifier.width(8.dp))
+                            Text(bytesLabel(it, androidx.compose.ui.platform.LocalConfiguration.current.locales[0]), style = MaterialTheme.typography.labelSmall,
+                                color = Neon.Secondary)
+                        }
+                    }
+                }
+            }
+        }
+        if (hasAnalysis && screen.analysis?.direct == true) {
+            val host = remember(screen.analysis.url) {
+                runCatching { java.net.URI(screen.analysis.url).host }.getOrNull().orEmpty()
+            }
+            Column(Modifier.testTag("file_facts"), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(stringResource(R.string.link_source, host), style = MaterialTheme.typography.labelSmall,
+                    color = Neon.Secondary)
+                val extension = screen.selected?.extension.orEmpty().uppercase()
+                Text(if (screen.verified == true) stringResource(R.string.link_verified, extension)
+                    else stringResource(R.string.link_unverified),
+                    style = MaterialTheme.typography.labelSmall, color = Neon.Secondary)
+                if (screen.category == FileCategory.APP)
+                    Text(stringResource(R.string.apk_notice), Modifier.testTag("apk_notice"),
+                        style = MaterialTheme.typography.labelSmall, color = Neon.Secondary)
             }
         }
         AnalysisOptions(screen, customFolder, onSelect, onFolder, onDefaultFolder, onPreset)

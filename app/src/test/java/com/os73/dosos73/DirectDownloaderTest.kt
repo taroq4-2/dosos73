@@ -11,31 +11,113 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class DirectDownloaderTest {
+    // ---- Link probe (AUDIT_BASELINE.md P0-1/P0-2/P0-3). Replaces the HEAD-first tests of 1.3.2. ----
+
+    private val zip = byteArrayOf(0x50, 0x4B, 0x03, 0x04, 0x14, 0x00, 0x08, 0x00)
+    private fun body(bytes: ByteArray) = okio.Buffer().write(bytes)
+
     @Test
-    fun headRejectionUsesBoundedRangeProbeAndRealTotal() = fixture { server, engine, _ ->
-        server.enqueue(MockResponse().setResponseCode(405))
+    fun apkWithAndroidMimeIsADirectVerifiedFileFromOneBoundedRequest() = fixture { server, engine, _ ->
         server.enqueue(
-            MockResponse()
-                .setResponseCode(206)
-                .setHeader("Content-Type", "VIDEO/MP4")
-                .setHeader("Content-Range", "bytes 0-0/5000000000")
-                .setBody("x")
+            MockResponse().setResponseCode(206)
+                .setHeader("Content-Type", "application/vnd.android.package-archive")
+                .setHeader("Content-Range", "bytes 0-7/48213504")
+                .setBody(body(zip))
         )
-        val result = engine.analyze("https://example.com/video.mp4")!!
-        assertEquals(5000000000L, result.sizeBytes)
-        assertEquals(Kind.VIDEO, result.choices.single().kind)
-        assertEquals("HEAD", server.takeRequest().method)
-        val probe = server.takeRequest()
-        assertEquals("bytes=0-0", probe.getHeader("Range"))
-        assertTrue(probe.getHeader("User-Agent")!!.startsWith("dosos73/"))
+        val result = engine.probe("https://example.com/dl/app-release.apk") as DirectProbe.File
+        assertTrue(result.verified)
+        assertEquals(FileCategory.APP, result.category)
+        assertEquals(48213504L, result.analysis.sizeBytes)
+        assertEquals("app-release", result.analysis.title)
+        assertEquals("apk", result.analysis.choices.single().extension)
+        assertEquals(Kind.FILE, result.analysis.choices.single().kind)
+        val request = server.takeRequest()
+        assertEquals("GET", request.method)
+        assertEquals("bytes=0-4095", request.getHeader("Range"))
+        assertTrue(request.getHeader("User-Agent")!!.startsWith("dosos73/"))
+        assertEquals(1, server.requestCount)
     }
 
     @Test
-    fun rangeRejectionRetriesGetAndStillRejectsHtml() = fixture { server, engine, file ->
-        server.enqueue(MockResponse().setResponseCode(405))
+    fun apkServedAsOctetStreamOrWithoutMimeIsRecognisedFromNameAndBytes() = fixture { server, engine, _ ->
+        for (mime in listOf("application/octet-stream", null, "application/zip", "binary/octet-stream")) {
+            server.enqueue(MockResponse().setResponseCode(200).apply {
+                if (mime != null) setHeader("Content-Type", mime)
+            }.setBody(body(zip)))
+            val result = engine.probe("https://example.com/files/tool.apk") as DirectProbe.File
+            assertEquals("$mime", "apk", result.analysis.choices.single().extension)
+            assertTrue("$mime", result.verified)
+        }
+    }
+
+    @Test
+    fun contentDispositionNamesTheFileIncludingRfc5987Utf8() = fixture { server, engine, _ ->
+        server.enqueue(MockResponse()
+            .setHeader("Content-Type", "application/octet-stream")
+            .setHeader("Content-Disposition",
+                "attachment; filename=\"fallback.apk\"; filename*=UTF-8''%D8%AA%D8%B7%D8%A8%D9%8A%D9%82.apk")
+            .setBody(body(zip)))
+        val result = engine.probe("https://example.com/download?id=7") as DirectProbe.File
+        assertEquals("تطبيق", result.analysis.title)
+        assertEquals("apk", result.analysis.choices.single().extension)
+    }
+
+    @Test
+    fun opaqueFileWithoutNameTakesItsTypeFromTheBytes() = fixture { server, engine, _ ->
+        server.enqueue(MockResponse().setHeader("Content-Type", "application/octet-stream")
+            .setBody(body("%PDF-1.7\n".toByteArray())))
+        val result = engine.probe("https://example.com/get") as DirectProbe.File
+        assertEquals("pdf", result.analysis.choices.single().extension)
+        assertTrue(result.verified)
+    }
+
+    @Test
+    fun htmlIsNeverAFileEvenWhenTheUrlEndsInApk() = fixture { server, engine, _ ->
+        server.enqueue(MockResponse().setHeader("Content-Type", "text/html; charset=utf-8").setBody("<html>Login</html>"))
+        assertTrue(engine.probe("https://example.com/app.apk") is DirectProbe.Page)
+        // A page disguised as a binary is caught by its bytes.
+        server.enqueue(MockResponse().setHeader("Content-Type", "application/vnd.android.package-archive")
+            .setBody("﻿  <!DOCTYPE html><html><body>Please wait</body></html>"))
+        assertTrue(engine.probe("https://example.com/app.apk") is DirectProbe.Page)
+    }
+
+    @Test
+    fun declaredApkWhoseBytesAreAnotherFormatIsRefused() = fixture { server, engine, _ ->
+        server.enqueue(MockResponse().setHeader("Content-Type", "application/vnd.android.package-archive")
+            .setBody(body("%PDF-1.4".toByteArray())))
+        val result = engine.probe("https://example.com/app.apk")
+        assertEquals(DirectProbe.Failed(FailureCode.FILE_TYPE_MISMATCH), result)
+    }
+
+    @Test
+    fun commonProgramArchiveAndDocumentTypesAreDirectFiles() = fixture { server, engine, _ ->
+        val rar = "Rar!".toByteArray() + byteArrayOf(0x1A, 0x07, 0x01, 0x00)
+        val sevenZip = byteArrayOf(0x37, 0x7A, 0xBC.toByte(), 0xAF.toByte(), 0x27, 0x1C, 0, 4)
+        for ((name, mime, bytes, extension) in listOf(
+            Quad("a.rar", "application/vnd.rar", rar, "rar"),
+            Quad("a.7z", "application/x-7z-compressed", sevenZip, "7z"),
+            Quad("setup.exe", "application/x-msdownload", "MZ\u0090\u0000".toByteArray(Charsets.ISO_8859_1), "exe"),
+            Quad("report.docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", zip, "docx"),
+            Quad("game.xapk", "application/octet-stream", zip, "xapk"),
+            Quad("bundle.apks", "application/octet-stream", zip, "apks"),
+            Quad("book.epub", "application/epub+zip", zip, "epub"),
+        )) {
+            server.enqueue(MockResponse().setHeader("Content-Type", mime).setBody(body(bytes)))
+            val result = engine.probe("https://example.com/$name")
+            assertTrue(name, result is DirectProbe.File)
+            assertEquals(name, extension, (result as DirectProbe.File).analysis.choices.single().extension)
+        }
+    }
+
+    private data class Quad(val a: String, val b: String, val c: ByteArray, val d: String)
+
+    @Test
+    fun rangeRejectionRetriesOnePlainGetAndStillRejectsHtml() = fixture { server, engine, file ->
         server.enqueue(MockResponse().setResponseCode(416))
         server.enqueue(MockResponse().setHeader("Content-Type", "TEXT/HTML").setBody("login"))
-        assertNull(engine.analyze("https://example.com/video.mp4"))
+        assertTrue(engine.probe("https://example.com/video.mp4") is DirectProbe.Page)
+        assertEquals("bytes=0-4095", server.takeRequest().getHeader("Range"))
+        assertNull(server.takeRequest().getHeader("Range"))
         server.enqueue(MockResponse().setHeader("Content-Type", "TEXT/HTML").setBody("login"))
         assertTrue(
             runCatching { engine.download("https://example.com/video.mp4", file) { _, _, _ -> } }
@@ -44,25 +126,65 @@ class DirectDownloaderTest {
     }
 
     @Test
-    fun rangeUnsupportedOriginUsesOnePlainGet() = fixture { server, engine, _ ->
-        server.enqueue(MockResponse().setResponseCode(405))
-        server.enqueue(MockResponse().setResponseCode(416))
-        server.enqueue(MockResponse().setHeader("Content-Type", "VIDEO/MP4").setBody("media"))
-        assertEquals(5L, engine.analyze("https://example.com/video.mp4")!!.sizeBytes)
-        server.takeRequest()
-        assertEquals("bytes=0-0", server.takeRequest().getHeader("Range"))
-        val fallback = server.takeRequest()
-        assertEquals("GET", fallback.method)
-        assertNull(fallback.getHeader("Range"))
+    fun repeatedRangeFailureDoesNotLoop() = fixture { server, engine, _ ->
+        repeat(3) { server.enqueue(MockResponse().setResponseCode(416)) }
+        assertTrue(engine.probe("https://example.com/video.mp4") is DirectProbe.Failed)
+        assertEquals(2, server.requestCount)
+    }
+
+    @Test
+    fun unrangedOriginReportsContentLengthAndReadsOnlyTheHeader() = fixture { server, engine, _ ->
+        val large = ByteArray(1024 * 1024) { 7 }
+        System.arraycopy(zip, 0, large, 0, zip.size)
+        server.enqueue(MockResponse().setHeader("Content-Type", "application/zip").setBody(body(large)))
+        val result = engine.probe("https://example.com/big.zip") as DirectProbe.File
+        assertEquals(large.size.toLong(), result.analysis.sizeBytes)
+        assertEquals(1, server.requestCount)
+    }
+
+    @Test
+    fun statusFailuresAreSpecificAndCarryRetryAfter() = fixture { server, engine, _ ->
+        for ((status, code) in listOf(
+            404 to FailureCode.HTTP_404, 410 to FailureCode.LINK_EXPIRED, 403 to FailureCode.HTTP_403,
+            401 to FailureCode.AUTHENTICATION_REQUIRED, 503 to FailureCode.HTTP_SERVER,
+        )) {
+            server.enqueue(MockResponse().setResponseCode(status))
+            assertEquals("$status", code, (engine.probe("https://example.com/f.apk") as DirectProbe.Failed).code)
+        }
+        server.enqueue(MockResponse().setResponseCode(429).setHeader("Retry-After", "30"))
+        assertEquals(DirectProbe.Failed(FailureCode.HTTP_429, 429, 30), engine.probe("https://example.com/f.apk"))
+    }
+
+    @Test
+    fun redirectChainToTheRealFileIsFollowedAndRechecked() = fixture { server, engine, _ ->
+        server.enqueue(MockResponse().setResponseCode(302).setHeader("Location", "https://example.com/step"))
+        server.enqueue(MockResponse().setResponseCode(307).setHeader("Location", "https://example.com/assets/real.apk"))
+        server.enqueue(MockResponse().setHeader("Content-Type", "application/octet-stream").setBody(body(zip)))
+        val result = engine.probe("https://example.com/releases/latest/download") as DirectProbe.File
+        assertEquals("apk", result.analysis.choices.single().extension)
+        assertEquals("https://example.com/releases/latest/download", result.analysis.url)
         assertEquals(3, server.requestCount)
     }
 
     @Test
-    fun repeatedRangeFailureDoesNotLoop() = fixture { server, engine, _ ->
-        server.enqueue(MockResponse().setResponseCode(405))
-        repeat(2) { server.enqueue(MockResponse().setResponseCode(416)) }
-        assertNull(engine.analyze("https://example.com/video.mp4"))
-        assertEquals(3, server.requestCount)
+    fun plainTextApiResponseIsAPageButAnAttachmentTextIsAFile() = fixture { server, engine, _ ->
+        server.enqueue(MockResponse().setHeader("Content-Type", "application/json").setBody("{\"ok\":true}"))
+        assertTrue(engine.probe("https://example.com/api/item") is DirectProbe.Page)
+        server.enqueue(MockResponse().setHeader("Content-Type", "text/csv")
+            .setHeader("Content-Disposition", "attachment; filename=data.csv").setBody("a,b\n1,2\n"))
+        val file = engine.probe("https://example.com/export") as DirectProbe.File
+        assertEquals("csv", file.analysis.choices.single().extension)
+    }
+
+    @Test
+    fun boundedJsonFetchRefusesNonJsonAndMapsRateLimit() = fixture { server, engine, _ ->
+        server.enqueue(MockResponse().setHeader("Content-Type", "application/json").setBody("{\"a\":1}"))
+        assertEquals("{\"a\":1}", engine.fetchJson("https://api.example.com/x"))
+        server.enqueue(MockResponse().setHeader("Content-Type", "text/html").setBody("<html/>"))
+        assertTrue(runCatching { engine.fetchJson("https://api.example.com/x") }.isFailure)
+        server.enqueue(MockResponse().setResponseCode(403).setHeader("X-RateLimit-Remaining", "0"))
+        val limited = runCatching { engine.fetchJson("https://api.example.com/x") }.exceptionOrNull()
+        assertEquals(FailureCode.HTTP_429, (limited as PipelineException).code)
     }
 
     private fun fixture(block: suspend (MockWebServer, DirectDownloader, File) -> Unit) =
