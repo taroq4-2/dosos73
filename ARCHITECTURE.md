@@ -77,6 +77,26 @@ LibraryRepository.files ─┘                    │                           
 total, speed, and an ETA **only** when total and a current rate are known. Filtering hidden
 history stays a presentation choice.
 
+## Surfaces outside the app (Phase E)
+
+```
+DownloadBoard.observe { TransferFiles.checkpoint(it) } ─┬─▶ WidgetModel.from(...) ─▶ WidgetUpdater (≤1 redraw / 1.5 s while active)
+Transfers.state (last outcome) ─────────────────────────┘                          └─▶ AppWidgetManager.updateAppWidget
+DownloadService.publish ─▶ NotificationGate (≤1 / s) ─▶ DownloadNotifications.progress (FGS, id 73)
+pause ack ─▶ DownloadNotifications.paused (id 75, Resume/Cancel)   processor COMPLETE ─▶ completed (74)   FAILED ─▶ failed (76)
+```
+
+- **Cold start:** `DownloadWidgetProvider.onUpdate` handles add, resize, reboot and package update. It loads the durable queue and failure journals (bounded to 8 s via `goAsync`) before drawing, so a paused lease is never shown as "idle".
+- **No background work of its own:** the updater only observes flows inside a process that is already alive. `updatePeriodMillis = 0`.
+- **Security:**
+  - The receiver is exported only for the system's `APPWIDGET_UPDATE`.
+  - Every widget and notification `PendingIntent` is explicit and `FLAG_IMMUTABLE`.
+  - The Activity accepts only the page names `home` / `downloads` from outside (`AppEntry.page`).
+  - Notification actions reuse the service's existing `pause` / `cancel` commands.
+- **Privacy:**
+  - The widget shows the file type unless the user enables names.
+  - Notifications are `VISIBILITY_PRIVATE`, with a public version that never contains the name.
+
 ## What Phase C changed and why
 
 | Change | Why | Compatibility |

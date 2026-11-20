@@ -57,13 +57,14 @@ internal fun DownloadsScreen(
     onForgetFailure: (FailedDownload) -> Unit,
 ) {
     val failures by FailureJournal.failures.collectAsState()
+    val leased by DownloadQueue.leased.collectAsState()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var filter by rememberSaveable { mutableStateOf(DownloadFilter.ALL) }
     var collapsed by rememberSaveable { mutableStateOf(setOf<String>()) }
     var storageError by remember { mutableStateOf(false) }
-    val board = remember(state, queue, failures, files) {
-        DownloadBoard.build(state, Transfers.currentTask, queue, failures, files)
+    val board = remember(state, queue, failures, files, leased) {
+        DownloadBoard.build(state, Transfers.currentTask, queue, failures, files, leased)
     }
     val visible = remember(board, query) { board.filter { it.title.contains(query, ignoreCase = true) } }
     val locale = LocalConfiguration.current.locales[0]
@@ -233,13 +234,6 @@ private fun subtitle(item: BoardItem, locale: Locale): String {
         stringResource(R.string.time_left, durationLabel(it))
     }
     return listOfNotNull(sizes, status, eta).joinToString("  •  ")
-}
-
-private fun durationLabel(seconds: Long): String {
-    val h = seconds / 3600
-    val m = (seconds % 3600) / 60
-    val s = seconds % 60
-    return if (h > 0) "%d:%02d:%02d".format(Locale.ROOT, h, m, s) else "%d:%02d".format(Locale.ROOT, m, s)
 }
 
 @Composable

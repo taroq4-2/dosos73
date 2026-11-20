@@ -29,20 +29,16 @@ class DownloadService : Service() {
     private val offline by offlineDelegate
     private val notificationGate = NotificationGate()
     private var detail = ""
-    private val processor by lazy { TransferProcessor(this, ::publish, ::transferTask, { userCancelled }, ::completionNotification) }
+    private val processor by lazy {
+        TransferProcessor(this, ::publish, ::transferTask, { userCancelled }, ::completionNotification,
+            onFailure = { state -> DownloadNotifications.failed(this, state, state.error) })
+    }
 
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onCreate() {
         super.onCreate()
-        getSystemService(NotificationManager::class.java)
-            .createNotificationChannel(
-                NotificationChannel(
-                    "downloads",
-                    getString(R.string.downloads),
-                    NotificationManager.IMPORTANCE_LOW,
-                )
-            )
+        DownloadNotifications.createChannels(this)
     }
 
     private val paused = kotlinx.coroutines.flow.MutableStateFlow(false)
@@ -67,6 +63,7 @@ class DownloadService : Service() {
             try {
                 when (action) {
                     "cancel" -> {
+                        DownloadNotifications.cancel(this@DownloadService, DownloadNotifications.ID_PAUSED)
                         userCancelled = true
                         cancelTransfer()
                         DeferredTransferScheduler.userStarted(this@DownloadService)
@@ -90,14 +87,17 @@ class DownloadService : Service() {
                                 cancelTransfer()
                                 job?.join()
                                 // A publication may have won the race with Pause. Preserve COMPLETE.
-                                if (DownloadQueue.interrupted(this@DownloadService)?.id == task.id)
+                                if (DownloadQueue.interrupted(this@DownloadService)?.id == task.id) {
                                     Transfers.update(Transfers.state.value.copy(phase = Phase.PAUSED, bytesPerSecond = null))
+                                    DownloadNotifications.paused(this@DownloadService, Transfers.state.value)
+                                }
                             }
                         } else {
                             job?.join()
                             val task = DownloadQueue.interrupted(this@DownloadService)
                             if (task != null) {
                                 DownloadQueue.setPaused(this@DownloadService, task.id, false)
+                                DownloadNotifications.cancel(this@DownloadService, DownloadNotifications.ID_PAUSED)
                                 enterForeground()
                                 startWorker()
                             }
@@ -124,7 +124,8 @@ class DownloadService : Service() {
     }
 
     private fun enterForeground() {
-        startForeground(73, notification(Transfers.state.value), ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
+        startForeground(DownloadNotifications.ID_PROGRESS, DownloadNotifications.progress(this, Transfers.state.value),
+            ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
     }
 
     private suspend fun cancelColdLease() {
@@ -298,61 +299,14 @@ class DownloadService : Service() {
     private fun publish(state: TransferState) {
         Transfers.update(state.copy(detail = detail))
         if (notificationGate.accept(state.phase, android.os.SystemClock.elapsedRealtime())) {
-            getSystemService(NotificationManager::class.java).notify(73, notification(state))
+            runCatching {
+                getSystemService(NotificationManager::class.java)
+                    .notify(DownloadNotifications.ID_PROGRESS, DownloadNotifications.progress(this, Transfers.state.value))
+            }
         }
     }
 
-    private fun notification(state: TransferState): Notification {
-        val open =
-            PendingIntent.getActivity(
-                this,
-                0,
-                Intent(this, MainActivity::class.java),
-                PendingIntent.FLAG_IMMUTABLE,
-            )
-        val cancel =
-            PendingIntent.getService(
-                this,
-                1,
-                Intent(this, DownloadService::class.java).setAction("cancel"),
-                PendingIntent.FLAG_IMMUTABLE,
-            )
-        return NotificationCompat.Builder(this, "downloads")
-            .setSmallIcon(R.drawable.ic_download)
-            .setContentTitle(getString(R.string.app_name))
-            .setContentText(getString(phaseText(state.phase)))
-            .setContentIntent(open)
-            .setOnlyAlertOnce(true)
-            .setOngoing(state.active)
-            .setProgress(100, ((state.percent ?: 0f) * 100).toInt(), state.percent == null)
-            .addAction(0, getString(R.string.cancel), cancel)
-            .build()
-    }
-
-    private fun completionNotification(state: TransferState) {
-        val uri = state.uri ?: return
-        val intent =
-            Intent(Intent.ACTION_VIEW)
-                .setDataAndType(uri, state.mime)
-                .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-        val open =
-            PendingIntent.getActivity(
-                this,
-                74,
-                intent,
-                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
-            )
-        val notification =
-            NotificationCompat.Builder(this, "downloads")
-                .setSmallIcon(R.drawable.ic_download)
-                .setContentTitle(getString(R.string.complete))
-                .setContentText(state.title)
-                .setAutoCancel(true)
-                .setContentIntent(open)
-                .addAction(0, getString(R.string.open), open)
-                .build()
-        getSystemService(NotificationManager::class.java).notify(74, notification)
-    }
+    private fun completionNotification(state: TransferState) = DownloadNotifications.completed(this, state)
 
     private fun cancelTransfer() {
         cancelled = true

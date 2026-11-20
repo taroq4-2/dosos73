@@ -31,7 +31,8 @@ import kotlinx.coroutines.withContext
 
 @OptIn(androidx.compose.ui.ExperimentalComposeUiApi::class)
 @Composable
-internal fun MainActivity.AppScreen(model: MainViewModel, sharedGeneration: Int, quickSettingsGeneration: Int = 0) {
+internal fun MainActivity.AppScreen(model: MainViewModel, sharedGeneration: Int, quickSettingsGeneration: Int = 0,
+    openRequest: Pair<Int, String>? = null) {
     val focus = androidx.compose.ui.platform.LocalFocusManager.current
     val keyboard = androidx.compose.ui.platform.LocalSoftwareKeyboardController.current
     val screen by model.state.collectAsStateWithLifecycle()
@@ -56,6 +57,14 @@ internal fun MainActivity.AppScreen(model: MainViewModel, sharedGeneration: Int,
             searching = false
             query = ""
         }
+    }
+    LaunchedEffect(openRequest) {
+        val target = openRequest?.second ?: return@LaunchedEffect
+        focus.clearFocus()
+        keyboard?.hide()
+        page = target
+        searching = false
+        query = ""
     }
     LaunchedEffect(quickSettingsGeneration) {
         if (quickSettingsGeneration > 0) page = "quick"
@@ -115,8 +124,12 @@ internal fun MainActivity.AppScreen(model: MainViewModel, sharedGeneration: Int,
                 if (interrupted?.userPaused == true) {
                     if (Transfers.reserve(interrupted)) {
                         Transfers.take()
+                        // Show the real committed progress of the paused task, not just its size.
+                        val done = withContext(Dispatchers.IO) { TransferFiles.checkpoint(this@AppScreen, interrupted) }
                         Transfers.update(
-                            TransferState(Phase.PAUSED, interrupted.analysis.title)
+                            TransferState(Phase.PAUSED, interrupted.analysis.title,
+                                bytes = done?.first ?: 0, total = done?.second,
+                                percent = done?.let { (it.first.toDouble() / it.second).toFloat() })
                         )
                     }
                 } else

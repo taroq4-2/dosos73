@@ -2,6 +2,17 @@
 
 ## Unreleased · vNext (branch `feature/dosos73-vnext-overhaul`)
 
+### Phase E: widget and notifications
+- Home-screen widget (reference: right phone) wired to the same `DownloadBoard` as the app. It shows idle, active, paused, waiting, completed and failed states, with real progress, size and speed and two buttons (New download, View downloads). It has a compact layout for small sizes, follows the app language and RTL, and uses light or dark with the system. There's no polling: it redraws when the state changes, at most every 1.5 s during a transfer. After a reboot it reads the durable queue and resume checkpoint, so a paused download keeps its real progress.
+- Privacy: by default the widget shows the file type, not the name (a home screen is public). Showing names is a setting.
+- Notifications are split into a silent "Download progress" channel, used only while transferring, and a "Download results" channel.
+  - Progress shows name, downloaded / total, speed, time left and percentage, with Pause and Cancel.
+  - Pausing leaves a notification with Resume and Cancel; previously nothing remained.
+  - New completion notification has Open and Downloads; failures now get a notification with the reason.
+  - The lock screen shows a generic version without the name. All actions are explicit, immutable PendingIntents.
+- Notifications and the widget use the language chosen in the app on Android 10–12 too.
+- After a restart, a paused download shows its real progress from the resume checkpoint in the app and the widget.
+
 ### Phase D: redesign
 - New design system matching the reference: deep navy `#0B1929`, cards `#14273A`, interactive teal `#42D9CC`, light text `#E4F5F4`. A WCAG-AA light theme was added, with System / Dark / Light choices and optional wallpaper colors on Android 12+. Every screen reads one palette, and contrast is checked by tests.
 - Home: centered brand, a "New download" card with paste inside the link field, a teal "Analyze link" button, and Video / Audio / Files / Downloads shortcuts. Quick settings, supported links and more tools are all real actions. The menu and crown icons from the concept were left out because nothing would sit behind them.

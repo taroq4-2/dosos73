@@ -61,6 +61,7 @@ internal fun SettingsScreen(customFolder: Boolean, onLanguage: (String) -> Unit,
         AppearanceControls(onLanguage)
 
         GroupTitle(stringResource(R.string.group_privacy))
+        WidgetPrivacyControl()
         SurfaceCard(padding = 8.dp) {
             ListRow(Glyph.SHIELD, stringResource(R.string.privacy_title), null, onPrivacy, Modifier.testTag("privacy"),
                 tint = palette.success)
@@ -164,6 +165,27 @@ private fun AppearanceControls(onLanguage: (String) -> Unit) {
                 modifier = Modifier.heightIn(min = 40.dp))
             NeonChip(language == "en", { onLanguage("en") }, label = { Text(stringResource(R.string.language_en)) },
                 modifier = Modifier.heightIn(min = 40.dp))
+        }
+        if (failed) Text(stringResource(R.string.error_storage), color = MaterialTheme.colorScheme.error)
+    }
+}
+
+@Composable
+private fun WidgetPrivacyControl() {
+    val context = LocalContext.current
+    var enabled by remember { mutableStateOf(SurfacePrivacy.widgetNames(context)) }
+    var failed by remember { mutableStateOf(false) }
+    val label = stringResource(R.string.widget_names)
+    SurfaceCard {
+        Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text(label, style = MaterialTheme.typography.titleSmall)
+                Text(stringResource(R.string.widget_names_hint), color = Neon.Secondary, style = MaterialTheme.typography.bodySmall)
+            }
+            Switch(enabled, {
+                failed = runCatching { SurfacePrivacy.setWidgetNames(context, it) }.isFailure
+                if (!failed) enabled = it
+            }, Modifier.testTag("widget_names").semantics { contentDescription = label })
         }
         if (failed) Text(stringResource(R.string.error_storage), color = MaterialTheme.colorScheme.error)
     }

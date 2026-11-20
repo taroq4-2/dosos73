@@ -26,6 +26,8 @@ class MainActivity : ComponentActivity() {
     private val model: MainViewModel by viewModels()
     private var sharedGeneration by mutableIntStateOf(0)
     private var quickSettingsGeneration by mutableIntStateOf(0)
+    /** Page asked for by a notification or the widget ("home" or "downloads"), with a counter. */
+    private var openRequest by androidx.compose.runtime.mutableStateOf<Pair<Int, String>?>(null)
     private var quickPending = false
     private var resumed = false
 
@@ -70,7 +72,7 @@ class MainActivity : ComponentActivity() {
                     val style = if (dark) SystemBarStyle.dark(transparent) else SystemBarStyle.light(transparent, transparent)
                     enableEdgeToEdge(statusBarStyle = style, navigationBarStyle = style)
                 }
-                AppScreen(model, sharedGeneration, quickSettingsGeneration)
+                AppScreen(model, sharedGeneration, quickSettingsGeneration, openRequest)
             }
         }
     }
@@ -129,6 +131,11 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun receive(intent: Intent?) {
+        // Notifications and the widget open a page; any other extras are ignored.
+        AppEntry.page(intent)?.let { page ->
+            openRequest = (openRequest?.first ?: 0) + 1 to page
+            return
+        }
         if (QuickLaunch.requested(this, intent)) {
             // Ignore extras/data: an exported launcher entry is not proof of a physical gesture.
             if (!model.state.value.quick) quickPending = true

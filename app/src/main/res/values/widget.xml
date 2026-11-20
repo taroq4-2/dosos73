@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="widget_idle">No active download</string>
+    <string name="widget_active">Active download</string>
+    <string name="widget_idle_hint">Tap New download to paste a link.</string>
+    <string name="widget_view_downloads">Downloads</string>
+    <string name="widget_description">Live download progress with quick access to new downloads.</string>
+    <string name="widget_kind_video">Video</string>
+    <string name="widget_kind_audio">Audio</string>
+    <string name="widget_kind_app">Android package</string>
+    <string name="widget_kind_archive">Archive</string>
+    <string name="widget_kind_document">Document</string>
+    <string name="widget_kind_image">Image</string>
+    <string name="widget_kind_program">Program</string>
+    <string name="widget_kind_file">File</string>
+    <string name="channel_progress">Download progress</string>
+    <string name="channel_progress_hint">Silent progress while a download runs, with pause and cancel.</string>
+    <string name="channel_results">Download results</string>
+    <string name="channel_results_hint">Completed, failed and paused downloads.</string>
+    <string name="notification_show_downloads">Downloads</string>
+    <string name="widget_names">Show file names on the home-screen widget</string>
+    <string name="widget_names_hint">Off: the widget shows only the file type, so people who see your home screen cannot read names.</string>
+</resources>

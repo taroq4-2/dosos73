@@ -58,9 +58,24 @@ internal object DownloadBoard {
         queue: List<DownloadTask>,
         failures: List<FailedDownload>,
         files: List<SavedFile>,
+        leased: DownloadTask? = null,
+        /** Committed bytes/total of [leased] from its resume checkpoint, when known. */
+        leasedProgress: Pair<Long, Long>? = null,
     ): List<BoardItem> {
         val items = mutableListOf<BoardItem>()
         val activeId = current?.id?.takeIf { transfer.active }
+        // A durable lease with no live transfer: paused by the user, or interrupted by process
+        // death. Shown so a cold process (widget, relaunch) never hides unfinished work.
+        if (leased != null && activeId == null && queue.none { it.id == leased.id }) {
+            items += BoardItem(
+                key = "task:${leased.id}", title = displayName(leased),
+                status = if (leased.userPaused) BoardStatus.PAUSED else BoardStatus.QUEUED,
+                category = categoryOf(leased.choice), bytes = leasedProgress?.first,
+                total = leasedProgress?.second ?: leased.analysis.sizeBytes,
+                percent = leasedProgress?.let { (done, size) -> (done.toDouble() / size).toFloat().coerceIn(0f, 1f) },
+                task = leased,
+            )
+        }
         if (activeId != null) {
             items += BoardItem(
                 key = "task:$activeId",
@@ -85,7 +100,7 @@ internal object DownloadBoard {
             )
         }
         for (failure in failures) {
-            if (failure.task.id == activeId || queue.any { it.id == failure.task.id }) continue
+            if (failure.task.id == activeId || failure.task.id == leased?.id || queue.any { it.id == failure.task.id }) continue
             items += BoardItem(
                 key = "failed:${failure.task.id}", title = displayName(failure.task), status = BoardStatus.FAILED,
                 category = categoryOf(failure.task.choice), total = failure.task.analysis.sizeBytes,
@@ -128,9 +143,9 @@ internal object DownloadBoard {
     }
 
     /** Live board for the app UI, widget and notifications. */
-    fun observe(): Flow<List<BoardItem>> = combine(
-        Transfers.state, DownloadQueue.tasks, FailureJournal.failures, LibraryRepository.files,
-    ) { transfer, queue, failures, files ->
-        build(transfer, Transfers.currentTask, queue, failures, files)
+    fun observe(progress: (DownloadTask) -> Pair<Long, Long>? = { null }): Flow<List<BoardItem>> = combine(
+        Transfers.state, DownloadQueue.tasks, FailureJournal.failures, LibraryRepository.files, DownloadQueue.leased,
+    ) { transfer, queue, failures, files, leased ->
+        build(transfer, Transfers.currentTask, queue, failures, files, leased, leased?.let(progress))
     }.distinctUntilChanged()
 }
