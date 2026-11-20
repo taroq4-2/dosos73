@@ -69,7 +69,7 @@ internal class ParallelDownloader(
             val counts = longArrayOf(0, 0)
             val monitor = Any()
             var last = System.nanoTime()
-            var lastBytes = 0L
+            val meter = SpeedMeter().apply { sample(0, System.nanoTime()) }
             supervisorScope {
                 val jobs =
                     (0..1).map { index ->
@@ -126,15 +126,8 @@ internal class ParallelDownloader(
                                                 val now = System.nanoTime()
                                                 if (now - last >= 250_000_000) {
                                                     val done = counts.sum()
-                                                    progress(
-                                                        done,
-                                                        total,
-                                                        ((done - lastBytes).toDouble() *
-                                                                1_000_000_000 / (now - last))
-                                                            .toLong(),
-                                                    )
+                                                    progress(done, total, meter.sample(done, now))
                                                     last = now
-                                                    lastBytes = done
                                                 }
                                             }
                                         }

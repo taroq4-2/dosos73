@@ -82,6 +82,7 @@ class DownloadWidgetProvider : AppWidgetProvider() {
     override fun onUpdate(context: Context, manager: AppWidgetManager, ids: IntArray) {
         // Added, resized, restored after reboot or launcher restart: the process may be cold, so
         // load the durable queue/failure state first (bounded), then draw from the real board.
+        WidgetUpdater.start(context.applicationContext)
         val pending = goAsync()
         WidgetUpdater.scope.launch {
             try {
@@ -119,6 +120,16 @@ internal object WidgetUpdater {
                 // Coalesce progress: at most one redraw every 1.5 s while a transfer runs.
                 if (model.state == WidgetState.ACTIVE) delay(1_500)
             }
+        }
+    }
+
+    /** Starts observing only when at least one widget exists; the check runs off the main thread. */
+    fun startIfPlaced(app: Context) {
+        scope.launch {
+            val ids = runCatching {
+                AppWidgetManager.getInstance(app)?.getAppWidgetIds(ComponentName(app, DownloadWidgetProvider::class.java))
+            }.getOrNull()
+            if (ids != null && ids.isNotEmpty()) start(app)
         }
     }
 

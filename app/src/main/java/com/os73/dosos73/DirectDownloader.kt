@@ -300,7 +300,7 @@ class DirectDownloader(private val client: OkHttpClient = secureClient()) : Link
                 }
                 val canResume = etag != null && total != null && total > 0
                 var count = offset
-                var lastBytes = offset
+                val meter = SpeedMeter().apply { sample(offset, System.nanoTime()) }
                 var last = System.nanoTime()
                 var checkpointBytes = offset
                 var checkpointAt = last
@@ -342,15 +342,8 @@ class DirectDownloader(private val client: OkHttpClient = secureClient()) : Link
                                 )
                                     persist()
                                 if (now - last > 250_000_000) {
-                                    progress(
-                                        count,
-                                        total,
-                                        ((count - lastBytes).toDouble() * 1_000_000_000 /
-                                                (now - last))
-                                            .toLong(),
-                                    )
+                                    progress(count, total, meter.sample(count, now))
                                     last = now
-                                    lastBytes = count
                                 }
                             }
                         }
