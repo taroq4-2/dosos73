@@ -42,6 +42,7 @@
     <string name="status_queued">Waiting</string>
     <string name="status_paused">Paused</string>
     <string name="status_failed">Failed</string>
+    <string name="status_cancelled">Cancelled</string>
     <string name="time_left">%1$s left</string>
     <string name="item_actions">Actions for %1$s</string>
     <string name="section_toggle">Show or hide %1$s</string>

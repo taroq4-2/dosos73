@@ -196,7 +196,8 @@ private fun BoardRow(item: BoardItem, locale: Locale, h: RowHandlers) {
                     overflow = TextOverflow.Ellipsis,
                     style = MaterialTheme.typography.titleSmall.copy(textDirection = TextDirection.ContentOrLtr))
                 Text(subtitle(item, locale), style = MaterialTheme.typography.labelMedium,
-                    color = if (item.status == BoardStatus.FAILED) MaterialTheme.colorScheme.error else palette.secondary,
+                    color = if (item.status == BoardStatus.FAILED && item.failure?.cancelled != true) MaterialTheme.colorScheme.error
+                        else palette.secondary,
                     maxLines = 3, overflow = TextOverflow.Ellipsis)
             }
             PrimaryAction(item, current, h)
@@ -233,7 +234,7 @@ private fun subtitle(item: BoardItem, locale: Locale): String {
         }
         BoardStatus.QUEUED -> stringResource(R.string.status_queued)
         BoardStatus.PAUSED -> stringResource(R.string.status_paused)
-        BoardStatus.FAILED -> stringResource(item.error ?: R.string.status_failed)
+        BoardStatus.FAILED -> stringResource(DownloadBoard.failureLabel(item))
         BoardStatus.COMPLETED -> stringResource(R.string.status_completed)
     }
     val eta = item.secondsLeft?.takeIf { item.status == BoardStatus.ACTIVE }?.let {

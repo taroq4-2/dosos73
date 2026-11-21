@@ -1,6 +1,7 @@
 package com.os73.dosos73
 
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.luminance
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -30,6 +31,15 @@ class DesignContrastTest {
             check("$theme button label", p.onAccent, p.accent, 4.5)
             check("$theme error/surface", p.error, p.surface, 4.5)
             check("$theme nav label on indicator", p.accent, p.accentSoft, 3.0)
+        }
+    }
+
+    @Test
+    fun playbackSeekTrackIsVisibleOnDialogs() {
+        // Dialogs use `raised`, which is also Material's default inactive slider track colour; the
+        // preview therefore draws its track with outline (= muted) at 45 % (OfflinePreview.kt).
+        for ((theme, p) in listOf("dark" to DososPalettes.Dark, "light" to DososPalettes.Light)) {
+            check("$theme seek track/raised", p.muted.copy(alpha = 0.45f).compositeOver(p.raised), p.raised, 1.5)
         }
     }
 

@@ -166,6 +166,9 @@ private fun PlaybackControls(item: SavedFile, playback: LocalPlaybackState?) {
                 contentDescription = label
                 stateDescription = time
             },
+            // The dialog sits on surfaceContainerHigh, which the palette shares with secondaryContainer
+            // (Material's default inactive track), so the track was invisible without its own colour.
+            colors = SliderDefaults.colors(inactiveTrackColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.45f)),
             valueRange = 0f..duration.toFloat(), onValueChangeFinished = {
                 dragged?.let { LocalPlayback.seek(it.toInt()); position = it }
                 dragged = null

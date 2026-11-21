@@ -79,6 +79,18 @@ class SurfacesPhaseETest {
     }
 
     @Test
+    fun aCancelledTransferIsLabelledCancelledNotFailed() {
+        val items = DownloadBoard.build(TransferState(), null, emptyList(),
+            listOf(FailedDownload(task("stopped"), null, true), FailedDownload(task("broken"), FailureCode.DOWNLOAD_FAILED, false)),
+            emptyList())
+        val stopped = items.single { it.title == "stopped.apk" }
+        val broken = items.single { it.title == "broken.apk" }
+        assertEquals(R.string.status_cancelled, DownloadBoard.failureLabel(stopped))
+        assertNotEquals(R.string.status_cancelled, DownloadBoard.failureLabel(broken))
+        assertNotEquals(R.string.status_failed, DownloadBoard.failureLabel(broken)) // the specific reason wins
+    }
+
+    @Test
     fun etaOnlyWithKnownSizeAndRate() {
         assertEquals(6L, TransferText.etaSeconds(400, 1_000, 100))
         assertNull(TransferText.etaSeconds(400, null, 100))

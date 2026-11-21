@@ -42,6 +42,7 @@
     <string name="status_queued">بالانتظار</string>
     <string name="status_paused">متوقف مؤقتًا</string>
     <string name="status_failed">فشل</string>
+    <string name="status_cancelled">أُلغي</string>
     <string name="time_left">متبقٍ %1$s</string>
     <string name="item_actions">إجراءات %1$s</string>
     <string name="section_toggle">إظهار أو إخفاء %1$s</string>

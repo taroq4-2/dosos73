@@ -45,6 +45,10 @@ internal data class BoardSummary(val counts: Map<BoardStatus, Int>, val focus: B
 }
 
 internal object DownloadBoard {
+    /** A cancelled transfer stays retryable in the journal, but the user stopped it: it did not fail. */
+    fun failureLabel(item: BoardItem): Int =
+        if (item.failure?.cancelled == true) R.string.status_cancelled else item.error ?: R.string.status_failed
+
     /** Task titles carry no extension (it is a separate choice); show "name.ext" like saved files. */
     fun displayName(task: DownloadTask, title: String = task.analysis.title): String {
         val extension = task.choice.extension.lowercase()

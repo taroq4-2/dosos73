@@ -1,6 +1,6 @@
 # Release notes
 
-## 1.4.0 (versionCode 23) · vNext, not yet released (branch `feature/dosos73-vnext-overhaul`)
+## 1.4.0 (versionCode 23)
 
 Highlights for users:
 - Links to APKs, archives, documents and other files now download as files, and the app checks the file's real type before saving it. A web page is never saved as an APK.
@@ -10,6 +10,11 @@ Highlights for users:
 - New design in Arabic (RTL) and English, dark and light, plus a home-screen widget and notifications with pause, resume and cancel.
 - A separate ARM64 package is about 62% smaller (22.3 MB versus 58.4 MB). The universal package stays for other devices.
 - APKs are saved, never installed automatically.
+
+### Release preparation (found while capturing the release screenshots)
+- Fixed: the seek bar in the local playback dialog had no visible track, because the dialog background and Material's default inactive track share one colour in the dosos73 palette. The track now uses the outline colour; `DesignContrastTest.playbackSeekTrackIsVisibleOnDialogs` keeps it visible in both themes.
+- Fixed: a download the user cancelled was listed as "Failed" in red. It now reads "Cancelled", while real failures keep their specific reason (`SurfacesPhaseETest.aCancelledTransferIsLabelledCancelledNotFailed`).
+- New README, release images and download site, built from screenshots of this build.
 
 ### Phase G: security review, QA and release preparation
 - Version 1.4.0 (versionCode 23); CI bundle check updated to match.
