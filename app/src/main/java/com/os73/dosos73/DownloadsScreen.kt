@@ -17,6 +17,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -110,7 +111,9 @@ internal fun DownloadsScreen(
         ).filter { it.second.isNotEmpty() }
         val waiting = queue.isNotEmpty() && !state.active
         LazyColumn(
-            Modifier.fillMaxSize().testTag("downloads_list"),
+            // Readable card width on tablets and in landscape, like the Home page.
+            Modifier.fillMaxSize().wrapContentWidth(Alignment.CenterHorizontally).widthIn(max = 840.dp)
+                .fillMaxWidth().testTag("downloads_list"),
             verticalArrangement = Arrangement.spacedBy(10.dp),
             contentPadding = PaddingValues(top = 6.dp, bottom = 16.dp),
         ) {
@@ -188,7 +191,9 @@ private fun BoardRow(item: BoardItem, locale: Locale, h: RowHandlers) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             CategoryBadge(item.category, extension)
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                Text(breakableName(item.title), maxLines = 2, overflow = TextOverflow.Ellipsis,
+                // More lines at large font scales so the distinguishing end ("… (4).zip") stays visible.
+                Text(breakableName(item.title), maxLines = if (LocalDensity.current.fontScale > 1.3f) 4 else 2,
+                    overflow = TextOverflow.Ellipsis,
                     style = MaterialTheme.typography.titleSmall.copy(textDirection = TextDirection.ContentOrLtr))
                 Text(subtitle(item, locale), style = MaterialTheme.typography.labelMedium,
                     color = if (item.status == BoardStatus.FAILED) MaterialTheme.colorScheme.error else palette.secondary,

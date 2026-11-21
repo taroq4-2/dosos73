@@ -7,6 +7,11 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -152,9 +157,20 @@ internal fun ShortcutTile(
         verticalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterVertically),
     ) {
         Symbol(glyph, modifier = Modifier.size(28.dp), color = tint)
-        Text(label, style = MaterialTheme.typography.titleSmall, color = palette.text, maxLines = 1,
-            overflow = TextOverflow.Ellipsis)
+        FitText(label, MaterialTheme.typography.titleSmall, palette.text)
     }
+}
+
+/**
+ * One-line label that steps its size down (to 60% at most) only when it would not fit, so a
+ * single long word stays readable at large font scales instead of ending in an ellipsis.
+ */
+@Composable
+internal fun FitText(text: String, style: TextStyle, color: Color = Color.Unspecified, modifier: Modifier = Modifier) {
+    var scale by remember(text, style) { mutableFloatStateOf(1f) }
+    Text(text, modifier, color = color, style = style.copy(fontSize = style.fontSize * scale), maxLines = 1,
+        softWrap = false, overflow = TextOverflow.Ellipsis,
+        onTextLayout = { if (it.hasVisualOverflow && scale > 0.6f) scale = (scale - 0.1f).coerceAtLeast(0.6f) })
 }
 
 /** Progress bar with rounded track; null fraction renders indeterminate. */

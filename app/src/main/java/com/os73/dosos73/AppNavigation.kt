@@ -40,9 +40,7 @@ internal fun AppNavigation(page: String, onPage: (String) -> Unit) {
                 onClick = { onPage(key) },
                 icon = { Symbol(icon, color = if (selected) palette.accent else palette.muted) },
                 label = {
-                    Text(stringResource(label), maxLines = 1,
-                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-                        style = MaterialTheme.typography.labelMedium)
+                    FitText(stringResource(label), MaterialTheme.typography.labelMedium)
                 },
                 colors = NavigationBarItemDefaults.colors(
                     indicatorColor = palette.accentSoft, selectedTextColor = palette.accent,
