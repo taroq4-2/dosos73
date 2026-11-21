@@ -1,5 +1,68 @@
 # Release-readiness security review
 
+## vNext 1.4.0 (branch `feature/dosos73-vnext-overhaul`), 20 November 2026
+
+This section covers what vNext added or changed. Everything below "1.3.2 and earlier" still applies: the native runtime is unchanged and verified byte-for-byte against `tools/universal-runtime.json`. **This is a defensive review with automated and device evidence. It does not claim the app is free of vulnerabilities.**
+
+Format: **severity — evidence — reproduce — fix — test — status**.
+
+### Findings fixed
+
+| # | Finding | Severity | Evidence / reproduce | Fix | Test | Status |
+|---|---|---|---|---|---|---|
+| S1 | An HTML page (login or error) served as `application/octet-stream` or `vnd.android.package-archive` under an `.apk` URL was saved and reported as a completed file | High (user trusts a fake APK/file) | 1.3.2 checked only `Content-Type`; `OutputStore.validate` did nothing for files | Leading-byte signature check at probe time and again before publication (`FileTypes`, `OutputStore.validate`); HTML is never a file | `FileTypesTest`, `DirectDownloaderTest`, `SecurityPhaseGTest.aDisguisedPage…` | Fixed |
+| S2 | Server file names could disguise their real extension with bidi/format characters (`invoice‮gpj.exe` shows as `invoiceexe.jpg`) | Medium | `DirectFileName` removed only control characters from display titles | Strip Unicode format characters (`Cf`) from names | `DirectFileNameTest`, `SecurityPhaseGTest.serverFileNames…` | Fixed |
+| S3 | Resume bound to the full signed CDN URL: an interrupted GitHub download could never resume and retries failed forever | Medium (availability, not confidentiality) | Reproduced in `SignedRedirectResumeTest` (failed with `Changed representation` before the fix) | Identity = host + path + strong ETag + `If-Range` + exact length; another object path is still refused | `SignedRedirectResumeTest` (2); device run with SHA-256 equal to GitHub's digest | Fixed |
+| S4 | Icon buttons announced no name to TalkBack | Low (accessibility) | Found on the emulator | Label on the button node | Device run | Fixed |
+| S5 | Notification IDs collided: the paused notification (75) with the deferred-start reminder, and the failure notification (76) with local playback. One notification could silently replace or cancel another, so the user could lose the paused/failed state or the playback controls | Low (integrity of user-facing state) | Found in Phase G while testing airplane mode: `dumpsys notification` | Paused 77, failed 78; the reminder uses the app language | `SurfacesPhaseETest.everyNotificationOwnsADistinctId`, `SurfacesTest` (3 runs) | Fixed |
+| S6 | Status integrity on network loss: a broken socket before the platform callback was recorded as a terminal failure, and a waiting task had no Resume in the new UI | Low (availability) | Reproduced on the emulator with airplane mode mid-transfer (`DOWNLOAD_FAILED` in the diagnostics log) | Retry only when the bound network is confirmed gone; Resume restored | `NetworkRecoveryTest` (+2), `NetworkWaitResumeTest`; 3 manual runs with SHA-256 equal to GitHub's | Fixed |
+
+### New surfaces reviewed (no vulnerability found)
+
+| Surface | Control | Evidence |
+|---|---|---|
+| Link probe (`DirectDownloader.probe`) | Every redirect hop is re-checked: `Safety.url` (scheme, no userinfo, ports 80/443, no `localhost`) plus `requirePublicLiteral` for IP literals; DNS uses the policy-bound resolver (`Safety.checkedAddresses`); HTTPS→HTTP refused; at most 6 hops; reads ≤ 4 KiB; 25 s call timeout | `SecurityPhaseGTest`: redirects to 10.0.0.5, 127.0.0.1, 169.254.169.254 (cloud metadata), [::1], 192.168.1.1 and localhost are all refused **without being contacted**; downgrade refused |
+| GitHub / F-Droid resolvers | Only documented public endpoints; same client and SSRF policy; response ≤ 2 MiB and must be JSON; GitHub 403 rate-limit mapped; asset URLs accepted only if `https://github.com/<owner>/<repo>/releases/download/…` of the same release | `SourceResolversTest`, `SecurityPhaseGTest.apiResolverRedirect…`, `…oversizedApiResponse…`, `…releaseAssetsOnlyAccept…` |
+| Home-screen widget | Receiver exported only for the system's `APPWIDGET_UPDATE`, no custom actions; all buttons are explicit `FLAG_IMMUTABLE` PendingIntents to `MainActivity`; file names hidden by default (setting) | Manifest dump (below); `SurfacesTest` |
+| Notifications | Actions reuse the non-exported `DownloadService` `pause`/`cancel` commands via immutable PendingIntents; `VISIBILITY_PRIVATE` with a public version without the name; a no-op when permission is denied | `SurfacesTest.progressNotification…` |
+| External entry (`MainActivity` extra) | Only the page names `home` / `downloads` are honoured; other values are ignored | `SurfacesTest.onlyKnownPages…` |
+| Readable publication names | The final name is unique among the destination's files and other pending plans, so exact-name crash recovery can't attach to a foreign file; falls back to `name-<id>` | `ReadablePublicationNameTest`, 42 publication/recovery device tests |
+| Logs | The only production log is debug-only `Diagnostics` with fixed labels, millis and codes; no URLs, names or error text | `grep` audit of `app/src/main` |
+
+### Exported components (from the built 1.4.0 release APK, `aapt2 dump xmltree`)
+
+| Component | Exported | Protection |
+|---|---|---|
+| `MainActivity` | yes | Launcher, `SEND text/plain`, page allowlist |
+| `QuickDownloadEntry` (alias, 1.3.2) | yes | Disabled by default |
+| `DownloadWidgetProvider` (new) | yes | `APPWIDGET_UPDATE` only; `AppWidgetManager` rejects foreign widget IDs |
+| `DeferredTransferJobService` | yes | `BIND_JOB_SERVICE` |
+| `androidx.profileinstaller.ProfileInstallReceiver` (new, AndroidX) | yes | `android.permission.DUMP` (shell/system) |
+| `DownloadService`, `LocalPlaybackService`, `InitializationProvider` | no | — |
+
+No content provider is exported. `allowBackup=false`.
+
+### Dependencies
+
+- `tools/check_dependency_advisories.py` (OSV.dev), 20 Nov 2026: **89 runtime coordinates, 0 findings** (`PASS_SCOPED_LOOKUP`).
+- `tools/check_build_advisories.py`: 4 build-tool coordinates, 1 finding (`GHSA-r937-wjx7-w2jp`, Kotlin Gradle plugin). It keeps its recorded `not_affected` disposition: KAPT isn't used, and the `verifyNoKapt` task passes.
+- New test-only dependency: `org.json:json:20240303` (JVM unit tests only; not packaged).
+- No new runtime library: the widget uses `RemoteViews`, and notifications use the existing `androidx.core`.
+
+### Accepted risks (unchanged by vNext, documented)
+
+- `usesCleartextTraffic="true"`: required by the authenticated loopback CONNECT proxy and the explicit, opt-in "Allow HTTP links" setting. The OkHttp policy refuses public HTTP unless the user enables it. A static network-security config can't express a runtime opt-in.
+- Ports other than 80/443 are refused (`Safety.url`). That blocks some legitimate file servers, but keeps the SSRF surface small.
+- The widget's exported receiver can be poked by other apps to redraw. Impact: a redundant redraw and a bounded journal read.
+
+### Not covered
+
+No penetration test against third-party servers; no TLS interception test on a device; no fuzzing of the native runtime in this review (see the 1.3.2 sections below); Android 10–12 and OEM launchers not tested.
+
+---
+
+## 1.3.2 and earlier
+
 **4 November source-built candidate update.** The signed universal candidate
 SHA-256 `195bb74228ebeb59519513dd49790075d7fd12b9906c4ac470a8c013b53c741d`
 uses the verified four-ABI producer `79893270b85278b71d02a7aae0f4143921c2f6ac`,

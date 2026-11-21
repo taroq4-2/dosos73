@@ -1,6 +1,32 @@
 # Release notes
 
-## Unreleased · vNext (branch `feature/dosos73-vnext-overhaul`)
+## 1.4.0 (versionCode 23) · vNext, not yet released (branch `feature/dosos73-vnext-overhaul`)
+
+Highlights for users:
+- Links to APKs, archives, documents and other files now download as files, and the app checks the file's real type before saving it. A web page is never saved as an APK.
+- Link analysis no longer freezes the screen: it shows each stage, can be cancelled, and fails fast with a clear reason.
+- GitHub release pages and F-Droid package pages list their real files.
+- Interrupted GitHub downloads resume instead of restarting or failing forever.
+- New design in Arabic (RTL) and English, dark and light, plus a home-screen widget and notifications with pause, resume and cancel.
+- A separate ARM64 package is about 62% smaller (22.3 MB versus 58.4 MB). The universal package stays for other devices.
+- APKs are saved, never installed automatically.
+
+### Phase G: security review, QA and release preparation
+- Version 1.4.0 (versionCode 23); CI bundle check updated to match.
+- Fixed (present in 1.3.2): when the connection broke before Android reported the network loss (common with airplane mode or a Wi-Fi drop), the download failed with "Could not download" instead of waiting. A failure is now treated as an interruption only if the bound network really disappears within 3 s, so disk, sign-in and HTTP failures still fail at once. Verified on the emulator: three mid-transfer cuts, each resumed from its saved point, SHA-256 identical to GitHub's digest.
+- Fixed (from the Phase D redesign): a download waiting for the network had no Resume button, and "Start queue" stayed disabled, so it could only continue after restarting the app. The card shows Resume again (as in 1.3.2) and reads "Waiting for permitted network" instead of "Waiting to start".
+- Fixed (from Phase E): the paused-download notification shared ID 75 with the waiting-downloads reminder, and the failure notification shared ID 76 with local playback, so one could silently replace or remove the other. They now use 77 and 78; a test keeps every ID distinct.
+- Fixed (present in 1.3.2): the "Start waiting downloads" reminder ignored the in-app language.
+- Large text: one-word labels (bottom bar, shortcut tiles) shrink slightly instead of being cut at 200% font, and file names get more lines so a name's "(4)" stays visible. On tablets the downloads list keeps a readable width.
+- Security review of the new surfaces in `SECURITY_REVIEW.md`: link probe, documented API resolvers, widget, notifications, external page extra, readable names and logs. Findings S1–S4 are fixed with tests.
+- New `SecurityPhaseGTest`: redirects from the probe to private, loopback, link-local (cloud metadata) and `localhost` addresses are refused without being contacted; HTTPS→HTTP downgrade and oversized API responses are refused; release assets are accepted only from that release on `github.com`; server file names cannot escape the folder or spoof the type.
+
+### Phase F: size and performance
+- ARM64-only package built from the same pinned, hash-verified native runtime (`tools/assemble_universal.py --abi`). The universal package is unchanged apart from the new code.
+- 16 KB page alignment checked for every 64-bit library (0 failures).
+- Baseline profile for app code. Speed and ETA are smoothed (`SpeedMeter`). The widget updater starts only when a widget is placed.
+- Measurements, including a cold-start regression after a fresh install, are in `PERFORMANCE_AND_SIZE_REPORT.md`.
+
 
 ### Phase E: widget and notifications
 - Home-screen widget (reference: right phone) wired to the same `DownloadBoard` as the app. It shows idle, active, paused, waiting, completed and failed states, with real progress, size and speed and two buttons (New download, View downloads). It has a compact layout for small sizes, follows the app language and RTL, and uses light or dark with the system. There's no polling: it redraws when the state changes, at most every 1.5 s during a transfer. After a reboot it reads the durable queue and resume checkpoint, so a paused download keeps its real progress.

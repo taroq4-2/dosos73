@@ -166,7 +166,7 @@ gradlew.bat testDebugUnitTest lintDebug assembleDebug assembleRelease bundleRele
 |---|---|---|
 | P0-1 روابط APK والبرامج | **مُعالَج** (المرحلة B) | `FileTypes.kt` و`DirectDownloader.probe()`. اختبارات `DirectDownloaderTest` و`FileTypesTest`، وتجارب المحاكي في `TEST_RESULTS.md` |
 | P0-2 التحقق من المحتوى | **مُعالَج** | فحص التوقيع عند التحليل في `probe()`، وبعد التنزيل وقبل النشر في `OutputStore.validate(extension=…)` |
-| P0-3 تحليل حاجب ومعتم | **مُعالَج جزئيًا** | آلة المراحل في `LinkAnalyzer.kt`، ومهلة فحص 30 s، ومهلة تحليل مصدر 25 s، وإلغاء، وأسباب فشل محددة. لم يُقس P50/P95 بعد (المرحلة F) |
+| P0-3 تحليل حاجب ومعتم | **مُعالَج** (B + F) | آلة المراحل في `LinkAnalyzer.kt`، ومهلة فحص 30 s، ومهلة تحليل مصدر 25 s، وإلغاء، وأسباب فشل محددة. القياس (المرحلة F): ظهور المرحلة بعد الضغط P50 52 ms وP95 105 ms على 30 عينة، والتحليل الشبكي P50/P95 لكل نوع في `PERFORMANCE_AND_SIZE_REPORT.md` |
 | P1-8 GitHub/F-Droid | **مُعالَج** | `SourceResolvers.kt` + `SourceResolversTest` + تجارب المحاكي |
 | P1-10 أسماء الملفات المحفوظة تحمل معرّف المهمة | **مُعالَج** (المرحلة C) | `PublicationNames.kt`: اسم مقروء فريد بين ملفات الوجهة وخطط النشر المعلقة، مع الرجوع إلى `name-<id>` عند تعذر القراءة. `ReadablePublicationNameTest` و42 اختبار نشر/استعادة على الجهاز |
 | P1-7 God ViewModel | **مُعالَج** (المرحلة C) | `BatchDraftSession.kt`، `AnalysisReducer.kt`، `EngineContracts.kt`، و`ARCHITECTURE.md` |
@@ -178,7 +178,14 @@ gradlew.bat testDebugUnitTest lintDebug assembleDebug assembleRelease bundleRele
 | P1-2 أفعال الإشعار | **مُعالَج** (المرحلة E) | إيقاف/إلغاء أثناء التنزيل، واستئناف/إلغاء بعد الإيقاف، وإشعارا الاكتمال والفشل. `DownloadNotifications.kt` + `SurfacesTest` + تجارب المحاكي |
 | P1-3 ودجت الشاشة الرئيسية | **مُعالَج** (المرحلة E) | `DownloadWidget.kt` مربوط بـ `DownloadBoard`. تجارب الإضافة، والتنزيل، والإيقاف، وإعادة التشغيل، وتغيير الحجم، والإزالة |
 | P1-11 (جديد) بعد إعادة التشغيل تظهر المهمة المتوقفة بالحجم الكلي فقط | **مُعالَج** (المرحلة E) | `TransferFiles.checkpoint` يقرأ نقطة الاستئناف للتطبيق والودجت |
-| بقية P1/P2 | مفتوحة | المراحل F–G (P1-1 التزامن) |
+| P2-4 قائمة MIME مكررة | **مُعالَج** (المرحلة B) | سجل واحد في `FileTypes.kt`؛ `DirectFileName` و`DirectDownloader` يقرآن منه |
+| P0-5 (جديد، المرحلة G) انقطاع الشبكة أثناء التنزيل يُسجَّل فشلًا نهائيًا (موجود في 1.3.2) | **مُعالَج** | `recoverNetwork(lostNetwork=…)` في `NetworkRecovery.kt` و`DownloadService.kt`. `NetworkRecoveryTest` (+2)، وثلاث تجارب وضع الطيران بمطابقة SHA-256 |
+| P1-12 (جديد، المرحلة G) مهمة تنتظر الشبكة بلا زر «استئناف» في الواجهة الجديدة (تراجع من المرحلة D) | **مُعالَج** | `DownloadsScreen.PrimaryAction` + `NetworkWaitResumeTest` |
+| P1-13 (جديد، المرحلة G) تصادم معرّفات الإشعارات 75/76 (تراجع من المرحلة E) | **مُعالَج** | `DownloadNotifications` 77/78 + `SurfacesPhaseETest.everyNotificationOwnsADistinctId` |
+| P1-1 تنزيلات متزامنة | **غير منفذ** | يمس عقد `Transfers` والخدمة والطابور والنشر والاستعادة. لم يُنفذ دون تصميم واختبارات تزامن مخصصة (انظر `FINAL_REPORT.md`) |
+| P1-9 عدد التنزيلات المتزامنة في الإعدادات | **غير منفذ** | يعتمد على P1-1 |
+| P2-1 / P2-2 / P2-3 | **مقبولة وموثقة** | `SECURITY_REVIEW.md` (المخاطر المقبولة) |
+| P2-5 تحذيرات Gradle 9 | **مفتوح** | لا أثر على الإصدار الحالي (Gradle 8.14.6) |
 
 ## 8) خطة التغيير القصيرة (المرحلة B — P0)
 1. مُصنّف ملفات موحد (`FileTypeRegistry`): MIME + امتداد + magic bytes لـ APK/XAPK/APKS/AAB/ZIP/RAR/7Z/PDF/Office/EXE/MSI/DMG/ISO/EPUB/صور/صوت/فيديو، يحل محل القائمتين المكررتين.
