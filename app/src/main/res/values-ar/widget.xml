@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="widget_idle">لا يوجد تنزيل نشط</string>
+    <string name="widget_active">التنزيل النشط</string>
+    <string name="widget_idle_hint">اضغط «تحميل جديد» للصق رابط.</string>
+    <string name="widget_view_downloads">عرض التنزيلات</string>
+    <string name="widget_description">تقدم التنزيل المباشر مع وصول سريع إلى تحميل جديد.</string>
+    <string name="widget_kind_video">فيديو</string>
+    <string name="widget_kind_audio">صوت</string>
+    <string name="widget_kind_app">حزمة Android</string>
+    <string name="widget_kind_archive">أرشيف</string>
+    <string name="widget_kind_document">مستند</string>
+    <string name="widget_kind_image">صورة</string>
+    <string name="widget_kind_program">برنامج</string>
+    <string name="widget_kind_file">ملف</string>
+    <string name="channel_progress">تقدم التنزيل</string>
+    <string name="channel_progress_hint">تقدم صامت أثناء التنزيل، مع الإيقاف المؤقت والإلغاء.</string>
+    <string name="channel_results">نتائج التنزيل</string>
+    <string name="channel_results_hint">التنزيلات المكتملة والفاشلة والمتوقفة.</string>
+    <string name="notification_show_downloads">التنزيلات</string>
+    <string name="widget_names">إظهار أسماء الملفات في ودجت الشاشة الرئيسية</string>
+    <string name="widget_names_hint">عند الإيقاف يعرض الودجت نوع الملف فقط، فلا يقرأ الأسماء من يرى شاشتك الرئيسية.</string>
+</resources>

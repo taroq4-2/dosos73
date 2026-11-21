@@ -19,6 +19,9 @@ class DososApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        // Widget follows the download state while this process lives, but only if one is placed:
+        // checked off the main thread so app startup never pays for it (measured in Phase F).
+        WidgetUpdater.startIfPlaced(this)
         // No extractor, timer, network request or clipboard access during startup.
         // Old private temporary data can be removed after a process death.
         Thread {

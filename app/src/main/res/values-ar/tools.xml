@@ -1,5 +1,4 @@
 <resources>
-    <string name="tools_local_hint">من فيديو محفوظ · دون إنترنت</string>
     <string name="tools_preset_applied">طُبّقت الإعدادات الجاهزة. راجع الخيارات قبل البدء.</string>
     <string name="tools_preset_folder_error">مجلد الإعداد الجاهز غير متاح. اختر مجلدًا متاحًا ثم أعد المحاولة.</string>
     <string name="tools_history_error">تعذّر التحقق من التنزيلات السابقة. يمكنك متابعة هذا التنزيل.</string>

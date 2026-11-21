@@ -32,16 +32,20 @@ import java.text.NumberFormat
 import java.util.Date
 
 @Composable
-internal fun ScreenHeader(onSearch: () -> Unit, onMore: () -> Unit) {
-    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
-        Row(
-            Modifier.fillMaxWidth().padding(horizontal = 17.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Brand(true)
-            Spacer(Modifier.weight(1f))
-            IconAction(Glyph.SEARCH, stringResource(R.string.search), onSearch)
-            IconAction(Glyph.MORE, stringResource(R.string.more), onMore)
+internal fun ScreenHeader(title: String, glyph: Glyph, onSearch: () -> Unit,
+    menu: (@Composable (close: () -> Unit) -> Unit)? = null) {
+    var open by remember { mutableStateOf(false) }
+    Row(
+        Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        IconTile(glyph, Neon.Cyan, 44.dp)
+        Text(title, Modifier.weight(1f), style = MaterialTheme.typography.headlineSmall)
+        IconAction(Glyph.SEARCH, stringResource(R.string.search), onSearch)
+        if (menu != null) Box {
+            IconAction(Glyph.DOTS, stringResource(R.string.more), { open = true })
+            DropdownMenu(open, { open = false }) { menu { open = false } }
         }
     }
 }
@@ -83,10 +87,10 @@ internal fun SavedFileRow(
         FileAvailability.UNAVAILABLE -> "unavailable"
         else -> "open"
     }
-    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+    run {
         Row(
             Modifier.fillMaxWidth()
-                .clip(RoundedCornerShape(15.dp))
+                .clip(RoundedCornerShape(16.dp))
                 .background(Neon.Surface)
                 .clickable { onAction(item, previewAction()) }
                 .padding(11.dp)
@@ -95,7 +99,7 @@ internal fun SavedFileRow(
             horizontalArrangement = Arrangement.spacedBy(13.dp),
         ) {
             Box(
-                Modifier.size(65.dp, 75.dp).clip(RoundedCornerShape(10.dp)).background(Neon.Raised),
+                Modifier.size(56.dp).clip(RoundedCornerShape(14.dp)).background(Neon.Raised),
                 contentAlignment = Alignment.Center,
             ) {
                 bitmap?.let {
@@ -106,19 +110,11 @@ internal fun SavedFileRow(
                         contentScale = ContentScale.Crop,
                     )
                 }
-                    ?: Symbol(
-                        when (item.kind) {
-                            Kind.AUDIO -> Glyph.AUDIO
-                            Kind.VIDEO -> Glyph.VIDEO
-                            else -> Glyph.FOLDER
-                        },
-                        modifier = Modifier.size(30.dp),
-                        color = if (item.kind == Kind.AUDIO) Neon.Purple else Neon.Cyan,
-                    )
+                    ?: CategoryBadge(DownloadBoard.categoryOf(item), item.extension.lowercase(), 56.dp)
             }
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
                 Text(
-                    item.name,
+                    breakableName(item.name),
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                     style =
@@ -141,20 +137,20 @@ internal fun SavedFileRow(
                 }
                 accessMessage?.let { Text(stringResource(it), color = MaterialTheme.colorScheme.error,
                     style = MaterialTheme.typography.bodySmall, maxLines = 2, overflow = TextOverflow.Ellipsis) }
-                if (item.extension.isNotEmpty())
+                if (item.extension.isNotEmpty()) {
+                    val tint = LocalPalette.current.category(DownloadBoard.categoryOf(item))
                     Text(
                         item.extension,
-                        Modifier.clip(RoundedCornerShape(5.dp))
-                            .background(
-                                if (item.kind == Kind.AUDIO) Neon.Purple.copy(alpha = 0.65f)
-                                else Neon.Blue.copy(alpha = 0.5f)
-                            )
+                        Modifier.clip(RoundedCornerShape(6.dp))
+                            .background(tint.copy(alpha = 0.18f))
                             .padding(horizontal = 7.dp, vertical = 2.dp),
                         style = MaterialTheme.typography.labelSmall,
+                        color = tint,
                     )
+                }
             }
             Box {
-                IconAction(Glyph.MORE, stringResource(R.string.file_actions), { menu = true })
+                IconAction(Glyph.DOTS, stringResource(R.string.file_actions), { menu = true })
                 DropdownMenu(menu, { menu = false }) {
                     listOf(
                             "open" to R.string.preview,
@@ -246,9 +242,7 @@ internal fun FileLibraryScreen(
         remember(files, query, category, sort, ascending, selectedCollection, largeOnly, memberships) {
             val rows =
                 files.filter {
-                    (category == 0 ||
-                        (category == 1 && it.kind == Kind.VIDEO) ||
-                        (category == 2 && it.kind == Kind.AUDIO)) &&
+                    (category == 0 || DownloadBoard.categoryOf(it) == libraryCategories[category].first) &&
                         (it.name.contains(query, true) || it.mime.contains(query, true)) &&
                         (!largeOnly || it.bytes >= 100L * 1024 * 1024) &&
                         (selectedCollection.isEmpty() ||
@@ -262,31 +256,24 @@ internal fun FileLibraryScreen(
                 }
             rows.sortedWith(if (ascending) comparator else comparator.reversed())
         }
-    Column(Modifier.fillMaxSize().padding(horizontal = 17.dp)) {
-        CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
-            Row(
-                Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-            ) {
-                listOf(R.string.all_files, R.string.video, R.string.audio).forEachIndexed {
-                    index,
-                    label ->
-                    NeonChip(
-                        category == index,
-                        { category = index },
-                        label = { Text(stringResource(label)) },
-                        leadingIcon = {
-                            Symbol(
-                                when (index) {
-                                    1 -> Glyph.VIDEO
-                                    2 -> Glyph.AUDIO
-                                    else -> Glyph.FOLDER
-                                },
-                                modifier = Modifier.size(18.dp),
-                            )
-                        },
-                    )
-                }
+    val counts = remember(files) { files.groupingBy { DownloadBoard.categoryOf(it) }.eachCount() }
+    Column(Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
+        Row(
+            Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            libraryCategories.forEachIndexed { index, (value, label) ->
+                // Empty categories are hidden instead of offering filters with nothing behind them.
+                if (index != 0 && (counts[value] ?: 0) == 0 && category != index) return@forEachIndexed
+                NeonChip(
+                    category == index,
+                    { category = index },
+                    label = { Text(stringResource(label)) },
+                    leadingIcon = {
+                        Symbol(if (index == 0) Glyph.FOLDER else value.glyph(), modifier = Modifier.size(18.dp))
+                    },
+                    modifier = Modifier.testTag("library_category_$index"),
+                )
             }
         }
         Row(
@@ -361,175 +348,15 @@ internal fun FileLibraryScreen(
     }
 }
 
-@Composable
-internal fun DownloadsScreen(
-    state: TransferState,
-    queue: List<DownloadTask>,
-    files: List<SavedFile>,
-    query: String,
-    onCancel: () -> Unit,
-    onPause: () -> Unit,
-    onRetry: () -> Unit,
-    onOpen: () -> Unit,
-    onDetails: () -> Unit,
-    onRemove: (DownloadTask) -> Unit,
-    onRunQueue: () -> Unit,
-    onAction: (SavedFile, String) -> Unit,
-    onRetryFailed: (FailedDownload) -> Unit,
-    onForgetFailure: (FailedDownload) -> Unit,
-) {
-    val failures by FailureJournal.failures.collectAsState()
-    var filter by rememberSaveable { mutableIntStateOf(0) }
-    LaunchedEffect(state.phase) {
-        if (state.phase == Phase.COMPLETE) filter = 1 else if (state.active) filter = 0
-    }
-    val locale = LocalConfiguration.current.locales[0]
-    val completed = files.filter { it.name.contains(query, true) }
-    val waiting = queue.filter { it.analysis.title.contains(query, true) }
-    Column(Modifier.fillMaxSize().padding(horizontal = 17.dp)) {
-        CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
-            Row(
-                Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(5.dp),
-            ) {
-                listOf(
-                        R.string.active_downloads to if (state.active) 1 else 0,
-                        R.string.completed_downloads to files.size,
-                        R.string.waiting_downloads to queue.size,
-                    )
-                    .forEachIndexed { i, pair ->
-                        NeonChip(
-                            filter == i,
-                            { filter = i },
-                            label = {
-                                Text(
-                                    stringResource(pair.first) +
-                                        " " +
-                                        NumberFormat.getIntegerInstance(locale).format(pair.second),
-                                    style = MaterialTheme.typography.labelSmall,
-                                )
-                            },
-                        )
-                    }
-            }
-        }
-        LazyColumn(
-            Modifier.fillMaxSize().testTag("downloads_list"),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
-            contentPadding = PaddingValues(top = 12.dp, bottom = 16.dp),
-        ) {
-            if (filter == 0) {
-                if (
-                    state.phase != Phase.IDLE &&
-                        state.title.contains(query, true) &&
-                        (state.active || failures.none { it.task.id == Transfers.currentTask?.id })
-                )
-                    item { TransferCard(state, onCancel, onOpen, onPause, onRetry, onDetails) }
-                if (state.phase == Phase.IDLE && failures.isEmpty())
-                    item {
-                        EmptyState(
-                            Glyph.DOWNLOAD,
-                            R.string.no_active_downloads,
-                            R.string.downloads_empty_body,
-                        )
-                    }
-                items(
-                    failures.filter { it.task.analysis.title.contains(query, true) },
-                    key = { "failed-${it.task.id}" },
-                ) { failed ->
-                    Panel {
-                        Text(
-                            failed.task.analysis.title,
-                            style = MaterialTheme.typography.titleSmall,
-                        )
-                        Text(
-                            stringResource(
-                                if (failed.cancelled) R.string.cancelled
-                                else
-                                    PipelineException(
-                                            Stage.TRANSFER,
-                                            failed.code ?: FailureCode.DOWNLOAD_FAILED,
-                                        )
-                                        .messageResource()
-                            ),
-                            color = MaterialTheme.colorScheme.error,
-                            style = MaterialTheme.typography.bodySmall,
-                        )
-                        Row {
-                            TextButton({ onRetryFailed(failed) }) {
-                                Text(stringResource(R.string.retry))
-                            }
-                            TextButton({ onForgetFailure(failed) }) {
-                                Text(stringResource(R.string.remove_history))
-                            }
-                        }
-                        DiagnosticActions(failed.code)
-                    }
-                }
-                if (waiting.isNotEmpty())
-                    item {
-                        Text(
-                            stringResource(R.string.waiting_downloads),
-                            style = MaterialTheme.typography.titleMedium,
-                        )
-                    }
-            }
-            if (filter == 1) {
-                if (completed.isEmpty())
-                    item {
-                        EmptyState(
-                            Glyph.CHECK,
-                            R.string.no_completed_downloads,
-                            R.string.files_empty_body,
-                        )
-                    }
-                items(completed, key = { it.uri }) { SavedFileRow(it, onAction, true) }
-            }
-            if (filter == 2 && waiting.isEmpty())
-                item { EmptyState(Glyph.CLOCK, R.string.queue_empty, R.string.queue_empty_body) }
-            if (filter != 1) {
-                if (waiting.isNotEmpty() && !state.active)
-                    item {
-                        GradientButton(
-                            stringResource(R.string.start_queue),
-                            onRunQueue,
-                            Modifier.fillMaxWidth(),
-                            icon = Glyph.PLAY,
-                        )
-                    }
-                items(waiting, key = { it.id }) { task ->
-                    Panel {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(10.dp),
-                        ) {
-                            Symbol(Glyph.CLOCK, color = Neon.Muted)
-                            Column(Modifier.weight(1f)) {
-                                Text(
-                                    task.analysis.title,
-                                    maxLines = 2,
-                                    overflow = TextOverflow.Ellipsis,
-                                    style = MaterialTheme.typography.titleSmall,
-                                )
-                                Text(
-                                    stringResource(
-                                        if (task.userPaused) R.string.paused
-                                        else R.string.waiting_to_start
-                                    ),
-                                    color = Neon.Muted,
-                                    style = MaterialTheme.typography.bodySmall,
-                                )
-                            }
-                            IconAction(
-                                Glyph.CLOSE,
-                                stringResource(R.string.remove_queue),
-                                { onRemove(task) },
-                            )
-                        }
-                        QueueControls(task)
-                    }
-                }
-            }
-        }
-    }
-}
+/** Library filters (index 0 = all files). Order follows the most common downloads. */
+internal val libraryCategories: List<Pair<FileCategory, Int>> = listOf(
+    FileCategory.OTHER to R.string.all_files,
+    FileCategory.VIDEO to R.string.video,
+    FileCategory.AUDIO to R.string.audio,
+    FileCategory.APP to R.string.category_apps,
+    FileCategory.DOCUMENT to R.string.category_documents,
+    FileCategory.IMAGE to R.string.category_images,
+    FileCategory.ARCHIVE to R.string.category_archives,
+    FileCategory.PROGRAM to R.string.category_programs,
+    FileCategory.OTHER to R.string.category_other,
+)

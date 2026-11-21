@@ -11,6 +11,8 @@ internal class TransferProcessor(
     private val transfer: suspend (DownloadTask, File) -> File,
     private val isUserCancelled: () -> Boolean,
     private val onComplete: (TransferState) -> Unit,
+    /** Terminal failure (not user cancel or pause); the service turns it into a notification. */
+    private val onFailure: (TransferState) -> Unit = {},
 ) {
     companion object {
         @Volatile internal var failureObserverForTests: ((PipelineException) -> Unit)? = null
@@ -77,6 +79,8 @@ internal class TransferProcessor(
                     task.choice.kind,
                     task.choice.expectedHeight,
                     task.choice.expectsAudio,
+                    // Only direct files are checked against their name; engine outputs are media.
+                    extension = if (task.analysis.direct) task.choice.extension else null,
                 )
             }
             Diagnostics.event(stage, "completed", output.length())
@@ -113,10 +117,16 @@ internal class TransferProcessor(
         } catch (_: CancellationException) {
             if (terminal.phase != Phase.COMPLETE) {
                 withContext(NonCancellable) { trace(stage, TimelineResult.INTERRUPTED) }
+                val cancelled = isUserCancelled()
+                // A paused task keeps its last real progress so every surface can show "x / y".
+                val last = Transfers.state.value.takeIf { !cancelled && it.title == task.analysis.title }
                 terminal =
                     TransferState(
-                        if (isUserCancelled()) Phase.CANCELLED else Phase.PAUSED,
+                        if (cancelled) Phase.CANCELLED else Phase.PAUSED,
                         task.analysis.title,
+                        bytes = last?.bytes ?: 0,
+                        total = last?.total,
+                        percent = last?.percent,
                     )
             }
         } catch (e: Exception) {
@@ -168,6 +178,7 @@ internal class TransferProcessor(
                 }
                 Transfers.update(terminal.copy(detail = detail))
                 if (terminal.phase == Phase.COMPLETE) onComplete(terminal)
+                if (terminal.phase == Phase.FAILED) onFailure(terminal)
             }
         }
         terminal.phase

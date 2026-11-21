@@ -21,6 +21,12 @@ internal object DownloadQueue {
     private var loaded = false
     private var acceptedBatch = emptySet<String>()
     @Volatile private var active: DownloadTask? = null
+    private val leasedMutable = MutableStateFlow<DownloadTask?>(null)
+    /**
+     * Read-only view of the durable lease (the running, paused or interrupted task). Lets the
+     * widget and a cold process show a paused download without owning or changing the lease.
+     */
+    val leased = leasedMutable.asStateFlow()
 
     private fun journal(context: Context) = PrivateJournal(context, "waiting-tasks.json")
 
@@ -46,6 +52,7 @@ internal object DownloadQueue {
                 (0 until array.length()).map { decodeTask(array.getJSONObject(it)) }
             }
         active = leased
+        leasedMutable.value = leased
         acceptedBatch = accepted
         mutable.value = waiting
         loaded = true
@@ -65,6 +72,7 @@ internal object DownloadQueue {
                     .toString()
             )
         active = leased
+        leasedMutable.value = leased
         acceptedBatch = accepted
         mutable.value = waiting
     }
@@ -323,4 +331,18 @@ internal object TransferFiles {
     fun discard(context: Context, id: String) {
         directory(context, id).deleteRecursively()
     }
+
+    /**
+     * Durable progress of a direct download that is not running (paused, or interrupted by process
+     * death): the committed offset and total from its resume checkpoint. Read-only; null when
+     * unknown (media engine tasks, no checkpoint, or the source changed).
+     */
+    fun checkpoint(context: Context, task: DownloadTask): Pair<Long, Long>? = runCatching {
+        if (!task.analysis.direct || task.localSource != null) return null
+        val partial = File(directory(context, task.id), "file.${task.choice.extension}")
+        ResumeJournal(partial).read()?.takeIf {
+            it.sourceHash == ResumeCheckpoint.hash(Safety.url(task.analysis.url)) && it.total > 0 &&
+                partial.isFile && partial.length() >= it.offset
+        }?.let { it.offset to it.total }
+    }.getOrNull()
 }

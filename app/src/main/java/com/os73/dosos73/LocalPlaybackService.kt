@@ -114,7 +114,7 @@ internal object LocalPlayback {
 class LocalPlaybackService : Service() {
     companion object {
         @Volatile internal var pauseTimeoutMillisForTests: Long? = null
-        private const val ID = 76
+        internal const val ID = 76
         private const val CHANNEL = "local_playback"
         private const val TOGGLE = "com.os73.dosos73.PLAYBACK_TOGGLE"
         private const val STOP = "com.os73.dosos73.PLAYBACK_STOP"

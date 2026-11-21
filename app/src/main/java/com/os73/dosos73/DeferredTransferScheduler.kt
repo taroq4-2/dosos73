@@ -1,6 +1,5 @@
 package com.os73.dosos73
 
-import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.job.JobInfo
@@ -103,19 +102,22 @@ internal object DeferredTransferScheduler {
                 (candidate.localSource == null && !NetworkSettings.permitted(context, params.network)))
                 return@withLock true // System backoff/constraints handle a changed clock/network.
             val manager = context.getSystemService(NotificationManager::class.java)
-            manager.createNotificationChannel(NotificationChannel("downloads", context.getString(R.string.downloads), NotificationManager.IMPORTANCE_LOW))
+            // Same channel and app language as the other download notifications (a job's
+            // context carries the system locale, not the in-app choice).
+            DownloadNotifications.createChannels(context)
+            val text = DososLocale.wrap(context)
             val open = PendingIntent.getActivity(context, JOB_ID,
                 Intent(context, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE)
-            val notification = NotificationCompat.Builder(context, "downloads")
+            val notification = NotificationCompat.Builder(context, DownloadNotifications.CHANNEL_PROGRESS)
                 .setSmallIcon(R.drawable.ic_download)
-                .setContentTitle(context.getString(R.string.start_queue))
+                .setContentTitle(text.getString(R.string.start_queue))
                 .setContentText(candidate.analysis.title)
                 .setContentIntent(open)
                 .setAutoCancel(true)
                 .setOnlyAlertOnce(true)
                 // Bring the app foreground first, also resetting an exhausted Android35
                 // dataSync budget. The visible UI owns starting/resuming the service.
-                .addAction(0, context.getString(R.string.resume), open)
+                .addAction(0, text.getString(R.string.resume), open)
                 .build()
             // A denied notification permission must neither fail nor consume the queued task.
             try { manager.notify(NOTIFICATION_ID, notification) } catch (_: SecurityException) { }
