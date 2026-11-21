@@ -57,7 +57,7 @@ No content provider is exported. `allowBackup=false`.
 
 ### Not covered
 
-No penetration test against third-party servers; no TLS interception test on a device; no fuzzing of the native runtime in this review (see the 1.3.2 sections below); Android 10–12 and OEM launchers not tested.
+No penetration test against third-party servers; no TLS interception test on a device; no fuzzing of the native runtime in this review (see the 1.3.2 sections below); OEM launchers not tested; on Android 10–12 only the automated device suite ran (GitHub CI, API 29–32, all passed).
 
 ---
 

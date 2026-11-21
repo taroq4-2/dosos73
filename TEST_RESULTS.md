@@ -209,6 +209,19 @@ APK الـ debug مُجمّع مع `dosos73-1.3.2-runtime-hardened.zip` ومُح
 | `NetworkWaitResumeTest` + `SurfacesTest` + `DeferredTransferTest` | **3 × 11/11 PASSED** | بعد إصلاحات المرحلة G |
 | `QuickLaunchTest#unsafeClipboardItemsAreRejected…` | **متذبذب (FAILED في 4 من 6 تشغيلات في هذه المرحلة)** | الحافظة الحساسة تُقبل أحيانًا لأن علامة `IS_SENSITIVE` تصل فارغة. شيفرة `QuickLaunch.copiedUrl` لم تتغير منذ 1.3.2 وتفحص العلامة صحيحًا. السبب المرجّح مزامنة حافظة المحاكي مع المضيف. **غير مُثبت**؛ يحتاج جهازًا فعليًا |
 
+### CI على GitHub (طلب الدمج taroq4-2/dosos73#20، 21 نوفمبر 2026)
+
+سير العمل `.github/workflows/android.yml` على الشيفرة النهائية (التشغيل `44902027759`):
+
+| المهمة | النتيجة | التفاصيل |
+|---|---|---|
+| `build` (اختبارات الوحدة، Lint Debug/Release، AAB، `verify_bundle`، فحوص الاعتماديات) | **PASSED** | — |
+| `device-tests` على API 29، 30، 31، 32، 33، 34، 35، 36 (x86_64) | **PASSED على الثمانية** | `OK (210 tests)` في كل إصدار، بالـ APK المشترك مع runtime المقوّى. الاختبارات المفعّلة اختياريًا مستثناة كما في التشغيل المحلي |
+| API 35: تنزيل وسائط أصلي من مورد MP4 عام | **PASSED** | `OK (1 test)` |
+| API 36: تكرار اختبار التكرار والإلغاء 3 مرات | **PASSED 3/3** | — |
+
+تشغيل آخر للدفع نفسه أظهره GitHub «ملغى»: ألغاه سير العمل لأن تشغيل طلب الدمج بدأ بعده، وليس فشلًا في الاختبارات.
+
 ### تجارب حقيقية على المحاكي
 
 | الحالة | النتيجة | الحكم |
@@ -240,4 +253,5 @@ APK الـ debug مُجمّع مع `dosos73-1.3.2-runtime-hardened.zip` ومُح
 | شهادة TLS خاطئة / DNS rebinding يدويًا على الجهاز | NOT RUN | مغطى جزئيًا بـ `SafetyTest` و`LiteralNetworkBoundaryTest` (JVM) و`TlsVersionTest` (جهاز) |
 | اتصال بطيء حقيقي | NOT RUN | خنق شبكة المحاكي غير دقيق (المرحلة D) |
 | TalkBack يدويًا على كل الشاشات | NOT RUN | الأسماء مُتحقق منها برمجيًا فقط |
-| Android 10–12، ومشغّلات غير Pixel، وجهاز ARM64 فعلي | BLOCKED | لا جهاز |
+| Android 10–12 يدويًا | NOT RUN | الاختبارات الآلية للجهاز نجحت في CI على API 29–32 (انظر أعلاه) |
+| مشغّلات غير Pixel، وجهاز ARM64 فعلي | BLOCKED | لا جهاز |
