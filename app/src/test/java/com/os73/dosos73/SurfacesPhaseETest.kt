@@ -93,4 +93,15 @@ class SurfacesPhaseETest {
         // android.jar stubs return null for Intent extras in JVM tests; the allowlist is the contract.
         for (value in listOf("settings", "privacy", "../x", "")) assertNull(value, page(value))
     }
+
+    @Test
+    fun everyNotificationOwnsADistinctId() {
+        // A shared ID lets one notification silently replace or cancel another (found in Phase G:
+        // the paused notification shared 75 with the deferred-start reminder, and failures shared
+        // 76 with local playback).
+        val ids = listOf(DownloadNotifications.ID_PROGRESS, DownloadNotifications.ID_COMPLETED,
+            DownloadNotifications.ID_PAUSED, DownloadNotifications.ID_FAILED,
+            DeferredTransferScheduler.NOTIFICATION_ID, LocalPlaybackService.ID)
+        assertEquals(ids.toString(), ids.size, ids.toSet().size)
+    }
 }

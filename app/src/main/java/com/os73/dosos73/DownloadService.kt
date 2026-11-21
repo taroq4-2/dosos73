@@ -18,6 +18,9 @@ class DownloadService : Service() {
         // Debug fixtures can exercise the real service's timeout/lease path without
         // changing device connectivity or waiting fifteen seconds per test.
         @Volatile internal var networkWaitMillisForTests: Long? = null
+        /** Failures a dropped connection produces; anything else is never retried as a network loss. */
+        internal val TRANSIENT_TRANSFER_FAILURES = setOf(FailureCode.DOWNLOAD_FAILED,
+            FailureCode.DOWNLOAD_INTERRUPTED, FailureCode.NETWORK_TIMEOUT, FailureCode.NETWORK_UNAVAILABLE)
     }
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private var job: Job? = null
@@ -250,8 +253,9 @@ class DownloadService : Service() {
         }
     }
 
-    private suspend fun <T> withNetworkRecovery(task: DownloadTask, block: suspend () -> T): T =
-        recoverNetwork(
+    private suspend fun <T> withNetworkRecovery(task: DownloadTask, block: suspend () -> T): T {
+        var bound: android.net.Network? = null
+        return recoverNetwork(
             awaitNetwork = {
                 NetworkSettings.requireSource(this@DownloadService, task.analysis.url)
                 val testWait = if (BuildConfig.DEBUG) networkWaitMillisForTests else null
@@ -270,6 +274,7 @@ class DownloadService : Service() {
             },
             acquire = { NetworkSettings.requireNetwork(this@DownloadService) },
             attempt = { network ->
+                bound = network
                 transferNetwork = network
                 try {
                     direct = DirectDownloader(NetworkSettings.client(this@DownloadService, network))
@@ -294,7 +299,19 @@ class DownloadService : Service() {
             },
             waiting = { publish(TransferState(Phase.WAITING, task.analysis.title)) },
             allowRetry = { !userCancelled },
+            lostNetwork = { error ->
+                val network = bound
+                // Only transport-shaped failures qualify, and only if the bound network really
+                // disappears shortly after; a disk, auth or HTTP failure with a live network still fails.
+                network != null && !userCancelled && (error is java.io.IOException ||
+                    (error is PipelineException && error.code in TRANSIENT_TRANSFER_FAILURES)) &&
+                    withTimeoutOrNull(3_000) {
+                        while (NetworkSettings.permitted(this@DownloadService, network)) delay(100)
+                        true
+                    } == true
+            },
         )
+    }
 
     private fun publish(state: TransferState) {
         Transfers.update(state.copy(detail = detail))

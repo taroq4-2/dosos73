@@ -220,7 +220,8 @@ private fun subtitle(item: BoardItem, locale: Locale): String {
     }
     val status = when (item.status) {
         BoardStatus.ACTIVE -> when (item.phase) {
-            Phase.WAITING -> stringResource(R.string.waiting_to_start)
+            // WAITING is only published while the transfer waits for a permitted network.
+            Phase.WAITING -> stringResource(R.string.waiting_for_network)
             Phase.PROCESSING -> stringResource(R.string.processing)
             Phase.SAVING -> stringResource(R.string.saving)
             else -> item.bytesPerSecond?.let { stringResource(R.string.speed_value, bytesLabel(it, locale)) }
@@ -243,6 +244,10 @@ private fun PrimaryAction(item: BoardItem, current: Boolean, h: RowHandlers) {
     when {
         item.status == BoardStatus.ACTIVE && item.phase == Phase.DOWNLOADING ->
             RoundAction(Glyph.PAUSE, stringResource(R.string.pause), h.onPause)
+        // Deferred for the network (as in 1.3.2): the same toggle continues the retained lease
+        // once the user is back; while the service still waits on its own it is a no-op.
+        item.status == BoardStatus.ACTIVE && item.phase == Phase.WAITING && current ->
+            RoundAction(Glyph.PLAY, stringResource(R.string.resume), h.onPause)
         // The service treats "pause" as a toggle: with no running job it resumes the paused lease
         // from its durable checkpoint (cold resume). Same contract as the 1.3.2 transfer card.
         item.status == BoardStatus.PAUSED && current ->

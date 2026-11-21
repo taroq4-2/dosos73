@@ -76,10 +76,12 @@ internal fun durationLabel(seconds: Long): String {
 internal object DownloadNotifications {
     const val CHANNEL_PROGRESS = "downloads"
     const val CHANNEL_RESULTS = "download_results"
+    // 75 (deferred-start reminder) and 76 (local playback) predate vNext and stay theirs;
+    // a shared ID would let one notification replace or cancel the other.
     const val ID_PROGRESS = 73
     const val ID_COMPLETED = 74
-    const val ID_PAUSED = 75
-    const val ID_FAILED = 76
+    const val ID_PAUSED = 77
+    const val ID_FAILED = 78
 
     fun createChannels(context: Context) {
         val text = DososLocale.wrap(context)

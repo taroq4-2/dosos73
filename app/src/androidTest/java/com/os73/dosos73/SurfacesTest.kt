@@ -87,13 +87,22 @@ class SurfacesTest {
         val manager = context.getSystemService(NotificationManager::class.java)
         // Notifications are a no-op without permission; the test only asserts content when allowed.
         org.junit.Assume.assumeTrue(manager.areNotificationsEnabled())
+        // NotificationManager posts asynchronously: wait for the system to list the change.
+        fun awaitPosted(present: Boolean, id: Int) {
+            val end = android.os.SystemClock.uptimeMillis() + 5000
+            while (manager.activeNotifications.any { it.id == id } != present &&
+                android.os.SystemClock.uptimeMillis() < end) android.os.SystemClock.sleep(25)
+        }
         DownloadNotifications.paused(context, TransferState(Phase.PAUSED, "p.zip", 3, 10, 0.3f))
+        awaitPosted(true, DownloadNotifications.ID_PAUSED)
         val paused = manager.activeNotifications.single { it.id == DownloadNotifications.ID_PAUSED }.notification
         val text = DososLocale.wrap(context)
         assertEquals(listOf(text.getString(R.string.resume), text.getString(R.string.cancel)),
             paused.actions.map { it.title.toString() })
         DownloadNotifications.failed(context, TransferState(Phase.FAILED, "p.zip", error = R.string.error_http404),
             R.string.error_http404)
+        awaitPosted(true, DownloadNotifications.ID_FAILED)
+        awaitPosted(false, DownloadNotifications.ID_PAUSED)
         assertTrue(manager.activeNotifications.none { it.id == DownloadNotifications.ID_PAUSED })
         assertTrue(manager.activeNotifications.any { it.id == DownloadNotifications.ID_FAILED })
         manager.cancel(DownloadNotifications.ID_FAILED)

@@ -100,7 +100,6 @@
     <string name="no_active_downloads">لا توجد تنزيلات نشطة</string>
     <string name="downloads_empty_body">ألصق رابطًا في الرئيسية واختر الصيغة لبدء التنزيل.</string>
     <string name="start_queue">بدء قائمة الانتظار</string>
-    <string name="waiting_to_start">بانتظار البدء</string>
     <string name="remove_queue">إزالة من الانتظار</string>
     <string name="pause">إيقاف مؤقت</string>
     <string name="paused">التحميل متوقف مؤقتًا</string>

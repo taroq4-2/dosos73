@@ -100,7 +100,6 @@
     <string name="no_active_downloads">No active downloads</string>
     <string name="downloads_empty_body">Paste a link on Home and choose the format to start.</string>
     <string name="start_queue">Start waiting downloads</string>
-    <string name="waiting_to_start">Waiting to start</string>
     <string name="remove_queue">Remove waiting task</string>
     <string name="pause">Pause</string>
     <string name="paused">Download paused</string>
