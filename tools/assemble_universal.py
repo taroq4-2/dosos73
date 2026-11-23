@@ -2,6 +2,11 @@
 
 No historical APK or machine-specific path is needed. Alignment, production
 signing and acceptance operate on the resulting unsigned APK separately.
+
+With --abi, the same verified bundle is packaged for one CPU architecture (for
+example arm64-v8a): the whole bundle hash and every member hash are still
+checked against the lock first; only lib/<other ABIs>/ members are then left
+out. The app must be built for that ABI (Gradle -PtargetAbi=<abi>).
 """
 import argparse
 from copy import copy
@@ -14,9 +19,16 @@ from generate_rebuilt_sbom import signature_entry, apk_entries, payload_hash
 
 def runtime(name): return name.startswith(('lib/', 'assets/dosos73/'))
 def sha(data): return hashlib.sha256(data).hexdigest()
+ABIS = ('armeabi-v7a', 'arm64-v8a', 'x86', 'x86_64')
 
 
-def assemble(app, bundle, lock, output):
+def for_abi(name, abi):
+    """A runtime member kept in a single-ABI package: that ABI's libraries and the shared assets."""
+    return abi is None or not name.startswith('lib/') or name.startswith('lib/' + abi + '/')
+
+
+def assemble(app, bundle, lock, output, abi=None):
+    assert abi is None or abi in ABIS, 'Unsupported ABI'
     manifest=json.loads(lock.read_text(encoding='utf-8'))
     assert sha(bundle.read_bytes()) == manifest['runtime_sha256'], 'Unverified runtime input'
     with ZipFile(bundle) as native:
@@ -25,6 +37,9 @@ def assemble(app, bundle, lock, output):
             assert runtime(name) and '\\' not in name and '..' not in PurePosixPath(name).parts
         payload={n:native.read(n) for n in native.namelist()}
     assert {n:sha(data) for n,data in payload.items()} == manifest['members']
+    # Only after the complete bundle verified: keep this ABI's members (hashes already proven).
+    payload={n:data for n,data in payload.items() if for_abi(n, abi)}
+    assert abi is None or any(n.startswith('lib/' + abi + '/') for n in payload), 'ABI missing from runtime'
     with ZipFile(app) as original:
         assert len(original.namelist()) == len(set(original.namelist())), 'Duplicate app entry'
         app_runtime={n for n in original.namelist() if runtime(n)}
@@ -35,7 +50,7 @@ def assemble(app, bundle, lock, output):
                 if not runtime(entry.filename) and not signature_entry(entry.filename):
                     result.writestr(copy(entry), original.read(entry))
             for name,data in sorted(payload.items()): result.writestr(name,data)
-    report={'app_sha256':sha(app.read_bytes()),'runtime_sha256':manifest['runtime_sha256'],
+    report={'abi':abi or 'universal','app_sha256':sha(app.read_bytes()),'runtime_sha256':manifest['runtime_sha256'],
             'unsigned_apk_sha256':sha(output.read_bytes()),'payload_sha256':payload_hash(apk_entries(output))}
     output.with_suffix('.json').write_text(json.dumps(report,indent=2)+'\n',encoding='utf-8')
     print(json.dumps(report))
@@ -44,5 +59,6 @@ def assemble(app, bundle, lock, output):
 if __name__=='__main__':
     parser=argparse.ArgumentParser(description=__doc__)
     for arg in ('app','runtime','lock','output'): parser.add_argument('--'+arg,type=Path,required=True)
+    parser.add_argument('--abi',choices=ABIS,help='package one CPU architecture (app built with -PtargetAbi)')
     a=parser.parse_args()
-    assemble(a.app,a.runtime,a.lock,a.output)
+    assemble(a.app,a.runtime,a.lock,a.output,a.abi)

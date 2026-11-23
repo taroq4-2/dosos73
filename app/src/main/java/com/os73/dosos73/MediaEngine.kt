@@ -10,7 +10,7 @@ import org.json.JSONObject
 class MediaEngine(
     private val context: Context,
     private val networkProvider: () -> android.net.Network = { NetworkSettings.requireNetwork(context) },
-) {
+) : MediaExtractor {
     private fun publicProxy(stage: Stage): PublicProxy {
         val network = try { networkProvider() } catch (error: PipelineException) {
             if (error.code == FailureCode.NETWORK_UNAVAILABLE)
@@ -28,7 +28,7 @@ class MediaEngine(
 
     @Volatile private var session: NativeProcessSession? = null
 
-    fun cancel() { session?.cancel() }
+    override fun cancel() { session?.cancel() }
 
     private suspend fun <T> invocation(entry: File? = null, block: (NativeProcessSession) -> T): T {
         val active = if (entry == null) NativeProcessSession(context) else NativeProcessSession(context, entry)
@@ -79,7 +79,7 @@ class MediaEngine(
         }
     }
 
-    suspend fun analyze(url: String): Analysis = retryInterruptedMediaProbe { analyzeOnce(url) }
+    override suspend fun analyze(url: String): Analysis = retryInterruptedMediaProbe { analyzeOnce(url) }
 
     private suspend fun analyzeOnce(url: String): Analysis =
         invocation { active ->

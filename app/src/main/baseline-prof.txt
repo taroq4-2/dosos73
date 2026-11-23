@@ -1,0 +1,6 @@
+# dosos73 app code: compile ahead of time at install instead of interpreting/JIT at first launches.
+# Libraries (Compose, coroutines, OkHttp...) ship their own rules; these cover only this app.
+# Phase F measured cold start ~+110 ms vs 1.3.2 after the redesign, vanishing under full AOT:
+# the new UI code was not compiled at startup. Names are rewritten by R8 at build time.
+HSPLcom/os73/dosos73/**->**(**)**
+Lcom/os73/dosos73/**;

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="stage_validating">Checking the link…</string>
+    <string name="stage_resolving">Finding the release file…</string>
+    <string name="stage_connecting">Connecting to the source…</string>
+    <string name="stage_probing">Reading the file information…</string>
+    <string name="stage_extracting">Fetching media information… This can take up to a minute.</string>
+    <string name="analysis_canceled">Analysis canceled.</string>
+    <string name="error_type_mismatch">The file content does not match its type. It was not saved. The link may point to a different file than its name suggests.</string>
+    <string name="error_web_page">The link opened a web page, not a file. Open the page in a browser and copy the direct download link.</string>
+    <string name="error_link_expired">This download link has expired (HTTP 410). Get a fresh link from the source.</string>
+    <string name="error_source_no_file">This page has no downloadable file for this request.</string>
+    <string name="link_verified">Content verified (%1$s)</string>
+    <string name="link_unverified">Type taken from the server; checked again after download</string>
+    <string name="link_source">Source: %1$s</string>
+    <string name="candidates_title">Choose a file from this release</string>
+    <string name="apk_notice">Android packages are saved, never installed automatically. Install only from sources you trust.</string>
+    <plurals name="retry_after">
+        <item quantity="one">You can try again in %1$d second.</item>
+        <item quantity="other">You can try again in %1$d seconds.</item>
+    </plurals>
+</resources>

@@ -94,6 +94,12 @@ internal suspend fun <N, T> recoverNetwork(
     waiting: () -> Unit,
     allowRetry: () -> Boolean = { true },
     backoff: suspend (Long) -> Unit = { delay(it) },
+    /**
+     * The socket can break before the platform reports the network loss (airplane mode, Wi-Fi
+     * drop). Called for any other attempt failure; true only when the network is confirmed gone,
+     * so the failure is handled as an interruption instead of a terminal download error.
+     */
+    lostNetwork: suspend (Exception) -> Boolean = { false },
 ): T {
     var retries = 0
     while (true) {
@@ -107,7 +113,9 @@ internal suspend fun <N, T> recoverNetwork(
             currentCoroutineContext().ensureActive()
             val unavailable = acquiring && error is PipelineException &&
                 error.code == FailureCode.NETWORK_UNAVAILABLE
-            if ((error !is NetworkInterruption && !unavailable) || retries >= 2 || !allowRetry())
+            val interrupted = error is NetworkInterruption || unavailable ||
+                (!acquiring && error !is CancellationException && lostNetwork(error))
+            if (!interrupted || retries >= 2 || !allowRetry())
                 throw error
             retries++
             waiting()

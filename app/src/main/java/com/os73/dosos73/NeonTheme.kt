@@ -23,91 +23,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-internal object Neon {
-    val Background = Color(0xFF070F1E)
-    val Surface = Color(0xFF0D1B2E)
-    val Raised = Color(0xFF14263D)
-    val Cyan = Color(0xFF19D7F5)
-    val Blue = Color(0xFF168BFF)
-    val ActionBlue = Color(0xFF255CBD)
-    val Purple = Color(0xFF7044D4)
-    val Text = Color(0xFFF5F7FF)
-    val Secondary = Color(0xFFA7B6D0)
-    val Muted = Color(0xFF8B9DB7)
-    val Line = Color(0xFF263B54)
-    val Brand = Brush.linearGradient(listOf(Cyan, Blue, Color(0xFF812BFF)))
-    val Radius = RoundedCornerShape(18.dp)
-}
-
-@Composable
-internal fun DososTheme(content: @Composable () -> Unit) {
-    val family =
-        FontFamily(
-            Font(R.font.tajawal_regular, FontWeight.Normal),
-            Font(R.font.tajawal_medium, FontWeight.Medium),
-            Font(R.font.tajawal_bold, FontWeight.Bold),
-        )
-    MaterialTheme(
-        colorScheme =
-            darkColorScheme(
-                primary = Neon.Cyan,
-                secondary = Neon.Purple,
-                background = Neon.Background,
-                surface = Neon.Surface,
-                onSurface = Neon.Text,
-                onBackground = Neon.Text,
-                onSurfaceVariant = Neon.Secondary,
-                surfaceVariant = Neon.Raised,
-                surfaceContainerHighest = Neon.Raised,
-                surfaceContainer = Neon.Surface,
-                surfaceContainerLow = Neon.Background,
-                surfaceContainerHigh = Neon.Raised,
-                surfaceContainerLowest = Neon.Background,
-                primaryContainer = Neon.Raised,
-                onPrimaryContainer = Neon.Text,
-                secondaryContainer = Neon.Raised,
-                onSecondaryContainer = Neon.Text,
-                outline = Neon.Muted,
-                outlineVariant = Neon.Line,
-                error = Color(0xFFFF647C),
-            ),
-        typography =
-            Typography(
-                headlineMedium =
-                    TextStyle(fontFamily = family, fontSize = 26.sp, lineHeight = 36.sp, fontWeight = FontWeight.Bold),
-                headlineSmall =
-                    TextStyle(fontFamily = family, fontSize = 22.sp, lineHeight = 32.sp, fontWeight = FontWeight.Bold),
-                labelLarge =
-                    TextStyle(
-                        fontFamily = family,
-                        fontSize = 14.sp, lineHeight = 22.sp,
-                        fontWeight = FontWeight.Medium,
-                    ),
-                titleLarge =
-                    TextStyle(fontFamily = family, fontSize = 21.sp, lineHeight = 30.sp, fontWeight = FontWeight.Bold),
-                titleMedium =
-                    TextStyle(
-                        fontFamily = family,
-                        fontSize = 16.sp, lineHeight = 24.sp,
-                        fontWeight = FontWeight.SemiBold,
-                    ),
-                titleSmall =
-                    TextStyle(
-                        fontFamily = family,
-                        fontSize = 14.sp, lineHeight = 22.sp,
-                        fontWeight = FontWeight.SemiBold,
-                    ),
-                bodyLarge = TextStyle(fontFamily = family, fontSize = 16.sp, lineHeight = 24.sp),
-                bodyMedium = TextStyle(fontFamily = family, fontSize = 14.sp, lineHeight = 22.sp),
-                bodySmall = TextStyle(fontFamily = family, fontSize = 12.sp, lineHeight = 18.sp),
-                labelSmall = TextStyle(fontFamily = family, fontSize = 11.sp, lineHeight = 17.sp),
-                labelMedium =
-                    TextStyle(fontFamily = family, fontSize = 12.sp, lineHeight = 18.sp, fontWeight = FontWeight.Medium),
-            ),
-        content = content,
-    )
-}
-
 /** Uses the same vector geometry as the launcher, with no bitmap allocation. */
 @Composable
 internal fun BrandMark(modifier: Modifier = Modifier) {
@@ -141,7 +56,27 @@ internal enum class Glyph {
     BACK,
     RENAME,
     TRASH,
+    DOTS,
+    CHEVRON,
+    EXPAND,
+    PLUS,
+    CLIPBOARD,
+    FILE,
+    ARCHIVE,
+    APP,
+    LAYERS,
+    RETRY,
+    BELL,
+    PALETTE,
+    SHIELD,
+    GLOBE,
+    STORAGE,
+    WIFI,
+    PROGRAM,
 }
+
+/** Glyphs that point along the reading direction and must mirror in RTL. */
+private val directional = setOf(Glyph.BACK, Glyph.CHEVRON)
 
 @Composable
 internal fun Symbol(
@@ -150,9 +85,12 @@ internal fun Symbol(
     modifier: Modifier = Modifier,
     color: Color = LocalContentColor.current,
 ) {
+    val mirror = kind in directional &&
+        androidx.compose.ui.platform.LocalLayoutDirection.current == androidx.compose.ui.unit.LayoutDirection.Rtl
     Canvas(
         modifier
             .size(24.dp)
+            .then(if (mirror) Modifier.graphicsLayer(scaleX = -1f) else Modifier)
             .then(if (description != null) Modifier.semanticsCompat(description) else Modifier)
     ) {
         scale(size.width / 24f, size.height / 24f, pivot = Offset.Zero) {
@@ -275,6 +213,78 @@ internal fun Symbol(
                 }
                 Glyph.RENAME -> {
                     path(4f to 17f, 16f to 3f, 21f to 8f, 9f to 21f, 4f to 21f, 4f to 17f)
+                }
+                Glyph.DOTS -> listOf(5f, 12f, 19f).forEach { drawCircle(color, 1.7f, Offset(12f, it)) }
+                Glyph.CHEVRON -> path(9f to 5f, 16f to 12f, 9f to 19f)
+                Glyph.EXPAND -> path(5f to 9f, 12f to 16f, 19f to 9f)
+                Glyph.PLUS -> { line(12f, 4f, 12f, 20f); line(4f, 12f, 20f, 12f) }
+                Glyph.CLIPBOARD -> {
+                    path(8f to 4f, 5f to 4f, 5f to 21f, 19f to 21f, 19f to 4f, 16f to 4f)
+                    drawRoundRect(color, Offset(8f, 2.5f), Size(8f, 4f),
+                        androidx.compose.ui.geometry.CornerRadius(1.2f), style = Stroke(1.7f))
+                    line(9f, 12f, 15f, 12f); line(9f, 16f, 15f, 16f)
+                }
+                Glyph.FILE -> {
+                    path(6f to 2.5f, 14f to 2.5f, 19f to 7.5f, 19f to 21.5f, 6f to 21.5f, close = true)
+                    path(14f to 2.5f, 14f to 7.5f, 19f to 7.5f)
+                    line(9f, 13f, 16f, 13f); line(9f, 17f, 14f, 17f)
+                }
+                Glyph.ARCHIVE -> {
+                    path(4f to 4f, 20f to 4f, 20f to 20f, 4f to 20f, close = true)
+                    listOf(6f, 9f, 12f).forEach { y -> line(12f, y, 12f, y + 1.5f) }
+                    drawRoundRect(color, Offset(10f, 14f), Size(4f, 4f),
+                        androidx.compose.ui.geometry.CornerRadius(1f), style = Stroke(1.6f))
+                }
+                Glyph.APP -> {
+                    drawArc(color, 180f, 180f, false, Offset(5f, 6f), Size(14f, 12f), style = Stroke(1.7f))
+                    path(5f to 12f, 19f to 12f, 19f to 19f, 5f to 19f, close = true)
+                    line(8f, 4f, 9.5f, 6.8f); line(16f, 4f, 14.5f, 6.8f)
+                    drawCircle(color, 0.9f, Offset(9.5f, 9.5f)); drawCircle(color, 0.9f, Offset(14.5f, 9.5f))
+                }
+                Glyph.LAYERS -> {
+                    path(12f to 3f, 21f to 8f, 12f to 13f, 3f to 8f, close = true)
+                    path(3f to 12.5f, 12f to 17.5f, 21f to 12.5f)
+                    path(3f to 16.5f, 12f to 21.5f, 21f to 16.5f)
+                }
+                Glyph.RETRY -> {
+                    drawArc(color, -60f, 300f, false, Offset(4f, 4f), Size(16f, 16f), style = Stroke(1.7f, cap = StrokeCap.Round))
+                    path(16f to 2.5f, 19.5f to 5.5f, 15.5f to 7.5f)
+                }
+                Glyph.BELL -> {
+                    path(6f to 17f, 6f to 11f, 7f to 7f, 12f to 4f, 17f to 7f, 18f to 11f, 18f to 17f)
+                    line(4f, 17f, 20f, 17f)
+                    drawArc(color, 0f, 180f, false, Offset(10f, 18f), Size(4f, 4f), style = Stroke(1.6f))
+                }
+                Glyph.PALETTE -> {
+                    drawCircle(color, 9f, Offset(12f, 12f), style = Stroke(1.7f))
+                    listOf(Offset(8f, 9f), Offset(12f, 7f), Offset(16f, 9f), Offset(9f, 14f)).forEach {
+                        drawCircle(color, 1.3f, it)
+                    }
+                }
+                Glyph.SHIELD -> {
+                    path(12f to 2.5f, 20f to 5.5f, 20f to 11f, 12f to 21.5f, 4f to 11f, 4f to 5.5f, close = true)
+                    path(8.5f to 12f, 11f to 14.5f, 15.5f to 9.5f)
+                }
+                Glyph.GLOBE -> {
+                    drawCircle(color, 9f, Offset(12f, 12f), style = Stroke(1.7f))
+                    drawOval(color, Offset(8f, 3f), Size(8f, 18f), style = Stroke(1.5f))
+                    line(3.5f, 9f, 20.5f, 9f); line(3.5f, 15f, 20.5f, 15f)
+                }
+                Glyph.STORAGE -> {
+                    drawOval(color, Offset(4f, 3f), Size(16f, 5f), style = Stroke(1.7f))
+                    path(4f to 5.5f, 4f to 18.5f)
+                    path(20f to 5.5f, 20f to 18.5f)
+                    drawArc(color, 0f, 180f, false, Offset(4f, 16f), Size(16f, 5f), style = Stroke(1.7f))
+                    drawArc(color, 0f, 180f, false, Offset(4f, 9.5f), Size(16f, 5f), style = Stroke(1.5f))
+                }
+                Glyph.WIFI -> {
+                    drawArc(color, 215f, 110f, false, Offset(2f, 5f), Size(20f, 20f), style = Stroke(1.7f, cap = StrokeCap.Round))
+                    drawArc(color, 215f, 110f, false, Offset(6f, 9f), Size(12f, 12f), style = Stroke(1.7f, cap = StrokeCap.Round))
+                    drawCircle(color, 1.4f, Offset(12f, 18.5f))
+                }
+                Glyph.PROGRAM -> {
+                    path(3f to 4f, 21f to 4f, 21f to 16f, 3f to 16f, close = true)
+                    line(8f, 20f, 16f, 20f); line(12f, 16f, 12f, 20f)
                 }
                 Glyph.INFO -> {
                     drawCircle(color, 9f, Offset(12f, 12f), style = Stroke(1.7f))

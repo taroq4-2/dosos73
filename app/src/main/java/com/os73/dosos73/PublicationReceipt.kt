@@ -19,10 +19,16 @@ internal class PublicationReceipt(private val context: Context, private val id: 
     private fun review(cause: Throwable? = null): Nothing =
         throw PipelineException(Stage.PUBLISH, FailureCode.PUBLICATION_REVIEW_REQUIRED, cause)
 
-    fun prepare(tree: Uri?, mime: String, expected: StreamIntegrity.Fingerprint, title: String, extension: String): String {
+    /**
+     * @param taken names that must not be planned (destination contents and other receipts'
+     *   plans). Null keeps the collision-free `title-<id>.ext` scheme.
+     */
+    fun prepare(tree: Uri?, mime: String, expected: StreamIntegrity.Fingerprint, title: String, extension: String,
+        taken: Set<String>? = null): String {
         if (journal.readOrNull() != null) review()
         val temporary = "dosos73-$id.partial.$extension"
-        val final = title.substringBeforeLast('.') + "-$id.$extension"
+        val final = if (taken == null) title.substringBeforeLast('.') + "-$id.$extension"
+            else PublicationNames.choose(title.substringBeforeLast('.'), extension, id, taken)
         journal.write(JSONObject().put("plan", 1).put("tree", tree?.toString())
             .put("temporary", temporary).put("final", final).put("mime", mime)
             .put("bytes", expected.bytes).put("hash", hex(expected))

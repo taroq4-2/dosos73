@@ -240,4 +240,43 @@ class NetworkRecoveryTest {
             assertTrue(generateSequence(error as Throwable) { it.cause }.any { it === failure })
         }
     }
+
+    // Phase G (airplane mode on the emulator): the socket broke before the platform reported the
+    // loss, so the transfer failed as DOWNLOAD_FAILED instead of waiting for the network.
+    @Test fun aTransportFailureIsRetriedOnlyWhenTheNetworkIsConfirmedLost() = runBlocking {
+        var attempts = 0
+        var waits = 0
+        val consulted = mutableListOf<Exception>()
+        val broken = PipelineException(Stage.TRANSFER, FailureCode.DOWNLOAD_FAILED)
+        val result = recoverNetwork({ }, { Unit }, { if (++attempts == 1) throw broken else "resumed" },
+            { waits++ }, backoff = { }, lostNetwork = { consulted += it; true })
+        assertEquals("resumed", result)
+        assertEquals(2, attempts)
+        assertEquals(1, waits)
+        assertEquals(listOf<Exception>(broken), consulted)
+
+        // The same failure with a live network still fails at once.
+        val error = runCatching {
+            recoverNetwork<Unit, Unit>({ }, { }, { throw broken }, { }, backoff = { fail("Unexpected retry") },
+                lostNetwork = { false })
+        }.exceptionOrNull()
+        assertSame(broken, error)
+    }
+
+    @Test fun lostNetworkIsNeverConsultedForCancellationOrAcquisitionAndStaysBounded() = runBlocking {
+        val cancel = CancellationException("user paused")
+        val error = runCatching {
+            recoverNetwork<Unit, Unit>({ }, { }, { throw cancel }, { }, backoff = { fail("Unexpected retry") },
+                lostNetwork = { fail("Cancellation is not a network loss"); true })
+        }.exceptionOrNull()
+        assertSame(cancel, error)
+
+        var attempts = 0
+        val broken = java.io.IOException("connection reset")
+        val last = runCatching {
+            recoverNetwork<Unit, Unit>({ }, { }, { attempts++; throw broken }, { }, backoff = { }, lostNetwork = { true })
+        }.exceptionOrNull()
+        assertSame(broken, last)
+        assertEquals("Two retries at most, as for platform-reported losses", 3, attempts)
+    }
 }
