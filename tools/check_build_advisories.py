@@ -36,11 +36,14 @@ def queries_for_build(wrapper, plugins):
     coordinates = [('org.gradle:gradle-core', gradle)]
     for plugin_id, coordinate in (
         ('com.android.application', 'com.android.tools.build:gradle'),
-        ('org.jetbrains.kotlin.android', 'org.jetbrains.kotlin:kotlin-gradle-plugin'),
         ('org.jetbrains.kotlin.plugin.compose', 'org.jetbrains.kotlin:compose-compiler-gradle-plugin'),
     ):
         version = exact(r'id\("' + re.escape(plugin_id) + r'"\)\s+version\s+"([0-9]+(?:\.[0-9]+)+)"', plugins, plugin_id)
         coordinates.append((coordinate, version))
+    # AGP 9 uses built-in Kotlin; the Kotlin Gradle plugin is pinned on the buildscript classpath.
+    kotlin = exact(r'classpath\("org\.jetbrains\.kotlin:kotlin-gradle-plugin:([0-9]+(?:\.[0-9]+)+)"\)', plugins,
+                   'org.jetbrains.kotlin:kotlin-gradle-plugin')
+    coordinates.insert(2, ('org.jetbrains.kotlin:kotlin-gradle-plugin', kotlin))
     return [{'package': {'ecosystem': 'Maven', 'name': name}, 'version': version} for name, version in coordinates]
 
 

@@ -3,8 +3,8 @@
 ## 1.4.1 (versionCode 24)
 
 Highlights for users:
-- Video and audio downloads start sooner: the download reuses the information gathered when the link was analysed, instead of analysing the page a second time.
-- Repeated YouTube links analyse faster: the media engine keeps its private cache between runs, and its code is compiled once instead of on every run.
+- Video and audio downloads start much sooner (8.7 s → 1.2 s to the first progress on the test emulator, YouTube): the download reuses the information gathered when the link was analysed, instead of analysing the page a second time.
+- The media engine starts about 4× faster (0.79 s → 0.20 s on the test emulator): its code is compiled once and reused instead of being compiled on every run.
 - The first analysis after installing or updating no longer waits for the engine to unpack; this happens in the background shortly after the app opens.
 - Media engine updated to yt-dlp 2026.11.23 (YouTube fixes upstream).
 - New download options: a package for each processor type (ARM64, ARMv7, x86_64), each about a third of the universal size. The universal package no longer includes 32-bit x86, which no current phone uses.

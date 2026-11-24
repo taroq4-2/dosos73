@@ -3,7 +3,6 @@ import org.gradle.api.artifacts.component.ModuleComponentIdentifier
 
 plugins {
     id("com.android.application")
-    id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
 }
 android {
@@ -46,7 +45,6 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
-    kotlinOptions { jvmTarget = "17" }
     bundle { language { enableSplit = false } }
     buildFeatures { compose = true; buildConfig = true }
     packaging { jniLibs.useLegacyPackaging = true }

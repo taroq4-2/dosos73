@@ -56,24 +56,6 @@ class EngineSpeedBenchmark {
         report("engine_start_unpacked_bytecode", current)
     }
 
-    /** First analysis without the yt-dlp cache (1.4.0 behaviour) vs repeated analyses with it. */
-    @Test fun mediaAnalysisWithoutAndWithEngineCache() = runBlocking {
-        assumeTrue(enabled())
-        val cold = List(2) {
-            MediaEngine.engineCacheDirectory(context.cacheDir).deleteRecursively()
-            val start = SystemClock.elapsedRealtime()
-            MediaEngine(context).analyze(url)
-            SystemClock.elapsedRealtime() - start
-        }
-        val warm = List(3) {
-            val start = SystemClock.elapsedRealtime()
-            MediaEngine(context).analyze(url)
-            SystemClock.elapsedRealtime() - start
-        }
-        report("media_analysis_no_engine_cache", cold)
-        report("media_analysis_engine_cache", warm)
-    }
-
     /** Download call → first progress line, with a second extraction (1.4.0) vs from the analysis' metadata. */
     @Test fun downloadStartWithoutAndWithAnalysisMetadata() = runBlocking {
         assumeTrue(enabled())

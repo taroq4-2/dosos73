@@ -66,9 +66,9 @@ class MediaEngine(
             addOption("--js-runtimes", "quickjs:${context.applicationInfo.nativeLibraryDir}/libqjs.so")
             addOption("--ffmpeg-location", "${context.applicationInfo.nativeLibraryDir}/libffmpeg.so")
             addOption("--no-playlist")
-            // App-private cache: YouTube player challenge results are reused instead of
-            // downloading and solving the player script again for every link.
-            addOption("--cache-dir", engineCacheDirectory(context.cacheDir).absolutePath)
+            // Measured in 1.4.1: an engine cache gave no measurable gain on YouTube analysis
+            // (network-bound), so the reviewed no-cache behaviour stays.
+            addOption("--no-cache-dir")
             addOption("--socket-timeout", 25)
             addOption("--retries", 2)
             addOption("--fragment-retries", 2)
@@ -219,8 +219,6 @@ class MediaEngine(
             FailureCode.HTTP_403, FailureCode.HTTP_404, FailureCode.LINK_EXPIRED,
             FailureCode.FORMAT_UNAVAILABLE, FailureCode.EXTRACTION_FAILED, FailureCode.DOWNLOAD_FAILED,
         )
-
-        internal fun engineCacheDirectory(cacheRoot: File) = File(cacheRoot, "engine-cache")
 
         /** Single-item, HTTPS-only metadata; yt-dlp's own fallback uses webpage_url. */
         internal fun reusableInfo(json: JSONObject): Boolean =

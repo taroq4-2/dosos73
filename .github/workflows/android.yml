@@ -35,7 +35,7 @@ jobs:
       - uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd # v4.0.4
         with:
           packages: 'platform-tools'
-      - run: sdkmanager 'platforms;android-36' 'build-tools;35.0.0'
+      - run: sdkmanager 'platforms;android-36' 'build-tools;36.0.0'
       - uses: gradle/actions/setup-gradle@0723195856401067f7a2779048b490ace7a47d7c # v5.0.2
       - run: chmod +x gradlew
       - run: ./gradlew testDebugUnitTest lintDebug lintRelease assembleDebug assembleRelease bundleRelease exportRuntimeInventory verifyNoKapt --console=plain
@@ -101,7 +101,7 @@ jobs:
           (set +o pipefail; yes | "$sdkmanager" --licenses >/dev/null)
           image="system-images;android-${TEST_API};default;x86_64"
           for attempt in 1 2 3; do
-            if "$sdkmanager" --install platform-tools 'platforms;android-36' 'build-tools;35.0.0' emulator "$image" &&
+            if "$sdkmanager" --install platform-tools 'platforms;android-36' 'build-tools;36.0.0' emulator "$image" &&
               test -x "$ANDROID_HOME/emulator/emulator" &&
               test -s "$ANDROID_HOME/system-images/android-${TEST_API}/default/x86_64/system.img"; then
               exit 0

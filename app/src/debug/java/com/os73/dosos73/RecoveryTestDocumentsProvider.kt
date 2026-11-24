@@ -52,7 +52,7 @@ class RecoveryTestDocumentsProvider : DocumentsProvider() {
     private fun row(cursor: MatrixCursor, id: String) {
         val entry = entries[id]
         if (id != "root" && entry == null) return
-        cursor.addRow(cursor.columnNames.map { column -> when (column) {
+        cursor.addRow(cursor.columnNames.map<String, Any?> { column -> when (column) {
             Document.COLUMN_DOCUMENT_ID -> id
             Document.COLUMN_DISPLAY_NAME -> entry?.name ?: "root"
             Document.COLUMN_MIME_TYPE -> if (id == "root") Document.MIME_TYPE_DIR else "application/octet-stream"
