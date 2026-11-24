@@ -1,5 +1,33 @@
 # Release-readiness security review
 
+## 1.4.1 (branch `release/1.4.1`), 24 November 2026
+
+### Versions actually shipped (read from the binaries, not from older notes)
+
+The "Native findings" table further down was written for CPython 3.12.11, OpenSSL 3.5.2 and Expat 2.7.3. The runtime that 1.4.0 shipped, and 1.4.1 keeps byte for byte (`tools/universal-runtime.json`), contains newer components. Version strings were read from the ARM64 libraries inside the signed 1.4.0 APK:
+
+| Component | Shipped | Latest upstream on 24 Nov 2026 | Status |
+|---|---|---|---|
+| OpenSSL (`libcrypto.so.3`) | 3.5.9 (29 Sep 2026) | 3.5.9 | Current in the 3.5 LTS line. The 3.5.2 findings below do not apply to this build |
+| CPython (`libpython3.12.so.1.0`) | 3.12.16 | 3.12.16 | Current. Includes the TLS denylist fix the older table asks for |
+| Expat (`libexpat.so.1.13.1`) | 2.10.0 | **2.11.0** (23 Nov 2026, upstream says it fixes three vulnerabilities) | **Open.** Needs a native rebuild (`tools/build_expat_runtime.py`, `tools/assemble_expat_update.py`) for all four ABIs, a new runtime lock and device tests. Not done in 1.4.1 |
+| FFmpeg | 9.0.2 | 9.0.2 | Current in 9.0 |
+| SQLite | 3.54.1 | — | Not checked against advisories here. yt-dlp uses it only for browser-cookie import, which the app never enables |
+| yt-dlp zipapp | **2026.11.23** (was 2026.10.21) | 2026.11.23 | Updated in 1.4.1. `SHA2-256SUMS` signature verified with the yt-dlp signing key (fingerprint `AC0C BBE6 848D 6A87 3464 AF4E 57CF 6593 3B5A 7581`); SHA-256 `e8665ed6…4c5256` matches. EJS stays 0.8.0 |
+
+### Changes in 1.4.1 and their security review
+
+| Change | Risk considered | Control |
+|---|---|---|
+| The analysis' `info.json` is kept up to 30 minutes so the download starts without a second extraction | Stale or replaced metadata; link leakage | App-private cache, file named by SHA-256 of the link, at most 8 entries and 4 MiB each, deleted after use, after expiry and at app start. Only single HTTPS items are kept. Every transfer still goes through the checked public-IP proxy, and a link or format failure falls back to a fresh extraction of the original link (`EngineInfoCacheTest`) |
+| yt-dlp cache enabled (`--cache-dir`, app-private) instead of `--no-cache-dir` | Cache poisoning | Only the app can write there; same trust boundary as the extracted runtime. `--no-remote-components` stays on |
+| yt-dlp unpacked to a folder, bytecode in `PYTHONPYCACHEPREFIX` | Unverified code on disk | Unpacked only from the SHA-256-checked zipapp, with path traversal, duplicate entry, entry count (5000) and size (64 MiB) limits. Published by an atomic directory rename with a completion marker. Bytecode lives in one private folder, is checked against each source file by Python, and is deleted when the app is updated |
+| Runtime prepared in the background on the first launch after install/update | Startup cost | Background-priority thread after 2.5 s, no network, no extractor run |
+
+Reviewed and kept: `android:usesCleartextTraffic="true"` is required by the opt-in "Allow HTTP" setting (off by default). The OkHttp interceptor in `DirectDownloader.secureClient` and `NetworkSettings` refuse non-HTTPS links unless the user turns it on.
+
+Kotlin Gradle plugin advisory GHSA-r937-wjx7-w2jp (CVE-2026-53914) is fixed only from Kotlin 2.4.20, which needs AGP 9.1 or later. The `not_affected` disposition for 2.0.21 expires on **2 December 2026**. See the 1.4.1 entry in `CHANGELOG.md` for whether the toolchain migration landed.
+
 ## vNext 1.4.0 (branch `feature/dosos73-vnext-overhaul`), 20 November 2026
 
 This section covers what vNext added or changed. Everything below "1.3.2 and earlier" still applies: the native runtime is unchanged and verified byte-for-byte against `tools/universal-runtime.json`. **This is a defensive review with automated and device evidence. It does not claim the app is free of vulnerabilities.**

@@ -23,7 +23,8 @@ import kotlin.coroutines.EmptyCoroutineContext
 /** One child process group, bounded diagnostics and no shell or permanent monitoring thread. */
 internal class NativeProcessSession(
     private val context: Context,
-    private val entry: File = File(context.noBackupFilesDir, "youtubedl-android/yt-dlp/yt-dlp"),
+    // The verified engine, expanded so Python can reuse its compiled bytecode.
+    private val entry: File = BundledEngine.unpacked(context),
 ) : Closeable {
     val id = UUID.randomUUID().toString()
     private val groupFile = File(context.cacheDir, "native-session-$id.pid")
@@ -196,11 +197,15 @@ internal class NativeProcessSession(
             environment().apply {
                 // The explicit authenticated proxy and bundled trust store own this session.
                 keys.filter { it.lowercase() in setOf("http_proxy", "https_proxy", "all_proxy", "no_proxy",
-                    "requests_ca_bundle", "curl_ca_bundle", "ssl_cert_dir", "pythonpath", "pythonstartup") }
+                    "requests_ca_bundle", "curl_ca_bundle", "ssl_cert_dir", "pythonpath", "pythonstartup",
+                    "pythondontwritebytecode", "pythonpycacheprefix") }
                     .toList().forEach { remove(it) }
                 put("LD_LIBRARY_PATH", "$native:$python/lib:$base/packages/ffmpeg/usr/lib")
                 put("SSL_CERT_FILE", "$python/etc/tls/cert.pem")
                 put("PYTHONHOME", python.absolutePath)
+                // Compiled bytecode lives in one private cache, never next to the sources
+                // or inside a transfer directory. Python revalidates it against each source.
+                put("PYTHONPYCACHEPREFIX", BundledEngine.bytecodeCache(context).absolutePath)
                 put("HOME", python.absolutePath)
                 put("PATH", System.getenv("PATH").orEmpty() + ":$native")
                 put("TMPDIR", context.cacheDir.absolutePath)

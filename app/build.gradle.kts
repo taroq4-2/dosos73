@@ -13,13 +13,15 @@ android {
         applicationId = "com.os73.dosos73"
         minSdk = 29
         targetSdk = 36
-        versionCode = 23
-        versionName = "1.4.0"
+        versionCode = 24
+        versionName = "1.4.1"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         val supportedAbis = listOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
-        val selectedAbi = providers.gradleProperty("targetAbi").orNull
-        require(selectedAbi == null || selectedAbi in supportedAbis) { "Unsupported targetAbi" }
-        ndk { abiFilters += selectedAbi?.let { listOf(it) } ?: supportedAbis }
+        // -PtargetAbi=arm64-v8a, or a comma-separated list such as armeabi-v7a,arm64-v8a,x86_64.
+        val selectedAbis = providers.gradleProperty("targetAbi").orNull?.split(',')?.map { it.trim() }
+        require(selectedAbis == null || (selectedAbis.isNotEmpty() && selectedAbis.distinct() == selectedAbis &&
+            selectedAbis.all { it in supportedAbis })) { "Unsupported targetAbi" }
+        ndk { abiFilters += selectedAbis ?: supportedAbis }
     }
     signingConfigs {
         val keyPath = System.getenv("DOSOS73_KEYSTORE")

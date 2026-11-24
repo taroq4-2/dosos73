@@ -32,6 +32,7 @@ class DososApp : Application() {
                         System.currentTimeMillis() - it.lastModified() > 24 * 60 * 60 * 1000
                     }
                     ?.forEach(File::deleteRecursively)
+                runCatching { EngineInfoCache.prune(cacheDir) }
             }
             .start()
     }

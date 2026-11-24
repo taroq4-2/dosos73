@@ -150,7 +150,7 @@ object Diagnostics {
                         put("stage", stage.name)
                         put("result", result.take(80))
                         put("wrapper", "0.18.1")
-                        put("engine", "2026.10.21")
+                        put("engine", "2026.11.23")
                         bytes?.let { put("bytes", it) }
                         millis?.let { put("millis", it) }
                         code?.let { put("failure", it.name) }

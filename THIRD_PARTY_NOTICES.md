@@ -1,6 +1,6 @@
 # Third-party notices and source inventory
 
-The application pins the official yt-dlp 2026.10.21 zipapp with EJS 0.8.0 inside the APK. Original yt-dlp/EJS code uses Unlicense; the zipapp additionally includes ISC/MIT components. Upstream notices are preserved in docs/licenses/. SHA256 is recorded in BundledEngine.kt. This does not complete the native wrapper/FFmpeg audit.
+The application pins the official yt-dlp 2026.11.23 zipapp with EJS 0.8.0 inside the APK. Original yt-dlp/EJS code uses Unlicense; the zipapp additionally includes ISC/MIT components. Upstream notices are preserved in docs/licenses/. SHA256 is recorded in BundledEngine.kt. This does not complete the native wrapper/FFmpeg audit.
 
 First-party Kotlin, resources and build scripts are offered under GPL-3.0-or-later; see LICENSE. This does not relicense dependencies or third-party artwork.
 
@@ -13,7 +13,7 @@ The signed 1.3.0 package's artifact-bound SBOM identifies CPython 3.12.16, OpenS
 | Component | Version | Declared upstream license / source |
 |---|---|---|
 | youtubedl-android library + ffmpeg | 0.18.1 | GPL-3.0, https://github.com/yausername/youtubedl-android/tree/0.18.1 |
-| yt-dlp / EJS pinned by application | 2026.10.21 / 0.8.0, verified on API35 | Unlicense for original projects; ISC/MIT bundled notices in docs/licenses, https://github.com/yt-dlp/yt-dlp |
+| yt-dlp / EJS pinned by application | 2026.11.23 / 0.8.0, verified on API35 | Unlicense for original projects; ISC/MIT bundled notices in docs/licenses, https://github.com/yt-dlp/yt-dlp |
 | FFmpeg in universal delivery | 9.0.2, commit 946fcce07b6dcd0331c8cc609192aeff5e1924f8 | LGPL-2.1-or-later configuration, CONFIG_GPL=0 and CONFIG_NONFREE=0; [pinned recipe](tools/build_compact_ffmpeg.sh). Untransformed developer APKs retain wrapper FFmpeg 7.1.1. |
 | Python / QuickJS bundled by wrapper | Python 3.12.11; QuickJS execution verified | Native/transitive license source correspondence remains under review; wrapper source above |
 | AndroidX/Compose | pinned in app/build.gradle.kts | Apache-2.0, https://android.googlesource.com/platform/frameworks/support/ |
