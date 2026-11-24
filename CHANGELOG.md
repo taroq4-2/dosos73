@@ -9,7 +9,17 @@ Highlights for users:
 - Media engine updated to yt-dlp 2026.11.23 (YouTube fixes upstream).
 - New download options: a package for each processor type (ARM64, ARMv7, x86_64), each about a third of the universal size. The universal package no longer includes 32-bit x86, which no current phone uses.
 
-<!-- 1.4.1-DETAILS -->
+### Details
+- Media downloads start from the analysis' `info.json` (`--load-info-json`), kept app-private for up to 30 minutes under a SHA-256 of the link (at most 8 entries, 4 MiB each, deleted after use). If those stream links fail (403/404/expired/format/extraction/download failure), the engine forgets them and extracts the original link again. Network, storage and TLS failures are reported as before. Measured on the emulator with yt-dlp 2026.10.21 (`EngineSpeedBenchmark`, YouTube, 2 runs each): first progress after **8.7 s → 1.2 s** (P50). With 2026.11.23 the live 720p YouTube download passed through this path. Repeating the benchmark was blocked by YouTube's bot check on the emulator's IP (see TEST_RESULTS).
+- The pinned yt-dlp zipapp is expanded once into a private folder, from the SHA-256-checked file, with traversal, duplicate, count and size limits and an atomic directory rename. Python keeps its bytecode in a private `PYTHONPYCACHEPREFIX`, which is cleared after an app update. Interpreter start plus full yt-dlp import: **769–788 ms → 197–204 ms** (P50, 5 runs each, two separate runs). Costs about 16 MB more app storage.
+- The runtime (Python, FFmpeg and the engine) is prepared on a background-priority thread 2.5 s after the first launch after an install or update. Verified on the emulator: prepared on the first launch, skipped on the next.
+- Tried and reverted: keeping yt-dlp's cache (`--cache-dir`). On YouTube analysis it gave no measurable gain (network-bound), so the reviewed `--no-cache-dir` stays.
+- yt-dlp 2026.10.21 → 2026.11.23. The `SHA2-256SUMS` GPG signature was verified against the yt-dlp signing key `AC0C BBE6 848D 6A87 3464 AF4E 57CF 6593 3B5A 7581`, and the zipapp SHA-256 is `e8665ed6…4c5256`. EJS stays 0.8.0.
+- Toolchain: Gradle 9.9.2, AGP 9.5.2 (built-in Kotlin), Kotlin 2.4.21, build-tools 36.0.0. This fixes Kotlin Gradle plugin advisory GHSA-r937-wjx7-w2jp, so the expiring exception for 2.0.21 is removed. Release DEX: 3.14 → 2.87 MB.
+- Packaging: `-PtargetAbi` and `tools/assemble_universal.py --abi` accept several ABIs. 1.4.1 ships ARM64 (21.93 MB), ARMv7 (20.46 MB), x86_64 (22.05 MB), and a universal package without 32-bit x86: **45.73 MB versus 58.57 MB** (−22%). The 64-bit 16 KB ELF audit has 0 failures in every package.
+- Reviewed and unchanged: `usesCleartextTraffic` is needed by the opt-in "Allow HTTP" setting.
+- Still open: Expat 2.11.0 (23 Nov 2026, fixes three upstream vulnerabilities) needs a native runtime rebuild. No physical ARM device test yet.
+
 
 ## 1.4.0 (versionCode 23)
 
