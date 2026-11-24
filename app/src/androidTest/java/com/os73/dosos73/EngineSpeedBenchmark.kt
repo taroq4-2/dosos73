@@ -56,6 +56,18 @@ class EngineSpeedBenchmark {
         report("engine_start_unpacked_bytecode", current)
     }
 
+    /** Are the offered format IDs stable across separate extractions of the same link? */
+    @Test fun formatIdsAcrossExtractions() = runBlocking {
+        assumeTrue(enabled())
+        val runs = List(4) { MediaEngine(context).analyze(url).choices.map { it.id }.toSet() }
+        val common = runs.reduce { a, b -> a intersect b }
+        Log.i("DososBenchmark", JSONObject().put("case", "format_ids_across_extractions")
+            .put("runs", JSONArray(runs.map { JSONArray(it.sorted()) }))
+            .put("common", JSONArray(common.sorted())).put("p50", common.size).put("min", common.size)
+            .put("max", runs.maxOf { it.size }).put("samples", JSONArray(runs.map { it.size })).toString())
+        Unit
+    }
+
     /** Download call → first progress line, with a second extraction (1.4.0) vs from the analysis' metadata. */
     @Test fun downloadStartWithoutAndWithAnalysisMetadata() = runBlocking {
         assumeTrue(enabled())
