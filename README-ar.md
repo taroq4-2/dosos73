@@ -8,9 +8,9 @@
 
 **مدير تنزيل مفتوح المصدر لأندرويد: فيديو وصوت وملفات، بالعربية والإنجليزية.**
 
-[**تنزيل dosos73 1.4.0**](https://github.com/taroq4-2/dosos73/releases/latest/download/dosos73.apk) · [الموقع الرسمي](https://taroq4-2.github.io/dosos73/) · [English](README.md) · [ملاحظات الإصدار](https://github.com/taroq4-2/dosos73/releases/tag/v1.4.0)
+[**تنزيل dosos73 1.4.1**](https://github.com/taroq4-2/dosos73/releases/latest/download/dosos73.apk) · [الموقع الرسمي](https://taroq4-2.github.io/dosos73/) · [English](README.md) · [ملاحظات الإصدار](https://github.com/taroq4-2/dosos73/releases/tag/v1.4.0)
 
-![Version](https://img.shields.io/badge/version-1.4.0-42D9CC?style=flat-square)
+![Version](https://img.shields.io/badge/version-1.4.1-42D9CC?style=flat-square)
 ![Android](https://img.shields.io/badge/Android-10%2B-3B82F6?style=flat-square)
 ![License](https://img.shields.io/badge/license-GPL--3.0--or--later-1FA4B8?style=flat-square)
 [![Android verification](https://github.com/taroq4-2/dosos73/actions/workflows/android.yml/badge.svg)](https://github.com/taroq4-2/dosos73/actions/workflows/android.yml)
@@ -44,12 +44,22 @@
 
 | الحزمة | الحجم | لمن |
 |---|---:|---|
-| [**الموحّدة**](https://github.com/taroq4-2/dosos73/releases/latest/download/dosos73.apk) (موصى بها) | 58.6 ميغابايت | كل أجهزة Android 10 فأحدث (ARM64 وARM32 وx86 وx86_64) |
-| [ARM64](https://github.com/taroq4-2/dosos73/releases/download/v1.4.0/dosos73-1.4.0-arm64-v8a.apk) (تجريبية) | 22.3 ميغابايت | معظم الهواتف الحديثة. محرك الوسائط فيها لم يُجرَّب بعد على هاتف فعلي. |
+| [**الموحّدة**](https://github.com/taroq4-2/dosos73/releases/latest/download/dosos73.apk) (موصى بها) | 45.7 ميغابايت | كل هواتف وأجهزة Android 10 فأحدث اللوحية وأجهزة Chromebook (ARM64 وARM32 وx86_64) |
+| [ARM64](https://github.com/taroq4-2/dosos73/releases/download/v1.4.1/dosos73-1.4.1-arm64-v8a.apk) (تجريبية) | 21.9 ميغابايت | معظم هواتف السنوات الأخيرة |
+| [ARMv7](https://github.com/taroq4-2/dosos73/releases/download/v1.4.1/dosos73-1.4.1-armeabi-v7a.apk) (تجريبية) | 20.5 ميغابايت | الهواتف الأقدم أو الاقتصادية بمعالج 32-bit |
+| [x86_64](https://github.com/taroq4-2/dosos73/releases/download/v1.4.1/dosos73-1.4.1-x86_64.apk) | 22.1 ميغابايت | أجهزة Chromebook والمحاكيات واللوحيات بمعالج x86 |
 
-الحزمتان موقّعتان بالمفتاح نفسه الذي وُقّع به 1.3.2، فتثبيت أيٍّ منهما يحدّث التطبيق الحالي ويحافظ على بياناتك. [التحقق ببصمة SHA-256](https://github.com/taroq4-2/dosos73/releases/download/v1.4.0/SHA256SUMS.txt)
+كل الحزم موقّعة بالمفتاح نفسه الذي وُقّع به 1.3.2، فتثبيت أيٍّ منها يحدّث التطبيق الحالي ويحافظ على بياناتك. حزم ARM المنفصلة تجريبية لأن محرك الوسائط فيها لم يُجرَّب بعد على هاتف فعلي. ابتداءً من 1.4.1 لم تعد أجهزة x86 بمعالج 32-bit مدعومة. [التحقق ببصمة SHA-256](https://github.com/taroq4-2/dosos73/releases/download/v1.4.1/SHA256SUMS.txt)
 
 إذا طلب Android ذلك، اسمح بالتثبيت من المتصفح أو مدير الملفات. أما dosos73 نفسه فلا يثبّت أبدًا ملفات APK التي ينزّلها.
+
+## الجديد في 1.4.1
+
+- يبدأ تنزيل الفيديو والصوت خلال ثانية تقريبًا بدل تسع ثوانٍ على محاكي الاختبار، لأن التنزيل يستخدم ما وجده تحليل الرابط.
+- محرك الوسائط يبدأ أسرع بنحو أربع مرات، ويُجهَّز في الخلفية بعد التثبيت أو التحديث.
+- yt-dlp 2026.11.23 مع أحدث إصلاحات YouTube.
+- حزمة لكل نوع معالج، وحزمة موحّدة أصغر بنسبة 22% (45.7 بدل 58.6 ميغابايت).
+- البناء بأدوات Android الحالية (Kotlin 2.4 وAGP 9.5)، ما يغلق ثغرة معلنة في أدوات البناء.
 
 ## الجديد في 1.4.0
 
