@@ -2,23 +2,33 @@
 import unittest
 from check_build_advisories import queries_for_build, verify_kapt_source
 
-WRAPPER = 'distributionUrl=https\\://services.gradle.org/distributions/gradle-8.14.6-bin.zip\n'
-PLUGINS = '''plugins {
- id("com.android.application") version "8.10.1" apply false
- id("org.jetbrains.kotlin.android") version "2.0.21" apply false
- id("org.jetbrains.kotlin.plugin.compose") version "2.0.21" apply false
+WRAPPER = 'distributionUrl=https\\://services.gradle.org/distributions/gradle-9.9.2-bin.zip\n'
+PLUGINS = '''buildscript {
+    dependencies { classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:2.4.21") }
+}
+plugins {
+ id("com.android.application") version "9.5.2" apply false
+ id("org.jetbrains.kotlin.plugin.compose") version "2.4.21" apply false
 }'''
 
 
 class BuildPinsTest(unittest.TestCase):
     def test_reads_actual_pins(self):
         queries = queries_for_build(WRAPPER, PLUGINS)
-        self.assertEqual(['8.14.6', '8.10.1', '2.0.21', '2.0.21'], [q['version'] for q in queries])
-        self.assertEqual('org.gradle:gradle-core', queries[0]['package']['name'])
+        self.assertEqual(['9.9.2', '9.5.2', '2.4.21', '2.4.21'], [q['version'] for q in queries])
+        self.assertEqual(['org.gradle:gradle-core', 'com.android.tools.build:gradle',
+                          'org.jetbrains.kotlin:kotlin-gradle-plugin',
+                          'org.jetbrains.kotlin:compose-compiler-gradle-plugin'],
+                         [q['package']['name'] for q in queries])
+
+    def test_unpinned_kotlin_classpath_rejected(self):
+        # AGP 9 built-in Kotlin: the Kotlin Gradle plugin version comes from the buildscript classpath.
+        with self.assertRaises(ValueError):
+            queries_for_build(WRAPPER, PLUGINS.replace('kotlin-gradle-plugin:2.4.21', 'kotlin-gradle-plugin:+'))
 
     def test_unpinned_wrapper_rejected(self):
         with self.assertRaises(ValueError):
-            queries_for_build(WRAPPER.replace('8.14.6', 'latest'), PLUGINS)
+            queries_for_build(WRAPPER.replace('9.9.2', 'latest'), PLUGINS)
 
     def test_missing_plugin_rejected(self):
         with self.assertRaises(ValueError):
@@ -26,7 +36,7 @@ class BuildPinsTest(unittest.TestCase):
 
     def test_ambiguous_declarations_rejected(self):
         with self.assertRaises(ValueError):
-            queries_for_build(WRAPPER, PLUGINS + '\nid("com.android.application") version "8.10.2"')
+            queries_for_build(WRAPPER, PLUGINS + '\nid("com.android.application") version "9.5.1"')
 
     def test_kapt_enablement_invalidates_review(self):
         for declaration in ('id("org.jetbrains.kotlin.kapt")', 'apply(plugin = "kotlin-kapt")',

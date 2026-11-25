@@ -63,6 +63,8 @@ class MainActivity : ComponentActivity() {
                 model.batchSaving.collect { consumeQuickRequest() }
             }
         }
+        // First launch after install/update only; off the main thread after a short delay.
+        EnginePrewarm.scheduleIfNeeded(this)
         setContent {
             DososTheme {
                 // System bar icons follow the resolved theme (light theme needs dark icons).

@@ -66,6 +66,8 @@ class MediaEngine(
             addOption("--js-runtimes", "quickjs:${context.applicationInfo.nativeLibraryDir}/libqjs.so")
             addOption("--ffmpeg-location", "${context.applicationInfo.nativeLibraryDir}/libffmpeg.so")
             addOption("--no-playlist")
+            // Measured in 1.4.1: an engine cache gave no measurable gain on YouTube analysis
+            // (network-bound), so the reviewed no-cache behaviour stays.
             addOption("--no-cache-dir")
             addOption("--socket-timeout", 25)
             addOption("--retries", 2)
@@ -113,6 +115,7 @@ class MediaEngine(
                     val json = JSONObject(info.readText())
                     val choices = mapFormats(json)
                     require(choices.isNotEmpty()) { "No supported formats" }
+                    if (reusableInfo(json)) runCatching { EngineInfoCache.store(context.cacheDir, url, info) }
                     Diagnostics.event(Stage.EXTRACT, "completed")
                     Analysis(url, json.optString("title", "download").take(200), choices, false)
                 }
@@ -125,14 +128,34 @@ class MediaEngine(
         task: DownloadTask,
         directory: File,
         progress: (Float?, Boolean) -> Unit,
-    ): File = retryInterruptedMediaProbe(
-        canRetry = { withContext(Dispatchers.IO) { directory.list()?.isEmpty() == true } },
-    ) { downloadOnce(task, directory, progress) }
+    ): File {
+        val url = task.analysis.url
+        val cached = withContext(Dispatchers.IO) { EngineInfoCache.fresh(context.cacheDir, url) }
+        if (cached != null) {
+            // Start from the analysis' metadata: no second extraction before bytes flow.
+            try {
+                return retryInterruptedMediaProbe(
+                    canRetry = { withContext(Dispatchers.IO) { directory.list()?.isEmpty() == true } },
+                ) { downloadOnce(task, directory, progress, cached) }
+                    .also { withContext(NonCancellable + Dispatchers.IO) { EngineInfoCache.forget(context.cacheDir, url) } }
+            } catch (failure: PipelineException) {
+                currentCoroutineContext().ensureActive()
+                if (failure.code !in REEXTRACT_ON) throw failure
+                // Expired or refused stream links: forget them and extract the page again.
+                Diagnostics.event(Stage.TRANSFER, "info_reuse_fallback", code = failure.code)
+                withContext(Dispatchers.IO) { EngineInfoCache.forget(context.cacheDir, url) }
+            }
+        }
+        return retryInterruptedMediaProbe(
+            canRetry = { withContext(Dispatchers.IO) { directory.list()?.isEmpty() == true } },
+        ) { downloadOnce(task, directory, progress, null) }
+    }
 
     private suspend fun downloadOnce(
         task: DownloadTask,
         directory: File,
         progress: (Float?, Boolean) -> Unit,
+        info: File?,
     ): File {
         val entry = withContext(Dispatchers.IO) {
             // Only validated HTTP checkpoint pairs survive a new extraction. Completed
@@ -154,6 +177,8 @@ class MediaEngine(
                         addOption("--continue")
                         addOption("--newline")
                         addOption("--progress-delta", 1)
+                        // yt-dlp ignores the positional link when this is present.
+                        if (info != null) addOption("--load-info-json", info.absolutePath)
                         if (task.choice.kind == Kind.AUDIO && task.choice.extension == "mp3") {
                             addOption("--extract-audio")
                             addOption("--audio-format", "mp3")
@@ -165,8 +190,8 @@ class MediaEngine(
                 var stage = Stage.TRANSFER
                 Diagnostics.event(stage, "started")
                 try {
-                    val zipapp = File(context.noBackupFilesDir, "youtubedl-android/yt-dlp/yt-dlp")
-                    active.execute(listOf(zipapp.absolutePath) + request.buildCommand()) { percent, processing ->
+                    val engine = BundledEngine.unpacked(context)
+                    active.execute(listOf(engine.absolutePath) + request.buildCommand()) { percent, processing ->
                         if (processing) stage = Stage.MERGE
                         progress(percent, processing)
                     }
@@ -189,6 +214,18 @@ class MediaEngine(
     }
 
     companion object {
+        /** Failures that a fresh extraction can fix when cached metadata was used. */
+        internal val REEXTRACT_ON = setOf(
+            FailureCode.HTTP_403, FailureCode.HTTP_404, FailureCode.LINK_EXPIRED,
+            FailureCode.FORMAT_UNAVAILABLE, FailureCode.EXTRACTION_FAILED, FailureCode.DOWNLOAD_FAILED,
+        )
+
+        /** Single-item, HTTPS-only metadata; yt-dlp's own fallback uses webpage_url. */
+        internal fun reusableInfo(json: JSONObject): Boolean =
+            json.optString("_type", "video") == "video" &&
+                json.optString("webpage_url").startsWith("https://") &&
+                !json.has("entries")
+
         internal fun formatSelector(id: String): String {
             val components = id.split('+')
             require(components.size in 1..2 && components.all { it.matches(Regex("[a-zA-Z0-9_.-]{1,80}")) })

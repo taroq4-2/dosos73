@@ -72,6 +72,26 @@ class SingleAbiAssemblyTest(unittest.TestCase):
         with self.assertRaises(AssertionError):
             assemble(self.app(list(ABIS)), self.bundle, self.lock, self.root / 'y.apk', 'arm64-v8a')
 
+    def test_three_abi_package_leaves_out_only_x86(self):
+        kept = ['armeabi-v7a', 'arm64-v8a', 'x86_64']
+        out = self.root / 'three.apk'
+        assemble(self.app(kept), self.bundle, self.lock, out, kept)
+        with zipfile.ZipFile(out) as z:
+            libs = {n for n in z.namelist() if n.startswith('lib/')}
+            self.assertEqual(libs, {f'lib/{abi}/{lib}' for abi in kept for lib in LIBS})
+            self.assertTrue(set(ASSETS) <= set(z.namelist()))
+        self.assertEqual('armeabi-v7a+arm64-v8a+x86_64', json.loads(out.with_suffix('.json').read_text())['abi'])
+
+    def test_app_and_package_abis_must_match(self):
+        # The app still carries x86 libraries: refused rather than shipping a mixed layout.
+        with self.assertRaises(AssertionError):
+            assemble(self.app(list(ABIS)), self.bundle, self.lock, self.root / 'm.apk',
+                     ['armeabi-v7a', 'arm64-v8a', 'x86_64'])
+
+    def test_duplicate_abi_is_rejected(self):
+        with self.assertRaises(AssertionError):
+            assemble(self.app(['arm64-v8a']), self.bundle, self.lock, self.root / 'd.apk', ['arm64-v8a', 'arm64-v8a'])
+
     def test_unknown_abi_is_rejected(self):
         with self.assertRaises(AssertionError):
             assemble(self.app(['arm64-v8a']), self.bundle, self.lock, self.root / 'z.apk', 'mips')

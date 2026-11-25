@@ -26,6 +26,9 @@ internal object EngineRuntime {
                     require(cached.canonicalPath.startsWith(base.canonicalPath + File.separator))
                     check(!cached.exists() || cached.deleteRecursively())
                 }
+                // Bytecode of the replaced runtime is useless after an update.
+                val bytecode = BundledEngine.bytecodeCache(context)
+                check(!bytecode.exists() || bytecode.deleteRecursively())
             }
         }
         // Upstream singletons cannot re-extract after successful init. Retrying a

@@ -6,9 +6,9 @@
 
 **An open-source download manager for Android. Video, audio and files, in Arabic and English.**
 
-[**Download dosos73 1.4.0**](https://github.com/taroq4-2/dosos73/releases/latest/download/dosos73.apk) · [Official site](https://taroq4-2.github.io/dosos73/en.html) · [العربية](README-ar.md) · [Release notes](https://github.com/taroq4-2/dosos73/releases/tag/v1.4.0)
+[**Download dosos73 1.4.1**](https://github.com/taroq4-2/dosos73/releases/latest/download/dosos73.apk) · [Official site](https://taroq4-2.github.io/dosos73/en.html) · [العربية](README-ar.md) · [Release notes](https://github.com/taroq4-2/dosos73/releases/tag/v1.4.0)
 
-![Version](https://img.shields.io/badge/version-1.4.0-42D9CC?style=flat-square)
+![Version](https://img.shields.io/badge/version-1.4.1-42D9CC?style=flat-square)
 ![Android](https://img.shields.io/badge/Android-10%2B-3B82F6?style=flat-square)
 ![License](https://img.shields.io/badge/license-GPL--3.0--or--later-1FA4B8?style=flat-square)
 [![Android verification](https://github.com/taroq4-2/dosos73/actions/workflows/android.yml/badge.svg)](https://github.com/taroq4-2/dosos73/actions/workflows/android.yml)
@@ -42,12 +42,22 @@ dosos73 turns a link into a verified file on your phone. Paste or share a link, 
 
 | Package | Size | For |
 |---|---:|---|
-| [**Universal**](https://github.com/taroq4-2/dosos73/releases/latest/download/dosos73.apk) (recommended) | 58.6 MB | Every Android 10+ device (ARM64, ARM32, x86, x86_64) |
-| [ARM64](https://github.com/taroq4-2/dosos73/releases/download/v1.4.0/dosos73-1.4.0-arm64-v8a.apk) (experimental) | 22.3 MB | Most modern phones. Its media engine has not yet been tried on a physical phone. |
+| [**Universal**](https://github.com/taroq4-2/dosos73/releases/latest/download/dosos73.apk) (recommended) | 45.7 MB | Every Android 10+ phone, tablet and Chromebook (ARM64, ARM32, x86_64) |
+| [ARM64](https://github.com/taroq4-2/dosos73/releases/download/v1.4.1/dosos73-1.4.1-arm64-v8a.apk) (experimental) | 21.9 MB | Most phones from the last several years |
+| [ARMv7](https://github.com/taroq4-2/dosos73/releases/download/v1.4.1/dosos73-1.4.1-armeabi-v7a.apk) (experimental) | 20.5 MB | Older or entry-level 32-bit phones |
+| [x86_64](https://github.com/taroq4-2/dosos73/releases/download/v1.4.1/dosos73-1.4.1-x86_64.apk) | 22.1 MB | Chromebooks, emulators and x86 tablets |
 
-Both packages are signed with the same key as 1.3.2, so installing one updates your existing app and keeps your data. [Verify SHA-256](https://github.com/taroq4-2/dosos73/releases/download/v1.4.0/SHA256SUMS.txt)
+All packages are signed with the same key as 1.3.2, so installing one updates your existing app and keeps your data. The ARM-only packages are marked experimental because their media engine has not yet been tried on a physical phone. Since 1.4.1, 32-bit x86 devices are no longer supported. [Verify SHA-256](https://github.com/taroq4-2/dosos73/releases/download/v1.4.1/SHA256SUMS.txt)
 
 When Android asks, allow installation from your browser or file manager. dosos73 itself never installs the APKs it downloads.
+
+## What's new in 1.4.1
+
+- Video and audio downloads start in about a second instead of about nine on our test emulator: the download reuses what the link analysis already found.
+- The media engine starts about four times faster, and after an install or update it gets ready in the background.
+- yt-dlp 2026.11.23 with the latest YouTube fixes.
+- A package for each processor type, and a universal package 22% smaller (45.7 MB instead of 58.6 MB).
+- Built with the current Android toolchain (Kotlin 2.4, AGP 9.5), which closes a build-tool security advisory.
 
 ## What's new in 1.4.0
 
